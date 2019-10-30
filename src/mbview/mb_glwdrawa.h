@@ -1,6 +1,5 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mb_glwdrawa.h	5/22/2007
- *    $Id$
  *
  *    Altered from original code for MB-System by
  *    David W. Caress (caress@mbari.org)
@@ -59,7 +58,7 @@
 #ifndef _mbGLwDrawA_h
 #define _mbGLwDrawA_h
 
-#ifndef WIN32
+#ifndef _WIN32
 #include <GL/glx.h>
 #endif
 #include <GL/gl.h>
@@ -177,14 +176,14 @@ typedef struct {
 } mbGLwDrawingAreaCallbackStruct;
 
 /* front ends to glXMakeCurrent and glXSwapBuffers */
-#ifdef WIN32
+#ifdef _WIN32
 extern void mbGLwDrawingAreaMakeCurrent(Widget w, HGLRC hglrc);
 #else
 extern void mbGLwDrawingAreaMakeCurrent(Widget w, GLXContext ctx);
 #endif
 extern void mbGLwDrawingAreaSwapBuffers(Widget w);
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifdef _NO_PROTO
 // WINGDIAPI Widget mbGLwCreateMDrawingArea();	/* It's defined in mb_glwdrawa.c */
 #else

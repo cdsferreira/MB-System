@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbr_mgd77tab.c	5/18/99
- *	$Id$
  *
- *    Copyright (c) 2014-2017 by
+ *    Copyright (c) 2014-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -26,16 +25,14 @@
  *
  */
 
-/* standard include files */
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
+#include "mb_status.h"
 #include "mbsys_singlebeam.h"
 
 /*
@@ -523,7 +520,6 @@
 
 /* header and data record in bytes */
 #define MBF_MGD77TAB_HEADER_FIELDS 58
-#define MBF_MGD77TAB_DATA_FIELDS 26
 
 struct mbf_mgd77tab_struct {
 	/* type of data record */
@@ -690,141 +686,19 @@ struct mbf_mgd77tab_struct {
 	char comment[MB_COMMENT_MAXLINE];
 };
 
-/* essential function prototypes */
-int mbr_register_mgd77tab(int verbose, void *mbio_ptr, int *error);
-int mbr_info_mgd77tab(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
-                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
-                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
-                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
-                      double *beamwidth_ltrack, int *error);
-int mbr_alm_mgd77tab(int verbose, void *mbio_ptr, int *error);
-int mbr_dem_mgd77tab(int verbose, void *mbio_ptr, int *error);
-int mbr_rt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_wt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_mgd77tab_rd_data(int verbose, void *mbio_ptr, int *error);
-int mbr_mgd77tab_wr_data(int verbose, void *mbio_ptr, void *data_ptr, int *error);
-
-static char rcs_id[] = "$Id$";
-
-/*--------------------------------------------------------------------*/
-int mbr_register_mgd77tab(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_register_mgd77tab";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-	}
-
-	/* get mb_io_ptr */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set format info parameters */
-	status = mbr_info_mgd77tab(
-	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
-	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
-	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
-	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
-	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
-
-	/* set format and system specific function pointers */
-	mb_io_ptr->mb_io_format_alloc = &mbr_alm_mgd77tab;
-	mb_io_ptr->mb_io_format_free = &mbr_dem_mgd77tab;
-	mb_io_ptr->mb_io_store_alloc = &mbsys_singlebeam_alloc;
-	mb_io_ptr->mb_io_store_free = &mbsys_singlebeam_deall;
-	mb_io_ptr->mb_io_read_ping = &mbr_rt_mgd77tab;
-	mb_io_ptr->mb_io_write_ping = &mbr_wt_mgd77tab;
-	mb_io_ptr->mb_io_dimensions = &mbsys_singlebeam_dimensions;
-	mb_io_ptr->mb_io_extract = &mbsys_singlebeam_extract;
-	mb_io_ptr->mb_io_insert = &mbsys_singlebeam_insert;
-	mb_io_ptr->mb_io_extract_nav = &mbsys_singlebeam_extract_nav;
-	mb_io_ptr->mb_io_insert_nav = &mbsys_singlebeam_insert_nav;
-	mb_io_ptr->mb_io_extract_altitude = &mbsys_singlebeam_extract_altitude;
-	mb_io_ptr->mb_io_insert_altitude = NULL;
-	mb_io_ptr->mb_io_extract_svp = NULL;
-	mb_io_ptr->mb_io_insert_svp = NULL;
-	mb_io_ptr->mb_io_ttimes = &mbsys_singlebeam_ttimes;
-	mb_io_ptr->mb_io_detects = &mbsys_singlebeam_detects;
-	mb_io_ptr->mb_io_copyrecord = &mbsys_singlebeam_copy;
-	mb_io_ptr->mb_io_extract_rawss = NULL;
-	mb_io_ptr->mb_io_insert_rawss = NULL;
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
-		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
-		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
-		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
-		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
-		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
-		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
-		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
-		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
-		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
-		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
-		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
-		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
-		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
-		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
-		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
-		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
-		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
-		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
-		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
-		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
-		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
-		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
-		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
-		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
-		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
-		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
-		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
-		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
-		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
-		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
-		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
-		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
-		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
-		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
-		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
-		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
-		fprintf(stderr, "dbg2       error:              %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:         %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
-
 /*--------------------------------------------------------------------*/
 int mbr_info_mgd77tab(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
                       char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error) {
-	char *function_name = "mbr_info_mgd77tab";
-	int status = MB_SUCCESS;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 	}
 
 	/* set format info parameters */
-	status = MB_SUCCESS;
-	*error = MB_ERROR_NO_ERROR;
 	*system = MB_SYS_SINGLEBEAM;
 	*beams_bath_max = 1;
 	*beams_amp_max = 0;
@@ -838,9 +712,9 @@ int mbr_info_mgd77tab(int verbose, int *system, int *beams_bath_max, int *beams_
 	        MB_DESCRIPTION_LENGTH);
 	*numfile = 1;
 	*filetype = MB_FILETYPE_NORMAL;
-	*variable_beams = MB_NO;
-	*traveltime = MB_YES;
-	*beam_flagging = MB_NO;
+	*variable_beams = false;
+	*traveltime = true;
+	*beam_flagging = false;
 	*platform_source = MB_DATA_NONE;
 	*nav_source = MB_DATA_DATA;
 	*sensordepth_source = MB_DATA_DATA;
@@ -850,9 +724,10 @@ int mbr_info_mgd77tab(int verbose, int *system, int *beams_bath_max, int *beams_
 	*beamwidth_xtrack = 0.0;
 	*beamwidth_ltrack = 0.0;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       system:             %d\n", *system);
 		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", *beams_bath_max);
@@ -879,42 +754,30 @@ int mbr_info_mgd77tab(int verbose, int *system, int *beams_bath_max, int *beams_
 		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_alm_mgd77tab(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_alm_mgd77tab";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_mgd77tab_struct *data;
-	char *data_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set initial status */
-	status = MB_SUCCESS;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* allocate memory for data structure */
 	mb_io_ptr->structure_size = sizeof(struct mbf_mgd77tab_struct);
 	mb_io_ptr->data_structure_size = 0;
-	status = mb_mallocd(verbose, __FILE__, __LINE__, mb_io_ptr->structure_size, &mb_io_ptr->raw_data, error);
-	status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_singlebeam_struct), &mb_io_ptr->store_data, error);
+	int status = mb_mallocd(verbose, __FILE__, __LINE__, mb_io_ptr->structure_size, &mb_io_ptr->raw_data, error);
+	status &= mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_singlebeam_struct), &mb_io_ptr->store_data, error);
 
 	/* get pointer to mbio descriptor */
 	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	data = (struct mbf_mgd77tab_struct *)mb_io_ptr->raw_data;
-	data_ptr = (char *)data;
+	struct mbf_mgd77tab_struct *data = (struct mbf_mgd77tab_struct *)mb_io_ptr->raw_data;
+	char *data_ptr = (char *)data;
 
 	/* set number of header records read to zero */
 	mb_io_ptr->save1 = 0;
@@ -922,67 +785,478 @@ int mbr_alm_mgd77tab(int verbose, void *mbio_ptr, int *error) {
 	/* initialize everything to zeros */
 	memset(data_ptr, 0, sizeof(struct mbf_mgd77tab_struct));
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_dem_mgd77tab(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_dem_mgd77tab";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* deallocate memory for data descriptor */
-	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->raw_data, error);
-	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->store_data, error);
+	int status = mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->raw_data, error);
+	status &= mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->store_data, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_mgd77tab_rd_data(int verbose, void *mbio_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+	}
+
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbf_mgd77tab_struct *data = (struct mbf_mgd77tab_struct *)mb_io_ptr->raw_data;
+
+	/* set file position */
+	mb_io_ptr->file_bytes = ftell(mb_io_ptr->mbfp);
+	mb_io_ptr->file_pos = mb_io_ptr->file_bytes;
+
+	int status = MB_SUCCESS;
+
+	/* read next record */
+	char line[MB_COMMENT_MAXLINE] = "";
+	const char *read_ptr = fgets(line, MB_PATH_MAXLINE, mb_io_ptr->mbfp);
+	if (read_ptr != NULL) {
+		mb_io_ptr->file_bytes += strlen(line);
+		status = MB_SUCCESS;
+		*error = MB_ERROR_NO_ERROR;
+	}
+	else {
+		status = MB_FAILURE;
+		*error = MB_ERROR_EOF;
+	}
+	mb_io_ptr->file_bytes = ftell(mb_io_ptr->mbfp);
+
+	/* parse the record */
+	if (status == MB_SUCCESS && strlen(line) > 0) {
+		/* count the number of tabs in the line */
+		const int line_len = strlen(line);
+		int ntabs = 0;
+		for (int i = 0; i < line_len; i++) {
+			if (line[i] == '\t')
+				ntabs++;
+		}
+
+		/* first check for comment */
+		if (line[0] == '#') {
+			data->kind = MB_DATA_COMMENT;
+			strncpy(data->comment, &line[1], line_len - 3);
+			data->comment[line_len - 3] = '\0';
+		}
+
+		/* else check for header lines */
+		else if (strncmp(line, "SURVEY_ID", 9) == 0 || ntabs > 26) {
+			data->kind = MB_DATA_HEADER;
+			strncpy(data->comment, line, line_len - 2);
+			data->comment[line_len - 2] = '\0';
+		}
+
+		/* else parse data record */
+		else if (ntabs > 0) {
+			data->kind = MB_DATA_DATA;
+
+			/* break line up into null-terminated fields
+			    - keep array of pointers to the start of each field */
+			char *fields[MBF_MGD77TAB_HEADER_FIELDS];
+			int nfields = 0;
+			fields[nfields] = &line[0];
+			nfields++;
+			for (int i = 0; i < line_len - 2; i++) {
+				if (line[i] == '\t') {
+					line[i] = '\0';
+					fields[nfields] = &line[i + 1];
+					nfields++;
+				}
+			}
+
+			/* now parse field 0 of the 26 expected fields */
+			data->last_field_defined = 0;
+			int ifield = 0;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_survey_id = false;
+				const int nscan = sscanf(fields[ifield], "%s", data->survey_id);
+				if (nscan == 1) {
+					data->defined_survey_id = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 1 of the 26 expected fields */
+			ifield = 1;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_timezone = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->timezone);
+				if (nscan == 1) {
+					data->defined_timezone = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 2 of the 26 expected fields */
+			ifield = 2;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_date = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->date);
+				if (nscan == 1) {
+					data->defined_date = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 3 of the 26 expected fields */
+			ifield = 3;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_time = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->time);
+				if (nscan == 1) {
+					data->defined_time = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 4 of the 26 expected fields */
+			ifield = 4;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_lat = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->lat);
+				if (nscan == 1) {
+					data->defined_lat = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 5 of the 26 expected fields */
+			ifield = 5;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_lon = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->lon);
+				if (nscan == 1) {
+					data->defined_lon = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 6 of the 26 expected fields */
+			ifield = 6;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_pos_type = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->pos_type);
+				if (nscan == 1) {
+					data->defined_pos_type = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 7 of the 26 expected fields */
+			ifield = 7;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_nav_qualco = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->nav_qualco);
+				if (nscan == 1) {
+					data->defined_nav_qualco = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 8 of the 26 expected fields */
+			ifield = 8;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_bat_ttime = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->bat_ttime);
+				if (nscan == 1) {
+					data->defined_bat_ttime = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 9 of the 26 expected fields */
+			ifield = 9;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_corr_depth = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->corr_depth);
+				if (nscan == 1) {
+					data->defined_corr_depth = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 10 of the 26 expected fields */
+			ifield = 10;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_bat_cpco = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->bat_cpco);
+				if (nscan == 1) {
+					data->defined_bat_cpco = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 11 of the 26 expected fields */
+			ifield = 11;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_bat_typco = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->bat_typco);
+				if (nscan == 1) {
+					data->defined_bat_typco = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 12 of the 26 expected fields */
+			ifield = 12;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_bat_qualco = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->bat_qualco);
+				if (nscan == 1) {
+					data->defined_bat_qualco = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 13 of the 26 expected fields */
+			ifield = 13;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_mag_tot = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->mag_tot);
+				if (nscan == 1) {
+					data->defined_mag_tot = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 14 of the 26 expected fields */
+			ifield = 14;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_mag_tot2 = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->mag_tot2);
+				if (nscan == 1) {
+					data->defined_mag_tot2 = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 15 of the 26 expected fields */
+			ifield = 15;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_mag_res = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->mag_res);
+				if (nscan == 1) {
+					data->defined_mag_res = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 16 of the 26 expected fields */
+			ifield = 16;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_mag_ressen = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->mag_ressen);
+				if (nscan == 1) {
+					data->defined_mag_ressen = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 17 of the 26 expected fields */
+			ifield = 17;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_mag_dicorr = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->mag_dicorr);
+				if (nscan == 1) {
+					data->defined_mag_dicorr = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 18 of the 26 expected fields */
+			ifield = 18;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_mag_sdepth = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->mag_sdepth);
+				if (nscan == 1) {
+					data->defined_mag_sdepth = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 19 of the 26 expected fields */
+			ifield = 19;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_mag_qualco = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->mag_qualco);
+				if (nscan == 1) {
+					data->defined_mag_qualco = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 20 of the 26 expected fields */
+			ifield = 20;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_gra_obs = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->gra_obs);
+				if (nscan == 1) {
+					data->defined_gra_obs = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 21 of the 26 expected fields */
+			ifield = 21;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_eotvos = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->eotvos);
+				if (nscan == 1) {
+					data->defined_eotvos = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 22 of the 26 expected fields */
+			ifield = 22;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_freeair = false;
+				const int nscan = sscanf(fields[ifield], "%f", &data->freeair);
+				if (nscan == 1) {
+					data->defined_freeair = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 23 of the 26 expected fields */
+			ifield = 23;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_gra_qualco = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->gra_qualco);
+				if (nscan == 1) {
+					data->defined_gra_qualco = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 24 of the 26 expected fields */
+			ifield = 24;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_lineid = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->lineid);
+				if (nscan == 1) {
+					data->defined_lineid = true;
+					data->last_field_defined = ifield;
+				}
+			}
+
+			/* now parse field 25 of the 26 expected fields */
+			ifield = 25;
+			if (nfields > ifield && strlen(fields[ifield]) > 0) {
+				data->defined_pointid = false;
+				const int nscan = sscanf(fields[ifield], "%d", &data->pointid);
+				if (nscan == 1) {
+					data->defined_pointid = true;
+					data->last_field_defined = ifield;
+				}
+			}
+		}
+	}
+
+	if (verbose >= 5) {
+		fprintf(stderr, "\ndbg5  Data read in function <%s>\n", __func__);
+		fprintf(stderr, "dbg5       data->kind:                 %d\n", data->kind);
+		fprintf(stderr, "dbg5       data->defined_survey_id:    %d\n", data->defined_survey_id);
+		fprintf(stderr, "dbg5       data->defined_timezone:     %d\n", data->defined_timezone);
+		fprintf(stderr, "dbg5       data->defined_date:         %d\n", data->defined_date);
+		fprintf(stderr, "dbg5       data->defined_time:         %d\n", data->defined_time);
+		fprintf(stderr, "dbg5       data->defined_lat:          %d\n", data->defined_lat);
+		fprintf(stderr, "dbg5       data->defined_lon:          %d\n", data->defined_lon);
+		fprintf(stderr, "dbg5       data->defined_pos_type:     %d\n", data->defined_pos_type);
+		fprintf(stderr, "dbg5       data->defined_nav_qualco:   %d\n", data->defined_nav_qualco);
+		fprintf(stderr, "dbg5       data->defined_bat_ttime:    %d\n", data->defined_bat_ttime);
+		fprintf(stderr, "dbg5       data->defined_corr_depth:   %d\n", data->defined_corr_depth);
+		fprintf(stderr, "dbg5       data->defined_bat_cpco:     %d\n", data->defined_bat_cpco);
+		fprintf(stderr, "dbg5       data->defined_bat_typco:    %d\n", data->defined_bat_typco);
+		fprintf(stderr, "dbg5       data->defined_bat_qualco:   %d\n", data->defined_bat_qualco);
+		fprintf(stderr, "dbg5       data->defined_mag_tot:      %d\n", data->defined_mag_tot);
+		fprintf(stderr, "dbg5       data->defined_mag_tot2:     %d\n", data->defined_mag_tot2);
+		fprintf(stderr, "dbg5       data->defined_mag_res:      %d\n", data->defined_mag_res);
+		fprintf(stderr, "dbg5       data->defined_mag_ressen:   %d\n", data->defined_mag_ressen);
+		fprintf(stderr, "dbg5       data->defined_mag_dicorr:   %d\n", data->defined_mag_dicorr);
+		fprintf(stderr, "dbg5       data->defined_mag_sdepth:   %d\n", data->defined_mag_sdepth);
+		fprintf(stderr, "dbg5       data->defined_mag_qualco:   %d\n", data->defined_mag_qualco);
+		fprintf(stderr, "dbg5       data->defined_gra_obs:      %d\n", data->defined_gra_obs);
+		fprintf(stderr, "dbg5       data->defined_eotvos:       %d\n", data->defined_eotvos);
+		fprintf(stderr, "dbg5       data->defined_freeair:      %d\n", data->defined_freeair);
+		fprintf(stderr, "dbg5       data->defined_gra_qualco:   %d\n", data->defined_gra_qualco);
+		fprintf(stderr, "dbg5       data->defined_lineid:       %d\n", data->defined_lineid);
+		fprintf(stderr, "dbg5       data->defined_pointid:      %d\n", data->defined_pointid);
+		fprintf(stderr, "dbg5       data->last_field_defined:   %d\n", data->last_field_defined);
+		fprintf(stderr, "dbg5       data->survey_id:            %s\n", data->survey_id);
+		fprintf(stderr, "dbg5       data->timezone:             %f\n", data->timezone);
+		fprintf(stderr, "dbg5       data->date:                 %d\n", data->date);
+		fprintf(stderr, "dbg5       data->time:                 %f\n", data->time);
+		fprintf(stderr, "dbg5       data->lat:                  %f\n", data->lat);
+		fprintf(stderr, "dbg5       data->lon:                  %f\n", data->lon);
+		fprintf(stderr, "dbg5       data->pos_type:             %d\n", data->pos_type);
+		fprintf(stderr, "dbg5       data->nav_qualco:           %d\n", data->nav_qualco);
+		fprintf(stderr, "dbg5       data->bat_ttime:            %f\n", data->bat_ttime);
+		fprintf(stderr, "dbg5       data->corr_depth:           %f\n", data->corr_depth);
+		fprintf(stderr, "dbg5       data->bat_cpco:             %d\n", data->bat_cpco);
+		fprintf(stderr, "dbg5       data->bat_typco:            %d\n", data->bat_typco);
+		fprintf(stderr, "dbg5       data->bat_qualco:           %d\n", data->bat_qualco);
+		fprintf(stderr, "dbg5       data->mag_tot:              %f\n", data->mag_tot);
+		fprintf(stderr, "dbg5       data->mag_tot2:             %f\n", data->mag_tot2);
+		fprintf(stderr, "dbg5       data->mag_res:              %f\n", data->mag_res);
+		fprintf(stderr, "dbg5       data->mag_ressen:           %d\n", data->mag_ressen);
+		fprintf(stderr, "dbg5       data->mag_dicorr:           %f\n", data->mag_dicorr);
+		fprintf(stderr, "dbg5       data->mag_sdepth:           %d\n", data->mag_sdepth);
+		fprintf(stderr, "dbg5       data->mag_qualco:           %d\n", data->mag_qualco);
+		fprintf(stderr, "dbg5       data->gra_obs:              %f\n", data->gra_obs);
+		fprintf(stderr, "dbg5       data->eotvos:               %f\n", data->eotvos);
+		fprintf(stderr, "dbg5       data->freeair:              %f\n", data->freeair);
+		fprintf(stderr, "dbg5       data->gra_qualco:           %d\n", data->gra_qualco);
+		fprintf(stderr, "dbg5       data->lineid:               %d\n", data->lineid);
+		fprintf(stderr, "dbg5       data->pointid:              %d\n", data->pointid);
+		fprintf(stderr, "dbg5       data->comment:              %s\n", data->comment);
+	}
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_rt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_rt_mgd77tab";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_mgd77tab_struct *data;
-	struct mbsys_singlebeam_struct *store;
-	double minutes;
-	double seconds;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -990,12 +1264,12 @@ int mbr_rt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointers to mbio descriptor and data structures */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	data = (struct mbf_mgd77tab_struct *)mb_io_ptr->raw_data;
-	store = (struct mbsys_singlebeam_struct *)store_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbf_mgd77tab_struct *data = (struct mbf_mgd77tab_struct *)mb_io_ptr->raw_data;
+	struct mbsys_singlebeam_struct *store = (struct mbsys_singlebeam_struct *)store_ptr;
 
 	/* read next data from file */
-	status = mbr_mgd77tab_rd_data(verbose, mbio_ptr, error);
+	const int status = mbr_mgd77tab_rd_data(verbose, mbio_ptr, error);
 
 	/* set error and kind in mb_io_ptr */
 	mb_io_ptr->new_error = *error;
@@ -1007,7 +1281,7 @@ int mbr_rt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		store->kind = data->kind;
 
 		/* survey id */
-		for (i = 0; i < 8; i++)
+		for (int i = 0; i < 8; i++)
 			store->survey_id[i] = data->survey_id[i];
 
 		/* get MB-System time values from the MGD77T date, time, and timezone values */
@@ -1015,9 +1289,9 @@ int mbr_rt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		store->time_i[1] = (int)((data->date - 10000 * store->time_i[0]) / 100);
 		store->time_i[2] = (int)(data->date - 10000 * store->time_i[0] - 100 * store->time_i[1]);
 		store->time_i[3] = (int)floor(data->time / 100.0);
-		minutes = data->time - 100.0 * store->time_i[3];
+		const double minutes = data->time - 100.0 * store->time_i[3];
 		store->time_i[4] = (int)floor(minutes);
-		seconds = (minutes - store->time_i[4]) * 60.0;
+		const double seconds = (minutes - store->time_i[4]) * 60.0;
 		store->time_i[5] = (int)floor(seconds);
 		store->time_i[6] = (int)((seconds - store->time_i[5]) * 1000000);
 		mb_get_time(verbose, store->time_i, &store->time_d);
@@ -1061,35 +1335,348 @@ int mbr_rt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		store->seismic_line = data->lineid;
 		store->seismic_shot = data->pointid;
 
-		for (i = 0; i < MB_COMMENT_MAXLINE; i++)
+		for (int i = 0; i < MB_COMMENT_MAXLINE; i++)
 			store->comment[i] = data->comment[i];
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_mgd77tab_wr_data(int verbose, void *mbio_ptr, void *data_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+		fprintf(stderr, "dbg2       data_ptr:   %p\n", (void *)data_ptr);
+	}
+
+	/* get pointer to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* get pointer to raw data structure */
+	struct mbf_mgd77tab_struct *data = (struct mbf_mgd77tab_struct *)data_ptr;
+
+	if (verbose >= 5) {
+		fprintf(stderr, "\ndbg5  Data to be written in function <%s>\n", __func__);
+		fprintf(stderr, "dbg5       data->kind:                 %d\n", data->kind);
+		fprintf(stderr, "dbg5       data->defined_survey_id:    %d\n", data->defined_survey_id);
+		fprintf(stderr, "dbg5       data->defined_timezone:     %d\n", data->defined_timezone);
+		fprintf(stderr, "dbg5       data->defined_date:         %d\n", data->defined_date);
+		fprintf(stderr, "dbg5       data->defined_time:         %d\n", data->defined_time);
+		fprintf(stderr, "dbg5       data->defined_lat:          %d\n", data->defined_lat);
+		fprintf(stderr, "dbg5       data->defined_lon:          %d\n", data->defined_lon);
+		fprintf(stderr, "dbg5       data->defined_pos_type:     %d\n", data->defined_pos_type);
+		fprintf(stderr, "dbg5       data->defined_nav_qualco:   %d\n", data->defined_nav_qualco);
+		fprintf(stderr, "dbg5       data->defined_bat_ttime:    %d\n", data->defined_bat_ttime);
+		fprintf(stderr, "dbg5       data->defined_corr_depth:   %d\n", data->defined_corr_depth);
+		fprintf(stderr, "dbg5       data->defined_bat_cpco:     %d\n", data->defined_bat_cpco);
+		fprintf(stderr, "dbg5       data->defined_bat_typco:    %d\n", data->defined_bat_typco);
+		fprintf(stderr, "dbg5       data->defined_bat_qualco:   %d\n", data->defined_bat_qualco);
+		fprintf(stderr, "dbg5       data->defined_mag_tot:      %d\n", data->defined_mag_tot);
+		fprintf(stderr, "dbg5       data->defined_mag_tot2:     %d\n", data->defined_mag_tot2);
+		fprintf(stderr, "dbg5       data->defined_mag_res:      %d\n", data->defined_mag_res);
+		fprintf(stderr, "dbg5       data->defined_mag_ressen:   %d\n", data->defined_mag_ressen);
+		fprintf(stderr, "dbg5       data->defined_mag_dicorr:   %d\n", data->defined_mag_dicorr);
+		fprintf(stderr, "dbg5       data->defined_mag_sdepth:   %d\n", data->defined_mag_sdepth);
+		fprintf(stderr, "dbg5       data->defined_mag_qualco:   %d\n", data->defined_mag_qualco);
+		fprintf(stderr, "dbg5       data->defined_gra_obs:      %d\n", data->defined_gra_obs);
+		fprintf(stderr, "dbg5       data->defined_eotvos:       %d\n", data->defined_eotvos);
+		fprintf(stderr, "dbg5       data->defined_freeair:      %d\n", data->defined_freeair);
+		fprintf(stderr, "dbg5       data->defined_gra_qualco:   %d\n", data->defined_gra_qualco);
+		fprintf(stderr, "dbg5       data->defined_lineid:       %d\n", data->defined_lineid);
+		fprintf(stderr, "dbg5       data->defined_pointid:      %d\n", data->defined_pointid);
+		fprintf(stderr, "dbg5       data->last_field_defined:   %d\n", data->last_field_defined);
+		fprintf(stderr, "dbg5       data->survey_id:            %s\n", data->survey_id);
+		fprintf(stderr, "dbg5       data->timezone:             %f\n", data->timezone);
+		fprintf(stderr, "dbg5       data->date:                 %d\n", data->date);
+		fprintf(stderr, "dbg5       data->time:                 %f\n", data->time);
+		fprintf(stderr, "dbg5       data->lat:                  %f\n", data->lat);
+		fprintf(stderr, "dbg5       data->lon:                  %f\n", data->lon);
+		fprintf(stderr, "dbg5       data->pos_type:             %d\n", data->pos_type);
+		fprintf(stderr, "dbg5       data->nav_qualco:           %d\n", data->nav_qualco);
+		fprintf(stderr, "dbg5       data->bat_ttime:            %f\n", data->bat_ttime);
+		fprintf(stderr, "dbg5       data->corr_depth:           %f\n", data->corr_depth);
+		fprintf(stderr, "dbg5       data->bat_cpco:             %d\n", data->bat_cpco);
+		fprintf(stderr, "dbg5       data->bat_typco:            %d\n", data->bat_typco);
+		fprintf(stderr, "dbg5       data->bat_qualco:           %d\n", data->bat_qualco);
+		fprintf(stderr, "dbg5       data->mag_tot:              %f\n", data->mag_tot);
+		fprintf(stderr, "dbg5       data->mag_tot2:             %f\n", data->mag_tot2);
+		fprintf(stderr, "dbg5       data->mag_res:              %f\n", data->mag_res);
+		fprintf(stderr, "dbg5       data->mag_ressen:           %d\n", data->mag_ressen);
+		fprintf(stderr, "dbg5       data->mag_dicorr:           %f\n", data->mag_dicorr);
+		fprintf(stderr, "dbg5       data->mag_sdepth:           %d\n", data->mag_sdepth);
+		fprintf(stderr, "dbg5       data->mag_qualco:           %d\n", data->mag_qualco);
+		fprintf(stderr, "dbg5       data->gra_obs:              %f\n", data->gra_obs);
+		fprintf(stderr, "dbg5       data->eotvos:               %f\n", data->eotvos);
+		fprintf(stderr, "dbg5       data->freeair:              %f\n", data->freeair);
+		fprintf(stderr, "dbg5       data->gra_qualco:           %d\n", data->gra_qualco);
+		fprintf(stderr, "dbg5       data->lineid:               %d\n", data->lineid);
+		fprintf(stderr, "dbg5       data->pointid:              %d\n", data->pointid);
+		fprintf(stderr, "dbg5       data->comment:              %s\n", data->comment);
+	}
+
+	char line[MB_COMMENT_MAXLINE] = "";
+
+	/* handle the data */
+	if (data->kind == MB_DATA_HEADER) {
+		sprintf(line, "%s\r\n", data->comment);
+	}
+	else if (data->kind == MB_DATA_COMMENT) {
+		sprintf(line, "#%s\r\n", data->comment);
+	}
+	else if (data->kind == MB_DATA_DATA) {
+		/* figure out which is the last valid field - no tabs to be
+		 * written past that field */
+
+		/* write out each field */
+		int shift = 0;
+		if (data->defined_survey_id == true) {
+			sprintf(&line[shift], "%s", data->survey_id);
+			shift = strlen(line);
+		}
+		if (data->defined_timezone == true) {
+			sprintf(&line[shift], "\t%f", data->timezone);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 1) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_date == true) {
+			sprintf(&line[shift], "\t%d", data->date);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 2) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_time == true) {
+			sprintf(&line[shift], "\t%f", data->time);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 3) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_lat == true) {
+			sprintf(&line[shift], "\t%f", data->lat);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 4) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_lon == true) {
+			sprintf(&line[shift], "\t%f", data->lon);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 5) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_pos_type == true) {
+			sprintf(&line[shift], "\t%d", data->pos_type);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 6) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_nav_qualco == true) {
+			sprintf(&line[shift], "\t%d", data->nav_qualco);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 7) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_bat_ttime == true) {
+			sprintf(&line[shift], "\t%f", data->bat_ttime);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 8) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_corr_depth == true) {
+			sprintf(&line[shift], "\t%f", data->corr_depth);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 9) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_bat_cpco == true) {
+			sprintf(&line[shift], "\t%d", data->bat_cpco);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 10) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_bat_typco == true) {
+			sprintf(&line[shift], "\t%d", data->bat_typco);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 11) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_bat_qualco == true) {
+			sprintf(&line[shift], "\t%d", data->bat_qualco);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 12) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_mag_tot == true) {
+			sprintf(&line[shift], "\t%f", data->mag_tot);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 13) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_mag_tot2 == true) {
+			sprintf(&line[shift], "\t%f", data->mag_tot2);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 14) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_mag_res == true) {
+			sprintf(&line[shift], "\t%f", data->mag_res);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 15) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_mag_ressen == true) {
+			sprintf(&line[shift], "\t%d", data->mag_ressen);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 16) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_mag_dicorr == true) {
+			sprintf(&line[shift], "\t%f", data->mag_dicorr);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 17) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_mag_sdepth == true) {
+			sprintf(&line[shift], "\t%d", data->mag_sdepth);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 18) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_mag_qualco == true) {
+			sprintf(&line[shift], "\t%d", data->mag_qualco);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 19) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_gra_obs == true) {
+			sprintf(&line[shift], "\t%f", data->gra_obs);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 20) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_eotvos == true) {
+			sprintf(&line[shift], "\t%f", data->eotvos);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 21) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_freeair == true) {
+			sprintf(&line[shift], "\t%f", data->freeair);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 22) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_gra_qualco == true) {
+			sprintf(&line[shift], "\t%d", data->gra_qualco);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 23) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_lineid == true) {
+			sprintf(&line[shift], "\t%d", data->lineid);
+			shift = strlen(line);
+		}
+		else if (data->last_field_defined > 24) {
+			sprintf(&line[shift], "\t");
+			shift = strlen(line);
+		}
+		if (data->defined_pointid == true) {
+			sprintf(&line[shift], "\t%d", data->pointid);
+			shift = strlen(line);
+		}
+		line[shift] = '\r';
+		shift++;
+		line[shift] = '\n';
+		shift++;
+		line[shift] = '\0';
+		/* shift++; */
+	}
+
+	const int write_status = fputs(line, mb_io_ptr->mbfp);
+	int status = MB_SUCCESS;
+	if (write_status > 0) {
+		*error = MB_ERROR_NO_ERROR;
+		status = MB_SUCCESS;
+	}
+	else {
+		*error = MB_ERROR_WRITE_FAIL;
+		status = MB_FAILURE;
+	}
+
+	if (verbose >= 5) {
+		fprintf(stderr, "\ndbg5  Data record kind in MBIO function <%s>\n", __func__);
+		fprintf(stderr, "dbg5       kind:       %d\n", data->kind);
+	}
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_wt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_wt_mgd77tab";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_mgd77tab_struct *data;
-	struct mbsys_singlebeam_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1097,11 +1684,11 @@ int mbr_wt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get pointer to raw data structure */
-	data = (struct mbf_mgd77tab_struct *)mb_io_ptr->raw_data;
-	store = (struct mbsys_singlebeam_struct *)store_ptr;
+	struct mbf_mgd77tab_struct *data = (struct mbf_mgd77tab_struct *)mb_io_ptr->raw_data;
+	struct mbsys_singlebeam_struct *store = (struct mbsys_singlebeam_struct *)store_ptr;
 
 	/* first translate values from data storage structure */
 	if (store != NULL) {
@@ -1109,7 +1696,7 @@ int mbr_wt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		data->kind = store->kind;
 
 		/* survey id */
-		for (i = 0; i < 8; i++)
+		for (int i = 0; i < 8; i++)
 			data->survey_id[i] = store->survey_id[i];
 
 		/* get MB-System time values from the MGD77T date, time, and timezone values */
@@ -1155,914 +1742,219 @@ int mbr_wt_mgd77tab(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		data->lineid = store->seismic_line;
 		data->pointid = store->seismic_shot;
 
-		for (i = 0; i < MB_COMMENT_MAXLINE; i++)
+		for (int i = 0; i < MB_COMMENT_MAXLINE; i++)
 			data->comment[i] = store->comment[i];
 
 		/* check for valid fields */
 		data->last_field_defined = 0;
 		if (strlen(data->survey_id) > 0) {
-			data->defined_survey_id = MB_YES;
+			data->defined_survey_id = true;
 			data->last_field_defined = 0;
 		}
 		if (data->timezone != 0.0) {
-			data->defined_timezone = MB_YES;
+			data->defined_timezone = true;
 			data->last_field_defined = 1;
 		}
 		if (data->date != 0) {
-			data->defined_date = MB_YES;
+			data->defined_date = true;
 			data->last_field_defined = 2;
 		}
 		if (data->time != 0.0) {
-			data->defined_time = MB_YES;
+			data->defined_time = true;
 			data->last_field_defined = 3;
 		}
 		if (data->lat != 0.0) {
-			data->defined_lat = MB_YES;
+			data->defined_lat = true;
 			data->last_field_defined = 4;
 		}
 		if (data->lon != 0.0) {
-			data->defined_lon = MB_YES;
+			data->defined_lon = true;
 			data->last_field_defined = 5;
 		}
 		if (data->pos_type != 0) {
-			data->defined_pos_type = MB_YES;
+			data->defined_pos_type = true;
 			data->last_field_defined = 6;
 		}
 		if (data->nav_qualco != 0) {
-			data->defined_nav_qualco = MB_YES;
+			data->defined_nav_qualco = true;
 			data->last_field_defined = 7;
 		}
 		if (data->bat_ttime != 0.0) {
-			data->defined_bat_ttime = MB_YES;
+			data->defined_bat_ttime = true;
 			data->last_field_defined = 8;
 		}
 		if (data->corr_depth != 0.0) {
-			data->defined_corr_depth = MB_YES;
+			data->defined_corr_depth = true;
 			data->last_field_defined = 9;
 		}
 		if (data->bat_cpco != 0) {
-			data->defined_bat_cpco = MB_YES;
+			data->defined_bat_cpco = true;
 			data->last_field_defined = 10;
 		}
 		if (data->bat_typco != 0) {
-			data->defined_bat_typco = MB_YES;
+			data->defined_bat_typco = true;
 			data->last_field_defined = 11;
 		}
 		if (data->bat_qualco != 0) {
-			data->defined_bat_qualco = MB_YES;
+			data->defined_bat_qualco = true;
 			data->last_field_defined = 12;
 		}
 		if (data->mag_tot != 0.0) {
-			data->defined_mag_tot = MB_YES;
+			data->defined_mag_tot = true;
 			data->last_field_defined = 13;
 		}
 		if (data->mag_tot2 != 0.0) {
-			data->defined_mag_tot2 = MB_YES;
+			data->defined_mag_tot2 = true;
 			data->last_field_defined = 14;
 		}
 		if (data->mag_res != 0.0) {
-			data->defined_mag_res = MB_YES;
+			data->defined_mag_res = true;
 			data->last_field_defined = 15;
 		}
 		if (data->mag_ressen != 0) {
-			data->defined_mag_ressen = MB_YES;
+			data->defined_mag_ressen = true;
 			data->last_field_defined = 16;
 		}
 		if (data->mag_dicorr != 0.0) {
-			data->defined_mag_dicorr = MB_YES;
+			data->defined_mag_dicorr = true;
 			data->last_field_defined = 17;
 		}
 		if (data->mag_sdepth != 0) {
-			data->defined_mag_sdepth = MB_YES;
+			data->defined_mag_sdepth = true;
 			data->last_field_defined = 18;
 		}
 		if (data->mag_qualco != 0) {
-			data->defined_mag_qualco = MB_YES;
+			data->defined_mag_qualco = true;
 			data->last_field_defined = 19;
 		}
 		if (data->gra_obs != 0.0) {
-			data->defined_gra_obs = MB_YES;
+			data->defined_gra_obs = true;
 			data->last_field_defined = 20;
 		}
 		if (data->eotvos != 0.0) {
-			data->defined_eotvos = MB_YES;
+			data->defined_eotvos = true;
 			data->last_field_defined = 21;
 		}
 		if (data->freeair != 0.0) {
-			data->defined_freeair = MB_YES;
+			data->defined_freeair = true;
 			data->last_field_defined = 22;
 		}
 		if (data->gra_qualco != 0) {
-			data->defined_gra_qualco = MB_YES;
+			data->defined_gra_qualco = true;
 			data->last_field_defined = 23;
 		}
 		if (data->lineid != 0) {
-			data->defined_lineid = MB_YES;
+			data->defined_lineid = true;
 			data->last_field_defined = 24;
 		}
 		if (data->pointid != 0) {
-			data->defined_pointid = MB_YES;
+			data->defined_pointid = true;
 			data->last_field_defined = 25;
 		}
 	}
 
 	/* write next data to file */
-	status = mbr_mgd77tab_wr_data(verbose, mbio_ptr, (void *)data, error);
+	const int status = mbr_mgd77tab_wr_data(verbose, mbio_ptr, (void *)data, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
-/*--------------------------------------------------------------------*/
-int mbr_mgd77tab_rd_data(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_mgd77tab_rd_data";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_mgd77tab_struct *data;
-	int *header_read;
-	char line[MB_COMMENT_MAXLINE] = "";
-	int line_len;
-	char *read_ptr;
-	int ntabs;
-	int nfields, ifield;
-	char *fields[MBF_MGD77TAB_HEADER_FIELDS];
-	int nscan;
-	int i;
 
-	/* print input debug statements */
+/*--------------------------------------------------------------------*/
+int mbr_register_mgd77tab(int verbose, void *mbio_ptr, int *error) {
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	/* get mb_io_ptr */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
-	/* get pointer to raw data structure */
-	data = (struct mbf_mgd77tab_struct *)mb_io_ptr->raw_data;
-	header_read = (int *)&mb_io_ptr->save1;
+	/* set format info parameters */
+	const int status = mbr_info_mgd77tab(
+	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
+	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
+	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
+	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
+	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
 
-	/* set file position */
-	mb_io_ptr->file_bytes = ftell(mb_io_ptr->mbfp);
-	mb_io_ptr->file_pos = mb_io_ptr->file_bytes;
+	/* set format and system specific function pointers */
+	mb_io_ptr->mb_io_format_alloc = &mbr_alm_mgd77tab;
+	mb_io_ptr->mb_io_format_free = &mbr_dem_mgd77tab;
+	mb_io_ptr->mb_io_store_alloc = &mbsys_singlebeam_alloc;
+	mb_io_ptr->mb_io_store_free = &mbsys_singlebeam_deall;
+	mb_io_ptr->mb_io_read_ping = &mbr_rt_mgd77tab;
+	mb_io_ptr->mb_io_write_ping = &mbr_wt_mgd77tab;
+	mb_io_ptr->mb_io_dimensions = &mbsys_singlebeam_dimensions;
+	mb_io_ptr->mb_io_extract = &mbsys_singlebeam_extract;
+	mb_io_ptr->mb_io_insert = &mbsys_singlebeam_insert;
+	mb_io_ptr->mb_io_extract_nav = &mbsys_singlebeam_extract_nav;
+	mb_io_ptr->mb_io_insert_nav = &mbsys_singlebeam_insert_nav;
+	mb_io_ptr->mb_io_extract_altitude = &mbsys_singlebeam_extract_altitude;
+	mb_io_ptr->mb_io_insert_altitude = NULL;
+	mb_io_ptr->mb_io_extract_svp = NULL;
+	mb_io_ptr->mb_io_insert_svp = NULL;
+	mb_io_ptr->mb_io_ttimes = &mbsys_singlebeam_ttimes;
+	mb_io_ptr->mb_io_detects = &mbsys_singlebeam_detects;
+	mb_io_ptr->mb_io_copyrecord = &mbsys_singlebeam_copy;
+	mb_io_ptr->mb_io_extract_rawss = NULL;
+	mb_io_ptr->mb_io_insert_rawss = NULL;
 
-	/* read next record */
-	if ((read_ptr = fgets(line, MB_PATH_MAXLINE, mb_io_ptr->mbfp)) != NULL) {
-		mb_io_ptr->file_bytes += strlen(line);
-		status = MB_SUCCESS;
-		*error = MB_ERROR_NO_ERROR;
-	}
-	else {
-		status = MB_FAILURE;
-		*error = MB_ERROR_EOF;
-	}
-	mb_io_ptr->file_bytes = ftell(mb_io_ptr->mbfp);
-
-	/* parse the record */
-	if (status == MB_SUCCESS && strlen(line) > 0) {
-		/* count the number of tabs in the line */
-		line_len = strlen(line);
-		ntabs = 0;
-		for (i = 0; i < line_len; i++) {
-			if (line[i] == '\t')
-				ntabs++;
-		}
-
-		/* first check for comment */
-		if (line[0] == '#') {
-			data->kind = MB_DATA_COMMENT;
-			strncpy(data->comment, &line[1], line_len - 3);
-			data->comment[line_len - 3] = '\0';
-		}
-
-		/* else check for header lines */
-		else if (strncmp(line, "SURVEY_ID", 9) == 0 || ntabs > 26) {
-			data->kind = MB_DATA_HEADER;
-			strncpy(data->comment, line, line_len - 2);
-			data->comment[line_len - 2] = '\0';
-		}
-
-		/* else parse data record */
-		else if (ntabs > 0) {
-			data->kind = MB_DATA_DATA;
-
-			/* break line up into null-terminated fields
-			    - keep array of pointers to the start of each field */
-			nfields = 0;
-			fields[nfields] = &line[0];
-			nfields++;
-			for (i = 0; i < line_len - 2; i++) {
-				if (line[i] == '\t') {
-					line[i] = '\0';
-					fields[nfields] = &line[i + 1];
-					nfields++;
-				}
-			}
-
-			/* now parse field 0 of the 26 expected fields */
-			data->last_field_defined = 0;
-			ifield = 0;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_survey_id = MB_NO;
-				nscan = sscanf(fields[ifield], "%s", data->survey_id);
-				if (nscan == 1) {
-					data->defined_survey_id = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 1 of the 26 expected fields */
-			ifield = 1;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_timezone = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->timezone);
-				if (nscan == 1) {
-					data->defined_timezone = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 2 of the 26 expected fields */
-			ifield = 2;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_date = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->date);
-				if (nscan == 1) {
-					data->defined_date = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 3 of the 26 expected fields */
-			ifield = 3;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_time = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->time);
-				if (nscan == 1) {
-					data->defined_time = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 4 of the 26 expected fields */
-			ifield = 4;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_lat = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->lat);
-				if (nscan == 1) {
-					data->defined_lat = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 5 of the 26 expected fields */
-			ifield = 5;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_lon = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->lon);
-				if (nscan == 1) {
-					data->defined_lon = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 6 of the 26 expected fields */
-			ifield = 6;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_pos_type = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->pos_type);
-				if (nscan == 1) {
-					data->defined_pos_type = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 7 of the 26 expected fields */
-			ifield = 7;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_nav_qualco = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->nav_qualco);
-				if (nscan == 1) {
-					data->defined_nav_qualco = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 8 of the 26 expected fields */
-			ifield = 8;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_bat_ttime = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->bat_ttime);
-				if (nscan == 1) {
-					data->defined_bat_ttime = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 9 of the 26 expected fields */
-			ifield = 9;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_corr_depth = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->corr_depth);
-				if (nscan == 1) {
-					data->defined_corr_depth = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 10 of the 26 expected fields */
-			ifield = 10;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_bat_cpco = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->bat_cpco);
-				if (nscan == 1) {
-					data->defined_bat_cpco = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 11 of the 26 expected fields */
-			ifield = 11;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_bat_typco = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->bat_typco);
-				if (nscan == 1) {
-					data->defined_bat_typco = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 12 of the 26 expected fields */
-			ifield = 12;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_bat_qualco = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->bat_qualco);
-				if (nscan == 1) {
-					data->defined_bat_qualco = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 13 of the 26 expected fields */
-			ifield = 13;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_mag_tot = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->mag_tot);
-				if (nscan == 1) {
-					data->defined_mag_tot = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 14 of the 26 expected fields */
-			ifield = 14;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_mag_tot2 = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->mag_tot2);
-				if (nscan == 1) {
-					data->defined_mag_tot2 = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 15 of the 26 expected fields */
-			ifield = 15;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_mag_res = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->mag_res);
-				if (nscan == 1) {
-					data->defined_mag_res = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 16 of the 26 expected fields */
-			ifield = 16;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_mag_ressen = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->mag_ressen);
-				if (nscan == 1) {
-					data->defined_mag_ressen = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 17 of the 26 expected fields */
-			ifield = 17;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_mag_dicorr = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->mag_dicorr);
-				if (nscan == 1) {
-					data->defined_mag_dicorr = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 18 of the 26 expected fields */
-			ifield = 18;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_mag_sdepth = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->mag_sdepth);
-				if (nscan == 1) {
-					data->defined_mag_sdepth = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 19 of the 26 expected fields */
-			ifield = 19;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_mag_qualco = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->mag_qualco);
-				if (nscan == 1) {
-					data->defined_mag_qualco = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 20 of the 26 expected fields */
-			ifield = 20;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_gra_obs = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->gra_obs);
-				if (nscan == 1) {
-					data->defined_gra_obs = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 21 of the 26 expected fields */
-			ifield = 21;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_eotvos = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->eotvos);
-				if (nscan == 1) {
-					data->defined_eotvos = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 22 of the 26 expected fields */
-			ifield = 22;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_freeair = MB_NO;
-				nscan = sscanf(fields[ifield], "%f", &data->freeair);
-				if (nscan == 1) {
-					data->defined_freeair = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 23 of the 26 expected fields */
-			ifield = 23;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_gra_qualco = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->gra_qualco);
-				if (nscan == 1) {
-					data->defined_gra_qualco = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 24 of the 26 expected fields */
-			ifield = 24;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_lineid = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->lineid);
-				if (nscan == 1) {
-					data->defined_lineid = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-
-			/* now parse field 25 of the 26 expected fields */
-			ifield = 25;
-			if (nfields > ifield && strlen(fields[ifield]) > 0) {
-				data->defined_pointid = MB_NO;
-				nscan = sscanf(fields[ifield], "%d", &data->pointid);
-				if (nscan == 1) {
-					data->defined_pointid = MB_YES;
-					data->last_field_defined = ifield;
-				}
-			}
-		}
-	}
-
-	/* print input debug statements */
-	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Data read in function <%s>\n", function_name);
-		fprintf(stderr, "dbg5       data->kind:                 %d\n", data->kind);
-		fprintf(stderr, "dbg5       data->defined_survey_id:    %d\n", data->defined_survey_id);
-		fprintf(stderr, "dbg5       data->defined_timezone:     %d\n", data->defined_timezone);
-		fprintf(stderr, "dbg5       data->defined_date:         %d\n", data->defined_date);
-		fprintf(stderr, "dbg5       data->defined_time:         %d\n", data->defined_time);
-		fprintf(stderr, "dbg5       data->defined_lat:          %d\n", data->defined_lat);
-		fprintf(stderr, "dbg5       data->defined_lon:          %d\n", data->defined_lon);
-		fprintf(stderr, "dbg5       data->defined_pos_type:     %d\n", data->defined_pos_type);
-		fprintf(stderr, "dbg5       data->defined_nav_qualco:   %d\n", data->defined_nav_qualco);
-		fprintf(stderr, "dbg5       data->defined_bat_ttime:    %d\n", data->defined_bat_ttime);
-		fprintf(stderr, "dbg5       data->defined_corr_depth:   %d\n", data->defined_corr_depth);
-		fprintf(stderr, "dbg5       data->defined_bat_cpco:     %d\n", data->defined_bat_cpco);
-		fprintf(stderr, "dbg5       data->defined_bat_typco:    %d\n", data->defined_bat_typco);
-		fprintf(stderr, "dbg5       data->defined_bat_qualco:   %d\n", data->defined_bat_qualco);
-		fprintf(stderr, "dbg5       data->defined_mag_tot:      %d\n", data->defined_mag_tot);
-		fprintf(stderr, "dbg5       data->defined_mag_tot2:     %d\n", data->defined_mag_tot2);
-		fprintf(stderr, "dbg5       data->defined_mag_res:      %d\n", data->defined_mag_res);
-		fprintf(stderr, "dbg5       data->defined_mag_ressen:   %d\n", data->defined_mag_ressen);
-		fprintf(stderr, "dbg5       data->defined_mag_dicorr:   %d\n", data->defined_mag_dicorr);
-		fprintf(stderr, "dbg5       data->defined_mag_sdepth:   %d\n", data->defined_mag_sdepth);
-		fprintf(stderr, "dbg5       data->defined_mag_qualco:   %d\n", data->defined_mag_qualco);
-		fprintf(stderr, "dbg5       data->defined_gra_obs:      %d\n", data->defined_gra_obs);
-		fprintf(stderr, "dbg5       data->defined_eotvos:       %d\n", data->defined_eotvos);
-		fprintf(stderr, "dbg5       data->defined_freeair:      %d\n", data->defined_freeair);
-		fprintf(stderr, "dbg5       data->defined_gra_qualco:   %d\n", data->defined_gra_qualco);
-		fprintf(stderr, "dbg5       data->defined_lineid:       %d\n", data->defined_lineid);
-		fprintf(stderr, "dbg5       data->defined_pointid:      %d\n", data->defined_pointid);
-		fprintf(stderr, "dbg5       data->last_field_defined:   %d\n", data->last_field_defined);
-		fprintf(stderr, "dbg5       data->survey_id:            %s\n", data->survey_id);
-		fprintf(stderr, "dbg5       data->timezone:             %f\n", data->timezone);
-		fprintf(stderr, "dbg5       data->date:                 %d\n", data->date);
-		fprintf(stderr, "dbg5       data->time:                 %f\n", data->time);
-		fprintf(stderr, "dbg5       data->lat:                  %f\n", data->lat);
-		fprintf(stderr, "dbg5       data->lon:                  %f\n", data->lon);
-		fprintf(stderr, "dbg5       data->pos_type:             %d\n", data->pos_type);
-		fprintf(stderr, "dbg5       data->nav_qualco:           %d\n", data->nav_qualco);
-		fprintf(stderr, "dbg5       data->bat_ttime:            %f\n", data->bat_ttime);
-		fprintf(stderr, "dbg5       data->corr_depth:           %f\n", data->corr_depth);
-		fprintf(stderr, "dbg5       data->bat_cpco:             %d\n", data->bat_cpco);
-		fprintf(stderr, "dbg5       data->bat_typco:            %d\n", data->bat_typco);
-		fprintf(stderr, "dbg5       data->bat_qualco:           %d\n", data->bat_qualco);
-		fprintf(stderr, "dbg5       data->mag_tot:              %f\n", data->mag_tot);
-		fprintf(stderr, "dbg5       data->mag_tot2:             %f\n", data->mag_tot2);
-		fprintf(stderr, "dbg5       data->mag_res:              %f\n", data->mag_res);
-		fprintf(stderr, "dbg5       data->mag_ressen:           %d\n", data->mag_ressen);
-		fprintf(stderr, "dbg5       data->mag_dicorr:           %f\n", data->mag_dicorr);
-		fprintf(stderr, "dbg5       data->mag_sdepth:           %d\n", data->mag_sdepth);
-		fprintf(stderr, "dbg5       data->mag_qualco:           %d\n", data->mag_qualco);
-		fprintf(stderr, "dbg5       data->gra_obs:              %f\n", data->gra_obs);
-		fprintf(stderr, "dbg5       data->eotvos:               %f\n", data->eotvos);
-		fprintf(stderr, "dbg5       data->freeair:              %f\n", data->freeair);
-		fprintf(stderr, "dbg5       data->gra_qualco:           %d\n", data->gra_qualco);
-		fprintf(stderr, "dbg5       data->lineid:               %d\n", data->lineid);
-		fprintf(stderr, "dbg5       data->pointid:              %d\n", data->pointid);
-		fprintf(stderr, "dbg5       data->comment:              %s\n", data->comment);
-	}
-
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
+		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
+		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
+		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
+		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
+		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
+		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
+		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
+		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
+		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
+		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
+		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
+		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
+		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
+		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
+		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
+		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
+		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
+		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
+		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
+		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
+		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
+		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
+		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
+		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
+		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
+		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
+		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
+		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
+		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
+		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
+		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
+		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
+		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
+		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
+		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
+		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
+		fprintf(stderr, "dbg2       error:              %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
+		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_mgd77tab_wr_data(int verbose, void *mbio_ptr, void *data_ptr, int *error) {
-	char *function_name = "mbr_mgd77tab_wr_data";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_mgd77tab_struct *data;
-	char line[MB_COMMENT_MAXLINE] = "";
-	int write_status;
-	int shift;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-		fprintf(stderr, "dbg2       data_ptr:   %p\n", (void *)data_ptr);
-	}
-
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get pointer to raw data structure */
-	data = (struct mbf_mgd77tab_struct *)data_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Data to be written in function <%s>\n", function_name);
-		fprintf(stderr, "dbg5       data->kind:                 %d\n", data->kind);
-		fprintf(stderr, "dbg5       data->defined_survey_id:    %d\n", data->defined_survey_id);
-		fprintf(stderr, "dbg5       data->defined_timezone:     %d\n", data->defined_timezone);
-		fprintf(stderr, "dbg5       data->defined_date:         %d\n", data->defined_date);
-		fprintf(stderr, "dbg5       data->defined_time:         %d\n", data->defined_time);
-		fprintf(stderr, "dbg5       data->defined_lat:          %d\n", data->defined_lat);
-		fprintf(stderr, "dbg5       data->defined_lon:          %d\n", data->defined_lon);
-		fprintf(stderr, "dbg5       data->defined_pos_type:     %d\n", data->defined_pos_type);
-		fprintf(stderr, "dbg5       data->defined_nav_qualco:   %d\n", data->defined_nav_qualco);
-		fprintf(stderr, "dbg5       data->defined_bat_ttime:    %d\n", data->defined_bat_ttime);
-		fprintf(stderr, "dbg5       data->defined_corr_depth:   %d\n", data->defined_corr_depth);
-		fprintf(stderr, "dbg5       data->defined_bat_cpco:     %d\n", data->defined_bat_cpco);
-		fprintf(stderr, "dbg5       data->defined_bat_typco:    %d\n", data->defined_bat_typco);
-		fprintf(stderr, "dbg5       data->defined_bat_qualco:   %d\n", data->defined_bat_qualco);
-		fprintf(stderr, "dbg5       data->defined_mag_tot:      %d\n", data->defined_mag_tot);
-		fprintf(stderr, "dbg5       data->defined_mag_tot2:     %d\n", data->defined_mag_tot2);
-		fprintf(stderr, "dbg5       data->defined_mag_res:      %d\n", data->defined_mag_res);
-		fprintf(stderr, "dbg5       data->defined_mag_ressen:   %d\n", data->defined_mag_ressen);
-		fprintf(stderr, "dbg5       data->defined_mag_dicorr:   %d\n", data->defined_mag_dicorr);
-		fprintf(stderr, "dbg5       data->defined_mag_sdepth:   %d\n", data->defined_mag_sdepth);
-		fprintf(stderr, "dbg5       data->defined_mag_qualco:   %d\n", data->defined_mag_qualco);
-		fprintf(stderr, "dbg5       data->defined_gra_obs:      %d\n", data->defined_gra_obs);
-		fprintf(stderr, "dbg5       data->defined_eotvos:       %d\n", data->defined_eotvos);
-		fprintf(stderr, "dbg5       data->defined_freeair:      %d\n", data->defined_freeair);
-		fprintf(stderr, "dbg5       data->defined_gra_qualco:   %d\n", data->defined_gra_qualco);
-		fprintf(stderr, "dbg5       data->defined_lineid:       %d\n", data->defined_lineid);
-		fprintf(stderr, "dbg5       data->defined_pointid:      %d\n", data->defined_pointid);
-		fprintf(stderr, "dbg5       data->last_field_defined:   %d\n", data->last_field_defined);
-		fprintf(stderr, "dbg5       data->survey_id:            %s\n", data->survey_id);
-		fprintf(stderr, "dbg5       data->timezone:             %f\n", data->timezone);
-		fprintf(stderr, "dbg5       data->date:                 %d\n", data->date);
-		fprintf(stderr, "dbg5       data->time:                 %f\n", data->time);
-		fprintf(stderr, "dbg5       data->lat:                  %f\n", data->lat);
-		fprintf(stderr, "dbg5       data->lon:                  %f\n", data->lon);
-		fprintf(stderr, "dbg5       data->pos_type:             %d\n", data->pos_type);
-		fprintf(stderr, "dbg5       data->nav_qualco:           %d\n", data->nav_qualco);
-		fprintf(stderr, "dbg5       data->bat_ttime:            %f\n", data->bat_ttime);
-		fprintf(stderr, "dbg5       data->corr_depth:           %f\n", data->corr_depth);
-		fprintf(stderr, "dbg5       data->bat_cpco:             %d\n", data->bat_cpco);
-		fprintf(stderr, "dbg5       data->bat_typco:            %d\n", data->bat_typco);
-		fprintf(stderr, "dbg5       data->bat_qualco:           %d\n", data->bat_qualco);
-		fprintf(stderr, "dbg5       data->mag_tot:              %f\n", data->mag_tot);
-		fprintf(stderr, "dbg5       data->mag_tot2:             %f\n", data->mag_tot2);
-		fprintf(stderr, "dbg5       data->mag_res:              %f\n", data->mag_res);
-		fprintf(stderr, "dbg5       data->mag_ressen:           %d\n", data->mag_ressen);
-		fprintf(stderr, "dbg5       data->mag_dicorr:           %f\n", data->mag_dicorr);
-		fprintf(stderr, "dbg5       data->mag_sdepth:           %d\n", data->mag_sdepth);
-		fprintf(stderr, "dbg5       data->mag_qualco:           %d\n", data->mag_qualco);
-		fprintf(stderr, "dbg5       data->gra_obs:              %f\n", data->gra_obs);
-		fprintf(stderr, "dbg5       data->eotvos:               %f\n", data->eotvos);
-		fprintf(stderr, "dbg5       data->freeair:              %f\n", data->freeair);
-		fprintf(stderr, "dbg5       data->gra_qualco:           %d\n", data->gra_qualco);
-		fprintf(stderr, "dbg5       data->lineid:               %d\n", data->lineid);
-		fprintf(stderr, "dbg5       data->pointid:              %d\n", data->pointid);
-		fprintf(stderr, "dbg5       data->comment:              %s\n", data->comment);
-	}
-
-	/* handle the data */
-	if (data->kind == MB_DATA_HEADER) {
-		sprintf(line, "%s\r\n", data->comment);
-	}
-	else if (data->kind == MB_DATA_COMMENT) {
-		sprintf(line, "#%s\r\n", data->comment);
-	}
-	else if (data->kind == MB_DATA_DATA) {
-		/* figure out which is the last valid field - no tabs to be
-		 * written past that field */
-
-		/* write out each field */
-		shift = 0;
-		if (data->defined_survey_id == MB_YES) {
-			sprintf(&line[shift], "%s", data->survey_id);
-			shift = strlen(line);
-		}
-		if (data->defined_timezone == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->timezone);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 1) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_date == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->date);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 2) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_time == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->time);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 3) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_lat == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->lat);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 4) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_lon == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->lon);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 5) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_pos_type == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->pos_type);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 6) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_nav_qualco == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->nav_qualco);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 7) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_bat_ttime == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->bat_ttime);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 8) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_corr_depth == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->corr_depth);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 9) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_bat_cpco == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->bat_cpco);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 10) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_bat_typco == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->bat_typco);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 11) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_bat_qualco == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->bat_qualco);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 12) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_mag_tot == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->mag_tot);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 13) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_mag_tot2 == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->mag_tot2);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 14) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_mag_res == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->mag_res);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 15) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_mag_ressen == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->mag_ressen);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 16) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_mag_dicorr == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->mag_dicorr);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 17) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_mag_sdepth == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->mag_sdepth);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 18) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_mag_qualco == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->mag_qualco);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 19) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_gra_obs == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->gra_obs);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 20) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_eotvos == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->eotvos);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 21) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_freeair == MB_YES) {
-			sprintf(&line[shift], "\t%f", data->freeair);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 22) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_gra_qualco == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->gra_qualco);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 23) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_lineid == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->lineid);
-			shift = strlen(line);
-		}
-		else if (data->last_field_defined > 24) {
-			sprintf(&line[shift], "\t");
-			shift = strlen(line);
-		}
-		if (data->defined_pointid == MB_YES) {
-			sprintf(&line[shift], "\t%d", data->pointid);
-			shift = strlen(line);
-		}
-		line[shift] = '\r';
-		shift++;
-		line[shift] = '\n';
-		shift++;
-		line[shift] = '\0';
-		shift++;
-	}
-
-	if ((write_status = fputs(line, mb_io_ptr->mbfp)) > 0) {
-		*error = MB_ERROR_NO_ERROR;
-		status = MB_SUCCESS;
-	}
-	else {
-		*error = MB_ERROR_WRITE_FAIL;
-		status = MB_FAILURE;
-	}
-
-	/* print output debug statements */
-	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Data record kind in MBIO function <%s>\n", function_name);
-		fprintf(stderr, "dbg5       kind:       %d\n", data->kind);
-	}
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/

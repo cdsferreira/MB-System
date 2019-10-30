@@ -349,7 +349,7 @@ sonars are supported: </P>
 <LI>MBIO Data Format ID:  56 </LI>
 
 <UL>
-<LI>Format name:          MBF_EM200RAW</LI>
+<LI>Format name:          MBF_EM300RAW</LI>
 
 <LI>Informal Description: Simrad current multibeam vendor format</LI>
 
@@ -474,6 +474,19 @@ sonars are supported: </P>
 </UL>
 
 <UL>
+<LI>MBIO Data Format ID:  72 </LI>
+
+<UL>
+<LI>Format name:          MBF_MBARIMB1</LI>
+
+<LI>Informal Description: MBARI TRN swath bathymetry</LI>
+
+<LI>Attributes:           Downsampled bathymetry from multibeam sonars, 
+                      bathymetry only, variable beams, binary, MBARI</LI>
+</UL>
+</UL>
+
+<UL>
 <LI>MBIO Data Format ID:  75 </LI>
 
 <UL>
@@ -558,6 +571,20 @@ sonars are supported: </P>
 
 <UL>
 <LI>Format name:          MBF_RESON7KR</LI>
+
+<LI>Informal Description: Reson 7K multibeam vendor format</LI>
+
+<LI>Attributes:           Reson 7K series multibeam sonars, 
+                      bathymetry, amplitude, three channels sidescan, and subbottom
+                      up to 254 beams, variable pixels, binary, Reson.</LI>
+</UL>
+</UL>
+
+<UL>
+<LI>MBIO Data Format ID:  89 </LI>
+
+<UL>
+<LI>Format name:          MBF_RESON7K3</LI>
 
 <LI>Informal Description: Reson 7K multibeam vendor format</LI>
 
@@ -681,10 +708,10 @@ sonars are supported: </P>
 <UL>
 <LI>Format name:          MBF_GSFGENMB</LI>
 
-<LI>Informal Description: SAIC Generic Sensor Format (GSF)</LI>
+<LI>Informal Description: Leidos Generic Sensor Format (GSF) version GSF-v03.09</LI>
 
 <LI>Attributes:           variable beams,  bathymetry and amplitude,
-                      binary, single files, SAIC. </LI>
+                      binary, single files, Leidos (formerly SAIC).</LI>
 </UL>
 </UL>
 
@@ -1104,12 +1131,13 @@ sonars are supported: </P>
 <LI>MBIO Data Format ID:  232 </LI>
 
 <UL>
-<LI>Format name:          MBSYS_3DDWISSL</LI>
+<LI>Format name:          MBF_3DWISSLR</LI>
 
-<LI>Informal Description: 3DatDepth prototype binary swath mapping LIDAR format</LI>
+<LI>Informal Description: 3D at Depth Wide Swath Subsea Lidar (WiSSL) raw format
+          </LI>
 
-<LI>Attributes:           3DatDepth LIDAR, variable pulses, bathymetry and amplitude, 
-                      binary, 3DatDepth.</LI>
+<LI>Attributes: 3D at Depth lidar, variable pulses, bathymetry and amplitude, 
+                      binary, 3D at Depth.</LI>
 </UL>
 </UL>
 
@@ -1117,12 +1145,13 @@ sonars are supported: </P>
 <LI>MBIO Data Format ID:  233 </LI>
 
 <UL>
-<LI>Format name:          MBF_3DDWISSL</LI>
+<LI>Format name:          MBF_3DWISSLP</LI>
 
-<LI>Informal Description: 3DatDepth prototype binary swath mapping LIDAR format</LI>
+<LI>Informal Description: 3D at Depth Wide Swath Subsea Lidar (WiSSL) processing format
+          </LI>
 
-<LI>Attributes:           3DatDepth LIDAR, variable pulses, bathymetry and amplitude, 
-                      binary, 3DatDepth.</LI>
+<LI>Attributes: 3D at Depth lidar, variable pulses, bathymetry and amplitude, 
+                      binary, MBARI.</LI>
 </UL>
 </UL>
 
@@ -1154,8 +1183,21 @@ sonars are supported: </P>
 </UL>
 </UL>
 
+<UL>
+<LI>MBIO Data Format ID:  261 </LI>
+
+<UL>
+<LI>Format name:          MBF_KEMKMALL</LI>
+
+<LI>Informal Description: Kongsberg multibeam echosounder system kmall datagram format</LI>
+
+<LI>Attributes:           Kongsberg fourth generation multibeam sonars (EM2040, EM712, 
+                      EM304, EM124), bathymetry, amplitude, backscatter, variable beams, 
+                      binary datagrams, Kongsberg.</LI>
+</UL>
+</UL>
+
 <CENTER><P><BR>
-Last Updated: $Id$ $Revision: $</P></CENTER>
 
 <P>
 <HR WIDTH="67%"></P>

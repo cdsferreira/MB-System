@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_hsldeoih.h	3/11/93
- *	$Id$
  *
- *    Copyright (c) 1993-2017 by
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -87,6 +86,11 @@
  *      The code checks for and fixes older data files on read,
  *      using the record size values to check for bad kind values.
  */
+
+#ifndef MBF_HSLDEOIH_H_
+#define MBF_HSLDEOIH_H_
+
+#include "mbsys_hsds.h"
 
 /* maximum number of depth-velocity pairs */
 #define MBF_HSLDEOIH_MAXVEL 30
@@ -447,3 +451,5 @@ struct mbf_hsldeoih_comment_struct {
 	/* comment */
 	char comment[MBF_HSLDEOIH_MAXLINE];
 };
+
+#endif  /* MBF_HSLDEOIH_H_ */

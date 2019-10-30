@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbrphsbias.c	9/29/2013
- *    $Id$
  *
- *    Copyright (c) 2013-2017 by
+ *    Copyright (c) 2013-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -20,37 +19,30 @@
  * variance of unflagged soundings in the input bathymetry data.
  *
  * Author:	D. W. Caress
- * Date:	September 29, 2013
- *		CCGS Sir Wilfrid Laurier
- *		136d00.6832'W 70d45.3653'W
- *		Beaufort Sea, Arctic Ocean
- *
- * $Log: mbrphsbias.c,v $
- *
  */
 
-/* standard include files */
+#include <getopt.h>
+#include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <math.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <unistd.h>
 
-/* mbio include files */
-#include "mb_status.h"
-#include "mb_format.h"
 #include "mb_define.h"
-#include "mb_io.h"
-#include "mb_swap.h"
-#include "mb_process.h"
+#include "mb_format.h"
 #include "mb_info.h"
+#include "mb_io.h"
+#include "mb_process.h"
+#include "mb_status.h"
+#include "mb_swap.h"
 
 /* allocation */
-#define FILEALLOCNUM 16
-#define PINGALLOCNUM 128
-#define SNDGALLOCNUM 128
+const int FILEALLOCNUM = 16;
+const int PINGALLOCNUM = 128;
+const int SNDGALLOCNUM = 128;
 
 /* mbrphsbias structures */
 struct mbrphsbias_ping_struct {
@@ -96,39 +88,30 @@ struct mbrphsbias_file_struct {
 	struct mbrphsbias_ping_struct *pings;
 };
 
-static char rcs_id[] = "$Id$";
+static const char program_name[] = "MBrphsbias";
+static const char help_message[] =
+    "MBrphsbias analyzes sonar soundings to solve for bias parameters associated with the attitude sensors "
+    "and first order speed of sound.\n";
+static const char usage_message[] =
+    "mbrphsbias [-Fformat -Iinfile -Rwest/east/south/north -Sbinsize	\n\t-B]";
 
 /*--------------------------------------------------------------------*/
 
 int main(int argc, char **argv) {
-	char program_name[] = "MBrphsbias";
-	char help_message[] = "MBrphsbias analyzes sonar soundings to solve for bias parameters associated with the attitude sensors "
-	                      "and first order speed of sound.\n";
-	char usage_message[] = "mbrphsbias [-Fformat -Iinfile -Rwest/east/south/north -Sbinsize	\n\t-B]";
-	extern char *optarg;
-	int errflg = 0;
-	int c;
-	int help = 0;
-	int flag = 0;
-
-	/* MBIO status variables */
 	int status;
 	int verbose = 0;
 	int error = MB_ERROR_NO_ERROR;
-	char *message = NULL;
 
 	/* MBIO read control parameters */
 	void *mbio_ptr = NULL;
 	void *store_ptr = NULL;
 	int kind;
-	int read_datalist = MB_NO;
 	char read_file[MB_PATH_MAXLINE];
 	char swathfile[MB_PATH_MAXLINE];
 	char swathfileread[MB_PATH_MAXLINE];
 	char dfile[MB_PATH_MAXLINE];
 	void *datalist;
 	int look_processed = MB_DATALIST_LOOK_UNSET;
-	int read_data;
 	double file_weight;
 	int format;
 	int formatread;
@@ -181,13 +164,11 @@ int main(int argc, char **argv) {
 
 	/* control parameters */
 	double areabounds[4];
-	int areaboundsset = MB_NO;
+	bool areaboundsset = false;
 	double binsize = 0.0;
-	int binsizeset = MB_NO;
+	bool binsizeset = false;
 	double mtodeglon;
 	double mtodeglat;
-	double dx, dy;
-	int nx, ny;
 
 	/* sounding atorage values and arrays */
 	int nfile = 0;
@@ -207,9 +188,7 @@ int main(int argc, char **argv) {
 	struct mbrphsbias_ping_struct *ping;
 	struct mbrphsbias_file_struct *file;
 
-	int done;
 	int nbeams;
-	int i, j;
 
 	/* get current default values */
 	status = mb_defaults(verbose, &format, &pings, &lonflip, bounds, btime_i, etime_i, &speedmin, &timegap);
@@ -240,106 +219,100 @@ int main(int argc, char **argv) {
 	timegap = 1000000000.0;
 
 	/* process argument list */
-	while ((c = getopt(argc, argv, "VvHhF:f:I:i:R:r:S:s:")) != -1)
-		switch (c) {
-		case 'H':
-		case 'h':
-			help++;
-			break;
-		case 'V':
-		case 'v':
-			verbose++;
-			break;
-		case 'F':
-		case 'f':
-			sscanf(optarg, "%d", &format);
-			flag++;
-			break;
-		case 'I':
-		case 'i':
-			sscanf(optarg, "%s", read_file);
-			flag++;
-			break;
-		case 'R':
-		case 'r':
-			mb_get_bounds(optarg, areabounds);
-			areaboundsset = MB_YES;
-			flag++;
-			break;
-		case 'S':
-		case 's':
-			sscanf(optarg, "%lf", &binsize);
-			binsizeset = MB_YES;
-			flag++;
-			break;
-		case '?':
-			errflg++;
+	{
+		bool errflg = false;
+		int c;
+		bool help = false;
+		while ((c = getopt(argc, argv, "VvHhF:f:I:i:R:r:S:s:")) != -1)
+			switch (c) {
+			case 'H':
+			case 'h':
+				help = true;
+				break;
+			case 'V':
+			case 'v':
+				verbose++;
+				break;
+			case 'F':
+			case 'f':
+				sscanf(optarg, "%d", &format);
+				break;
+			case 'I':
+			case 'i':
+				sscanf(optarg, "%s", read_file);
+				break;
+			case 'R':
+			case 'r':
+				mb_get_bounds(optarg, areabounds);
+				areaboundsset = true;
+				break;
+			case 'S':
+			case 's':
+				sscanf(optarg, "%lf", &binsize);
+				binsizeset = true;
+				break;
+			case '?':
+				errflg = true;
+			}
+
+		if (errflg) {
+			fprintf(stderr, "usage: %s\n", usage_message);
+			fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
+			exit(MB_ERROR_BAD_USAGE);
+		}
+		if (verbose == 1 || help) {
+			fprintf(stderr, "\nProgram %s\n", program_name);
+			fprintf(stderr, "MB-system Version %s\n", MB_VERSION);
 		}
 
-	/* if error flagged then print it and exit */
-	if (errflg) {
-		fprintf(stderr, "usage: %s\n", usage_message);
-		fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
-		error = MB_ERROR_BAD_USAGE;
-		exit(error);
-	}
-	/* print starting message */
-	if (verbose == 1 || help) {
-		fprintf(stderr, "\nProgram %s\n", program_name);
-		fprintf(stderr, "Version %s\n", rcs_id);
-		fprintf(stderr, "MB-system Version %s\n", MB_VERSION);
-	}
+		if (verbose >= 2) {
+			fprintf(stderr, "\ndbg2  Program <%s>\n", program_name);
+			fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
+			fprintf(stderr, "dbg2  Control Parameters:\n");
+			fprintf(stderr, "dbg2       verbose:        %d\n", verbose);
+			fprintf(stderr, "dbg2       help:           %d\n", help);
+			fprintf(stderr, "dbg2       pings:          %d\n", pings);
+			fprintf(stderr, "dbg2       lonflip:        %d\n", lonflip);
+			fprintf(stderr, "dbg2       bounds[0]:      %f\n", bounds[0]);
+			fprintf(stderr, "dbg2       bounds[1]:      %f\n", bounds[1]);
+			fprintf(stderr, "dbg2       bounds[2]:      %f\n", bounds[2]);
+			fprintf(stderr, "dbg2       bounds[3]:      %f\n", bounds[3]);
+			fprintf(stderr, "dbg2       btime_i[0]:     %d\n", btime_i[0]);
+			fprintf(stderr, "dbg2       btime_i[1]:     %d\n", btime_i[1]);
+			fprintf(stderr, "dbg2       btime_i[2]:     %d\n", btime_i[2]);
+			fprintf(stderr, "dbg2       btime_i[3]:     %d\n", btime_i[3]);
+			fprintf(stderr, "dbg2       btime_i[4]:     %d\n", btime_i[4]);
+			fprintf(stderr, "dbg2       btime_i[5]:     %d\n", btime_i[5]);
+			fprintf(stderr, "dbg2       btime_i[6]:     %d\n", btime_i[6]);
+			fprintf(stderr, "dbg2       etime_i[0]:     %d\n", etime_i[0]);
+			fprintf(stderr, "dbg2       etime_i[1]:     %d\n", etime_i[1]);
+			fprintf(stderr, "dbg2       etime_i[2]:     %d\n", etime_i[2]);
+			fprintf(stderr, "dbg2       etime_i[3]:     %d\n", etime_i[3]);
+			fprintf(stderr, "dbg2       etime_i[4]:     %d\n", etime_i[4]);
+			fprintf(stderr, "dbg2       etime_i[5]:     %d\n", etime_i[5]);
+			fprintf(stderr, "dbg2       etime_i[6]:     %d\n", etime_i[6]);
+			fprintf(stderr, "dbg2       speedmin:       %f\n", speedmin);
+			fprintf(stderr, "dbg2       timegap:        %f\n", timegap);
+			fprintf(stderr, "dbg2       data format:    %d\n", format);
+			fprintf(stderr, "dbg2       input file:     %s\n", read_file);
+			fprintf(stderr, "dbg2       areaboundsset:  %d\n", areaboundsset);
+			fprintf(stderr, "dbg2       areabounds[0]:  %f\n", areabounds[0]);
+			fprintf(stderr, "dbg2       areabounds[1]:  %f\n", areabounds[1]);
+			fprintf(stderr, "dbg2       areabounds[2]:  %f\n", areabounds[2]);
+			fprintf(stderr, "dbg2       areabounds[3]:  %f\n", areabounds[3]);
+			fprintf(stderr, "dbg2       binsizeset:     %d\n", binsizeset);
+			fprintf(stderr, "dbg2       binsize:        %f\n", binsize);
+		}
 
-	/* print starting debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Program <%s>\n", program_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
-		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
-		fprintf(stderr, "dbg2  Control Parameters:\n");
-		fprintf(stderr, "dbg2       verbose:        %d\n", verbose);
-		fprintf(stderr, "dbg2       help:           %d\n", help);
-		fprintf(stderr, "dbg2       pings:          %d\n", pings);
-		fprintf(stderr, "dbg2       lonflip:        %d\n", lonflip);
-		fprintf(stderr, "dbg2       bounds[0]:      %f\n", bounds[0]);
-		fprintf(stderr, "dbg2       bounds[1]:      %f\n", bounds[1]);
-		fprintf(stderr, "dbg2       bounds[2]:      %f\n", bounds[2]);
-		fprintf(stderr, "dbg2       bounds[3]:      %f\n", bounds[3]);
-		fprintf(stderr, "dbg2       btime_i[0]:     %d\n", btime_i[0]);
-		fprintf(stderr, "dbg2       btime_i[1]:     %d\n", btime_i[1]);
-		fprintf(stderr, "dbg2       btime_i[2]:     %d\n", btime_i[2]);
-		fprintf(stderr, "dbg2       btime_i[3]:     %d\n", btime_i[3]);
-		fprintf(stderr, "dbg2       btime_i[4]:     %d\n", btime_i[4]);
-		fprintf(stderr, "dbg2       btime_i[5]:     %d\n", btime_i[5]);
-		fprintf(stderr, "dbg2       btime_i[6]:     %d\n", btime_i[6]);
-		fprintf(stderr, "dbg2       etime_i[0]:     %d\n", etime_i[0]);
-		fprintf(stderr, "dbg2       etime_i[1]:     %d\n", etime_i[1]);
-		fprintf(stderr, "dbg2       etime_i[2]:     %d\n", etime_i[2]);
-		fprintf(stderr, "dbg2       etime_i[3]:     %d\n", etime_i[3]);
-		fprintf(stderr, "dbg2       etime_i[4]:     %d\n", etime_i[4]);
-		fprintf(stderr, "dbg2       etime_i[5]:     %d\n", etime_i[5]);
-		fprintf(stderr, "dbg2       etime_i[6]:     %d\n", etime_i[6]);
-		fprintf(stderr, "dbg2       speedmin:       %f\n", speedmin);
-		fprintf(stderr, "dbg2       timegap:        %f\n", timegap);
-		fprintf(stderr, "dbg2       data format:    %d\n", format);
-		fprintf(stderr, "dbg2       input file:     %s\n", read_file);
-		fprintf(stderr, "dbg2       areaboundsset:  %d\n", areaboundsset);
-		fprintf(stderr, "dbg2       areabounds[0]:  %f\n", areabounds[0]);
-		fprintf(stderr, "dbg2       areabounds[1]:  %f\n", areabounds[1]);
-		fprintf(stderr, "dbg2       areabounds[2]:  %f\n", areabounds[2]);
-		fprintf(stderr, "dbg2       areabounds[3]:  %f\n", areabounds[3]);
-		fprintf(stderr, "dbg2       binsizeset:     %d\n", binsizeset);
-		fprintf(stderr, "dbg2       binsize:        %f\n", binsize);
-	}
-
-	/* if help desired then print it and exit */
-	if (help) {
-		fprintf(stderr, "\n%s\n", help_message);
-		fprintf(stderr, "\nusage: %s\n", usage_message);
-		exit(error);
+		if (help) {
+			fprintf(stderr, "\n%s\n", help_message);
+			fprintf(stderr, "\nusage: %s\n", usage_message);
+			exit(error);
+		}
 	}
 
 	/* if bounds not set get bounds of input data */
-	if (areaboundsset == MB_NO) {
+	if (!areaboundsset) {
 		formatread = format;
 		status = mb_get_info_datalist(verbose, read_file, &formatread, &mb_info, lonflip, &error);
 
@@ -348,7 +321,7 @@ int main(int argc, char **argv) {
 		areabounds[2] = mb_info.lat_min;
 		areabounds[3] = mb_info.lat_max;
 
-		if (binsizeset == MB_NO)
+		if (!binsizeset)
 			binsize = 0.2 * mb_info.altitude_max;
 	}
 
@@ -356,10 +329,10 @@ int main(int argc, char **argv) {
 	mb_coor_scale(verbose, 0.5 * (areabounds[2] + areabounds[3]), &mtodeglon, &mtodeglat);
 	if (binsize <= 0.0)
 		binsize = (areabounds[1] - areabounds[0]) / 101 / mtodeglon;
-	dx = binsize * mtodeglon;
-	dy = binsize * mtodeglat;
-	nx = 1 + (int)((areabounds[1] - areabounds[0]) / dx);
-	ny = 1 + (int)((areabounds[3] - areabounds[2]) / dy);
+	double dx = binsize * mtodeglon;
+	double dy = binsize * mtodeglat;
+	const int nx = 1 + (int)((areabounds[1] - areabounds[0]) / dx);
+	const int ny = 1 + (int)((areabounds[3] - areabounds[2]) / dy);
 	if (nx > 1 && ny > 1) {
 		dx = (areabounds[1] - areabounds[0]) / (nx - 1);
 		dy = (areabounds[3] - areabounds[2]) / (ny - 1);
@@ -372,6 +345,7 @@ int main(int argc, char **argv) {
 
 	/* if error initializing memory then quit */
 	if (error != MB_ERROR_NO_ERROR) {
+		char *message = NULL;
 		mb_error(verbose, error, &message);
 		fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 		fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -395,7 +369,7 @@ int main(int argc, char **argv) {
 	}
 
 	/* if error initializing memory then quit */
-	for (i = 0; i < nx * ny; i++) {
+	for (int i = 0; i < nx * ny; i++) {
 		gsndgnum[i] = 0;
 		gsndgsqsum[i] = 0.0;
 	}
@@ -405,32 +379,32 @@ int main(int argc, char **argv) {
 		mb_get_format(verbose, read_file, NULL, &format, &error);
 
 	/* determine whether to read one file or a list of files */
-	if (format < 0)
-		read_datalist = MB_YES;
+	const bool read_datalist = format < 0;
+	bool read_data;
 
 	/* open file list */
-	if (read_datalist == MB_YES) {
+	if (read_datalist) {
 		if ((status = mb_datalist_open(verbose, &datalist, read_file, look_processed, &error)) != MB_SUCCESS) {
-			error = MB_ERROR_OPEN_FAIL;
 			fprintf(stderr, "\nUnable to open data list file: %s\n", read_file);
 			fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
-			exit(error);
+			exit(MB_ERROR_OPEN_FAIL);
 		}
 		if ((status = mb_datalist_read(verbose, datalist, swathfile, dfile, &format, &file_weight, &error)) == MB_SUCCESS)
-			read_data = MB_YES;
+			read_data = true;
 		else
-			read_data = MB_NO;
+			read_data = false;
 	}
 	/* else copy single filename to be read */
 	else {
 		strcpy(swathfile, read_file);
-		read_data = MB_YES;
+		read_data = true;
 	}
 
 	/* loop over all files to be read */
-	while (read_data == MB_YES) {
+	while (read_data) {
 		/* check format and get format flags */
 		if ((status = mb_format_flags(verbose, &format, &variable_beams, &traveltime, &beam_flagging, &error)) != MB_SUCCESS) {
+			char *message = NULL;
 			mb_error(verbose, error, &message);
 			fprintf(stderr, "\nMBIO Error returned from function <mb_format_flags> regarding input format %d:\n%s\n", format,
 			        message);
@@ -447,6 +421,7 @@ int main(int argc, char **argv) {
 		if ((status = mb_read_init(verbose, swathfileread, formatread, pings, lonflip, bounds, btime_i, etime_i, speedmin,
 		                           timegap, &mbio_ptr, &btime_d, &etime_d, &beams_bath, &beams_amp, &pixels_ss, &error)) !=
 		    MB_SUCCESS) {
+			char *message = NULL;
 			mb_error(verbose, error, &message);
 			fprintf(stderr, "\nMBIO Error returned from function <mb_read_init>:\n%s\n", message);
 			fprintf(stderr, "\nMultibeam File <%s> not initialized for reading\n", swathfileread);
@@ -509,6 +484,7 @@ int main(int argc, char **argv) {
 
 		/* if error initializing memory then quit */
 		if (error != MB_ERROR_NO_ERROR) {
+			char *message = NULL;
 			mb_error(verbose, error, &message);
 			fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 			fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -523,6 +499,7 @@ int main(int argc, char **argv) {
 
 			/* if error initializing memory then quit */
 			if (error != MB_ERROR_NO_ERROR) {
+				char *message = NULL;
 				mb_error(verbose, error, &message);
 				fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 				fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -545,6 +522,7 @@ int main(int argc, char **argv) {
 		status = mb_mallocd(verbose, __FILE__, __LINE__, file->num_pings_alloc * sizeof(struct mbrphsbias_ping_struct),
 		                    (void **)&(file->pings), &error);
 		if (error != MB_ERROR_NO_ERROR) {
+			char *message = NULL;
 			mb_error(verbose, error, &message);
 			fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 			fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -552,8 +530,8 @@ int main(int argc, char **argv) {
 		}
 
 		/* read the pings into memory */
-		done = MB_NO;
-		while (done == MB_NO) {
+		bool done = false;
+		while (!done) {
 			if (verbose > 1)
 				fprintf(stderr, "\n");
 
@@ -563,7 +541,7 @@ int main(int argc, char **argv) {
 			                    &distance, &altitude, &sonardepth, &beams_bath, &beams_amp, &pixels_ss, beamflag, bath, amp,
 			                    bathacrosstrack, bathalongtrack, ss, ssacrosstrack, ssalongtrack, comment, &error);
 			if (status == MB_FAILURE && error > MB_ERROR_NO_ERROR)
-				done = MB_YES;
+				done = true;
 			if (verbose >= 2) {
 				fprintf(stderr, "\ndbg2  current data status:\n");
 				fprintf(stderr, "dbg2    kind:       %d\n", kind);
@@ -582,6 +560,7 @@ int main(int argc, char **argv) {
 					    mb_reallocd(verbose, __FILE__, __LINE__, file->num_pings_alloc * sizeof(struct mbrphsbias_ping_struct),
 					                (void **)&(file->pings), &error);
 					if (error != MB_ERROR_NO_ERROR) {
+						char *message = NULL;
 						mb_error(verbose, error, &message);
 						fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 						fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -617,6 +596,7 @@ int main(int argc, char **argv) {
 					status = mb_mallocd(verbose, __FILE__, __LINE__, beams_bath * sizeof(double),
 					                    (void **)&(ping->alongtrack_offset), &error);
 				if (error != MB_ERROR_NO_ERROR) {
+					char *message = NULL;
 					mb_error(verbose, error, &message);
 					fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 					fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -626,7 +606,7 @@ int main(int argc, char **argv) {
 				/* update counters */
 				pings_tot++;
 				file->num_pings++;
-				for (i = 0; i < beams_bath; i++) {
+				for (int i = 0; i < beams_bath; i++) {
 					beams_tot++;
 					file->num_beams_tot++;
 					if (mb_beam_ok(beamflag[i])) {
@@ -644,7 +624,7 @@ int main(int argc, char **argv) {
 				}
 
 				/* store the ping data */
-				for (i = 0; i < 7; i++)
+				for (int i = 0; i < 7; i++)
 					ping->time_i[i] = time_i[i];
 				ping->time_d = time_d;
 				if (file->num_pings > 0 && fabs(ping->time_d - file->pings[file->num_pings - 1].time_d) < MB_ESF_MAXTIMEDIFF) {
@@ -666,7 +646,7 @@ int main(int argc, char **argv) {
 				ping->heave = heave;
 				ping->ssv = ssv;
 				ping->beams_bath = beams_bath;
-				for (i = 0; i < ping->beams_bath; i++) {
+				for (int i = 0; i < ping->beams_bath; i++) {
 					ping->beamflag[i] = beamflag[i];
 					ping->bath[i] = bath[i];
 					ping->bathacrosstrack[i] = bathacrosstrack[i];
@@ -685,14 +665,14 @@ int main(int argc, char **argv) {
 		status = mb_close(verbose, &mbio_ptr, &error);
 
 		/* figure out whether and what to read next */
-		if (read_datalist == MB_YES) {
+		if (read_datalist) {
 			if ((status = mb_datalist_read(verbose, datalist, swathfile, dfile, &format, &file_weight, &error)) == MB_SUCCESS)
-				read_data = MB_YES;
+				read_data = true;
 			else
-				read_data = MB_NO;
+				read_data = false;
 		}
 		else {
-			read_data = MB_NO;
+			read_data = false;
 		}
 	}
 
@@ -704,7 +684,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "%d total pings processed\n", pings_tot);
 		fprintf(stderr, "%d total soundings processed\n", beams_tot);
 		fprintf(stderr, "-------------------------\n");
-		for (i = 0; i < nfile; i++) {
+		for (int i = 0; i < nfile; i++) {
 		}
 	}
 
@@ -712,9 +692,9 @@ int main(int argc, char **argv) {
 	mb_freed(verbose, __FILE__, __LINE__, (void **)&gsndgnum, &error);
 	mb_freed(verbose, __FILE__, __LINE__, (void **)&gsndgsqsum, &error);
 
-	for (i = 0; i < nfile; i++) {
+	for (int i = 0; i < nfile; i++) {
 		file = &(files[nfile]);
-		for (j = 0; j < file->num_pings; j++) {
+		for (int j = 0; j < file->num_pings; j++) {
 			ping = &(file->pings[j]);
 			mb_freed(verbose, __FILE__, __LINE__, (void **)&(ping->beamflag), &error);
 			mb_freed(verbose, __FILE__, __LINE__, (void **)&(ping->bath), &error);
@@ -738,14 +718,12 @@ int main(int argc, char **argv) {
 	if (verbose >= 4)
 		status = mb_memory_list(verbose, &error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
 		fprintf(stderr, "\ndbg2  Program <%s> completed\n", program_name);
 		fprintf(stderr, "dbg2  Ending status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* end it all */
 	exit(error);
 }
 /*--------------------------------------------------------------------*/

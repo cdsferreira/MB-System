@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
- *    The MB-system:	mb_grdio.c	12/10/2007
- *    $Id$
+ *    The MB-system:	mb_readwritegrd.c	12/10/2007
  *
- *    Copyright (c) 2007-2017 by
+ *    Copyright (c) 2007-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -21,62 +20,40 @@
  *
  */
 
-/* standard include files */
-#include <stdio.h>
-#include <unistd.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 
-/* GMT include files */
-#include "gmt.h"
-
-/* MBIO include files */
-#include "mb_status.h"
-#include "mb_define.h"
+#include "gmt_dev.h"
 #include "mb_aux.h"
+#include "mb_define.h"
+#include "mb_status.h"
 
 /* Projection defines */
-#define ModelTypeProjected 1
-#define ModelTypeGeographic 2
-#define GCS_WGS_84 4326
-
-static char rcs_id[] = "$Id$";
+enum ModelType {
+  ModelTypeProjected = 1,
+  ModelTypeGeographic = 2
+};
+static const int GCS_WGS_84 = 4326;
 
 /*--------------------------------------------------------------------------*/
 int mb_read_gmt_grd(int verbose, char *grdfile, int *grid_projection_mode, char *grid_projection_id, float *nodatavalue, int *nxy,
                     int *n_columns, int *n_rows, double *min, double *max, double *xmin, double *xmax, double *ymin, double *ymax,
                     double *dx, double *dy, float **data, float **data_dzdx, float **data_dzdy, int *error) {
-	char function_name[] = "mb_read_gmt_grd";
-	int status = MB_SUCCESS;
-	void *API = NULL;               /* GMT API control structure pointer */
-	struct GMT_GRID *G = NULL;      /* GMT grid structure pointer */
-	struct GMT_GRID_HEADER *header; /* GMT grid header structure pointer */
-	int modeltype;
-	int projectionid;
-	mb_path projectionname = "";
-	struct stat file_status;
-	int num_tries;
-	int nscan;
-	int utmzone;
-	char NorS;
-	float *usedata;
-	double mtodeglon, mtodeglat;
-	double ddx, ddy;
-	int kx0, kx2, ky0, ky2;
-	int i, j, k, ii, jj, kk;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:         %d\n", verbose);
 		fprintf(stderr, "dbg2       grdfile:         %s\n", grdfile);
 	}
-	
+
+	int status = MB_SUCCESS;
+
 	/* check if the file exists and is readable */
+	struct stat file_status;
 	if (stat(grdfile, &file_status) == 0
 		&& (file_status.st_mode & S_IFMT) != S_IFDIR
 		&& file_status.st_size > 0) {
@@ -88,23 +65,35 @@ int mb_read_gmt_grd(int verbose, char *grdfile, int *grid_projection_mode, char 
 		status = MB_FAILURE;
 	}
 
+	struct GMT_GRID_HEADER *header; /* GMT grid header structure pointer */
+	mb_path projectionname = "";
+	int epsgid;
+	enum ModelType modeltype;
+
 	/* if file exists proceed */
 	if (status == MB_SUCCESS) {
-		
+
 		/* Initialize new GMT session */
-		if ((API = GMT_Create_Session(function_name, 2U, 0U, NULL)) == NULL) {
-			fprintf(stderr, "\nUnable to initialize a GMT session with GMT_Create_Session() in function %s\n", function_name);
+		/* GMT API control structure pointer */
+		void *API  = GMT_Create_Session(__func__, 2U, 0U, NULL);
+		if (API == NULL) {
+			fprintf(stderr, "\nUnable to initialize a GMT session with GMT_Create_Session() in function %s\n", __func__);
 			fprintf(stderr, "Unable to read GMT grid file %s\n",grdfile);
 			fprintf(stderr, "Program terminated\n");
 			exit(EXIT_FAILURE);
 		}
-	
+
 		/* read in the grid */
-		num_tries = 0;
+		int num_tries = 0;
+		struct GMT_GRID *G = NULL;      /* GMT grid structure pointer */
 		while (G == NULL && num_tries < 100) {
 			if ((G = GMT_Read_Data(API, GMT_IS_GRID, GMT_IS_FILE, GMT_IS_SURFACE, GMT_GRID_ALL, NULL, grdfile, NULL)) == NULL) {
 				num_tries++;
+#ifdef _WIN32
+				Sleep(1);		/* 1 milisec */
+#else
 				usleep(1000);
+#endif
 				//fprintf(stderr,"Failed to read grid with GMT_Read_Data(), attempt %d\n", num_tries);
 			} else {
 				if (num_tries > 0) {
@@ -114,53 +103,56 @@ int mb_read_gmt_grd(int verbose, char *grdfile, int *grid_projection_mode, char 
 		}
 		if (G == NULL) {
 			fprintf(stderr, "\nUnable to read GMT grid file %s with GMT_Read_Data() after %d tries in function %s\n",
-					grdfile, num_tries, function_name);
+					grdfile, num_tries, __func__);
 			fprintf(stderr, "Program terminated\n");
 			exit(EXIT_FAILURE);
 		}
-	
+
 		/* proceed if ok */
 		if (status == MB_SUCCESS) {
 			/* try to get projection from the grd file remark */
 			header = G->header;
 			if (strncmp(&(header->remark[2]), "Projection: ", 12) == 0) {
+				int nscan;
+				int utmzone;
+				char NorS;
 				if ((nscan = sscanf(&(header->remark[2]), "Projection: UTM%d%c", &utmzone, &NorS)) == 2) {
 					if (NorS == 'N') {
-						projectionid = 32600 + utmzone;
+						epsgid = 32600 + utmzone;
 					}
 					else if (NorS == 'S') {
-						projectionid = 32700 + utmzone;
+						epsgid = 32700 + utmzone;
 					}
 					else {
-						projectionid = 32600 + utmzone;
+						epsgid = 32600 + utmzone;
 					}
 					modeltype = ModelTypeProjected;
 					sprintf(projectionname, "UTM%2.2d%c", utmzone, NorS);
 					*grid_projection_mode = MB_PROJECTION_PROJECTED;
-					sprintf(grid_projection_id, "epsg%d", projectionid);
+					sprintf(grid_projection_id, "EPSG:%d", epsgid);
 				}
-				else if ((nscan = sscanf(&(header->remark[2]), "Projection: epsg%d", &projectionid)) == 1) {
-					sprintf(projectionname, "epsg%d", projectionid);
+				else if ((nscan = sscanf(&(header->remark[2]), "Projection: EPSG:%d", &epsgid)) == 1) {
+					sprintf(projectionname, "EPSG:%d", epsgid);
 					modeltype = ModelTypeProjected;
 					*grid_projection_mode = MB_PROJECTION_PROJECTED;
-					sprintf(grid_projection_id, "epsg%d", projectionid);
+					sprintf(grid_projection_id, "EPSG:%d", epsgid);
 				}
 				else {
 					strcpy(projectionname, "Geographic WGS84");
 					modeltype = ModelTypeGeographic;
-					projectionid = GCS_WGS_84;
+					epsgid = GCS_WGS_84;
 					*grid_projection_mode = MB_PROJECTION_GEOGRAPHIC;
-					sprintf(grid_projection_id, "epsg%d", projectionid);
+					sprintf(grid_projection_id, "EPSG:%d", epsgid);
 				}
 			}
 			else {
 				strcpy(projectionname, "Geographic WGS84");
 				modeltype = ModelTypeGeographic;
-				projectionid = GCS_WGS_84;
+				epsgid = GCS_WGS_84;
 				*grid_projection_mode = MB_PROJECTION_GEOGRAPHIC;
-				sprintf(grid_projection_id, "epsg%d", projectionid);
+				sprintf(grid_projection_id, "EPSG:%d", epsgid);
 			}
-	
+
 			/* set up internal arrays */
 			*nodatavalue = MIN(MB_DEFAULT_GRID_NODATA, header->z_min - 10 * (header->z_max - header->z_min));
 			*nxy = header->n_columns * header->n_rows;
@@ -174,7 +166,8 @@ int mb_read_gmt_grd(int verbose, char *grdfile, int *grid_projection_mode, char 
 			*dy = header->inc[1];
 			*min = header->z_min;
 			*max = header->z_max;
-	
+
+			float *usedata;
 			status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(float) * (*nxy), (void **)&usedata, error);
 			if (status == MB_SUCCESS) {
 				*data = usedata;
@@ -188,13 +181,13 @@ int mb_read_gmt_grd(int verbose, char *grdfile, int *grid_projection_mode, char 
 				*data_dzdy = usedata;
 			}
 		}
-	
+
 		/* copy grid data, reordering to internal convention */
 		if (status == MB_SUCCESS) {
-			for (i = 0; i < *n_columns; i++)
-				for (j = 0; j < *n_rows; j++) {
-					k = i * *n_rows + j;
-					kk = (*n_rows + header->pad[2] + header->pad[3] - 1 - j) * (*n_columns + header->pad[0] + header->pad[1]) +
+			for (int i = 0; i < *n_columns; i++)
+				for (int j = 0; j < *n_rows; j++) {
+					const int k = i * *n_rows + j;
+					const int kk = (*n_rows + header->pad[2] + header->pad[3] - 1 - j) * (*n_columns + header->pad[0] + header->pad[1]) +
 						 (i + header->pad[0]);
 					if (MB_IS_FNAN(G->data[kk]))
 						(*data)[k] = *nodatavalue;
@@ -202,21 +195,27 @@ int mb_read_gmt_grd(int verbose, char *grdfile, int *grid_projection_mode, char 
 						(*data)[k] = G->data[kk];
 				}
 		}
-	
+
 		/* calculate derivatives */
 		if (status == MB_SUCCESS && data_dzdx != NULL && data_dzdy != NULL) {
-			ddx = *dx;
-			ddy = *dy;
+			double ddx = *dx;
+			double ddy = *dy;
 			if (*grid_projection_mode == MB_PROJECTION_GEOGRAPHIC) {
+				double mtodeglon;
+				double mtodeglat;
 				mb_coor_scale(verbose, 0.5 * (*ymin + *ymax), &mtodeglon, &mtodeglat);
 				ddx /= mtodeglon;
 				ddy /= mtodeglon;
 			}
-			for (i = 0; i < *n_columns; i++)
-				for (j = 0; j < *n_rows; j++) {
-					k = i * (*n_rows) + j;
-					ii = 0;
-					jj = 0;
+			for (int i = 0; i < *n_columns; i++)
+				for (int j = 0; j < *n_rows; j++) {
+					const int k = i * (*n_rows) + j;
+					int ii = 0;
+					int jj = 0;
+					int kx0;
+					int kx2;
+					int ky0;
+					int ky2;
 					if (i > 0) {
 						kx0 = (i - 1) * (*n_rows) + j;
 						ii++;
@@ -247,30 +246,29 @@ int mb_read_gmt_grd(int verbose, char *grdfile, int *grid_projection_mode, char 
 						(*data_dzdy)[k] = ((*data)[ky2] - (*data)[ky0]) / (((double)jj) * ddy);
 				}
 		}
-	
+
 		/* Destroy GMT session */
 		if (GMT_Destroy_Session(API) != 0) {
-			fprintf(stderr, "\nUnable to destroy a GMT session with GMT_Destroy_Session() in function %s\n", function_name);
+			fprintf(stderr, "\nUnable to destroy a GMT session with GMT_Destroy_Session() in function %s\n", __func__);
 			fprintf(stderr, "Unable to read GMT grid file %s\n",grdfile);
 			fprintf(stderr, "Program terminated\n");
 			exit(EXIT_FAILURE);
 		}
 	}
 
-	/* print debug info */
-	if (verbose > 0) {
+	if (status == MB_SUCCESS && verbose > 0) {
 		fprintf(stderr, "\nGrid read:\n");
 		fprintf(stderr, "  Dimensions:     %d %d\n", header->n_columns, header->n_rows);
 		fprintf(stderr, "  Registration:   %d\n", header->registration);
 		if (modeltype == ModelTypeProjected) {
 			fprintf(stderr, "  Projected Coordinate System Name: %s\n", projectionname);
-			fprintf(stderr, "  Projected Coordinate System ID:   %d\n", projectionid);
+			fprintf(stderr, "  Projected Coordinate System ID:   %d\n", epsgid);
 			fprintf(stderr, "  Easting:    %f %f  %f\n", header->wesn[0], header->wesn[1], header->inc[0]);
 			fprintf(stderr, "  Northing:   %f %f  %f\n", header->wesn[2], header->wesn[3], header->inc[1]);
 		}
 		else {
 			fprintf(stderr, "  Geographic Coordinate System Name: %s\n", projectionname);
-			fprintf(stderr, "  Geographic Coordinate System ID:   %d\n", projectionid);
+			fprintf(stderr, "  Geographic Coordinate System ID:   %d\n", epsgid);
 			fprintf(stderr, "  Longitude:  %f %f  %f\n", header->wesn[0], header->wesn[1], header->inc[0]);
 			fprintf(stderr, "  Latitude:   %f %f  %f\n", header->wesn[2], header->wesn[3], header->inc[1]);
 		}
@@ -289,51 +287,52 @@ int mb_read_gmt_grd(int verbose, char *grdfile, int *grid_projection_mode, char 
 		fprintf(stderr, "    size:                   %zu\n", header->size);
 		fprintf(stderr, "    pad:                    %d %d %d %d\n", header->pad[0], header->pad[1], header->pad[2],
 		        header->pad[3]);
-		fprintf(stderr, "    data ptr:               %p\n", G->data);
+		fprintf(stderr, "    data ptr:               %p\n", data);
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBBA function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       Dimensions: %d %d\n", header->n_columns, header->n_rows);
-		if (modeltype == ModelTypeProjected) {
-			fprintf(stderr, "dbg2       Projected Coordinate System Name: %s\n", projectionname);
-			fprintf(stderr, "dbg2       Projected Coordinate System ID:   %d\n", projectionid);
-			fprintf(stderr, "dbg2       Easting:                  %f %f  %f\n", header->wesn[0], header->wesn[1], header->inc[0]);
-			fprintf(stderr, "dbg2       Northing:                 %f %f  %f\n", header->wesn[2], header->wesn[3], header->inc[1]);
+		if (status == MB_SUCCESS) {
+		        fprintf(stderr, "dbg2       Dimensions: %d %d\n", header->n_columns, header->n_rows);
+		        if (modeltype == ModelTypeProjected) {
+			        fprintf(stderr, "dbg2       Projected Coordinate System Name: %s\n", projectionname);
+			        fprintf(stderr, "dbg2       Projected Coordinate System ID:   %d\n", epsgid);
+			        fprintf(stderr, "dbg2       Easting:                  %f %f  %f\n", header->wesn[0], header->wesn[1], header->inc[0]);
+			        fprintf(stderr, "dbg2       Northing:                 %f %f  %f\n", header->wesn[2], header->wesn[3], header->inc[1]);
+		        }
+		        else {
+			        fprintf(stderr, "dbg2       Geographic Coordinate System Name: %s\n", projectionname);
+			        fprintf(stderr, "dbg2       Geographic Coordinate System ID:   %d\n", epsgid);
+			        fprintf(stderr, "dbg2       Longitude:                %f %f  %f\n", header->wesn[0], header->wesn[1], header->inc[0]);
+			        fprintf(stderr, "dbg2       Latitude:                 %f %f  %f\n", header->wesn[2], header->wesn[3], header->inc[1]);
+		        }
+		        fprintf(stderr, "dbg2       Internal Grid Projection Mode: %d\n", *grid_projection_mode);
+		        fprintf(stderr, "dbg2       Internal Grid Projection ID:   %s\n", grid_projection_id);
+		        fprintf(stderr, "Data Read:\n");
+		        fprintf(stderr, "dbg2       grid_projection_mode:     %d\n", *grid_projection_mode);
+		        fprintf(stderr, "dbg2       grid_projection_id:       %s\n", grid_projection_id);
+		        fprintf(stderr, "dbg2       nodatavalue:              %f\n", *nodatavalue);
+		        fprintf(stderr, "dbg2       n_columns:                %d\n", *n_columns);
+		        fprintf(stderr, "dbg2       n_rows:                   %d\n", *n_rows);
+		        fprintf(stderr, "dbg2       min:                      %f\n", *min);
+		        fprintf(stderr, "dbg2       max:                      %f\n", *max);
+		        fprintf(stderr, "dbg2       xmin:                     %f\n", *xmin);
+		        fprintf(stderr, "dbg2       xmax:                     %f\n", *xmax);
+		        fprintf(stderr, "dbg2       ymin:                     %f\n", *ymin);
+		        fprintf(stderr, "dbg2       ymax:                     %f\n", *ymax);
+		        fprintf(stderr, "dbg2       dx:                       %f\n", *dx);
+		        fprintf(stderr, "dbg2       dy:                       %f\n", *dy);
+		        fprintf(stderr, "dbg2       data:                     %p\n", *data);
 		}
-		else {
-			fprintf(stderr, "dbg2       Geographic Coordinate System Name: %s\n", projectionname);
-			fprintf(stderr, "dbg2       Geographic Coordinate System ID:   %d\n", projectionid);
-			fprintf(stderr, "dbg2       Longitude:                %f %f  %f\n", header->wesn[0], header->wesn[1], header->inc[0]);
-			fprintf(stderr, "dbg2       Latitude:                 %f %f  %f\n", header->wesn[2], header->wesn[3], header->inc[1]);
-		}
-		fprintf(stderr, "dbg2       Internal Grid Projection Mode: %d\n", *grid_projection_mode);
-		fprintf(stderr, "dbg2       Internal Grid Projection ID:   %s\n", grid_projection_id);
-		fprintf(stderr, "Data Read:\n");
-		fprintf(stderr, "dbg2       grid_projection_mode:     %d\n", *grid_projection_mode);
-		fprintf(stderr, "dbg2       grid_projection_id:       %s\n", grid_projection_id);
-		fprintf(stderr, "dbg2       nodatavalue:              %f\n", *nodatavalue);
-		fprintf(stderr, "dbg2       n_columns:                %d\n", *n_columns);
-		fprintf(stderr, "dbg2       n_rows:                   %d\n", *n_rows);
-		fprintf(stderr, "dbg2       min:                      %f\n", *min);
-		fprintf(stderr, "dbg2       max:                      %f\n", *max);
-		fprintf(stderr, "dbg2       xmin:                     %f\n", *xmin);
-		fprintf(stderr, "dbg2       xmax:                     %f\n", *xmax);
-		fprintf(stderr, "dbg2       ymin:                     %f\n", *ymin);
-		fprintf(stderr, "dbg2       ymax:                     %f\n", *ymax);
-		fprintf(stderr, "dbg2       dx:                       %f\n", *dx);
-		fprintf(stderr, "dbg2       dy:                       %f\n", *dy);
-		fprintf(stderr, "dbg2       data:                     %p\n", *data);
 		fprintf(stderr, "dbg2       error:           %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
 
-	/* return status */
 	return (status);
-} /*--------------------------------------------------------------------*/
+}
+/*--------------------------------------------------------------------*/
 /*
  * function write_cdfgrd writes output grid to a
  * GMT version 2 netCDF grd file
@@ -341,43 +340,8 @@ int mb_read_gmt_grd(int verbose, char *grdfile, int *grid_projection_mode, char 
 int mb_write_gmt_grd(int verbose, char *grdfile, float *grid, float nodatavalue, int n_columns, int n_rows, double xmin, double xmax,
                      double ymin, double ymax, double zmin, double zmax, double dx, double dy, char *xlab, char *ylab, char *zlab,
                      char *titl, char *projection, int argc, char **argv, int *error) {
-	char *function_name = "mb_write_gmt_grd";
-	int status = MB_SUCCESS;
-
-	double wesn[4];
-	double inc[2];
-	unsigned int registration;
-	int pad;
-	void *API = NULL;               /* GMT API control structure pointer */
-	struct GMT_GRID *G = NULL;      /* GMT grid structure pointer */
-	struct GMT_GRID_HEADER *header; /* GMT grid header structure pointer */
-	unsigned int mode = GMT_GRID_ALL;
-
-	int modeltype;
-	int projectionid;
-	int grid_projection_mode;
-	mb_path projectionname = "";
-	mb_path grid_projection_id = "";
-	mb_path program_name = "";
-	mb_path remark = "";
-	int nscan;
-	int utmzone;
-	char NorS;
-	time_t right_now;
-	char date[32], user[MB_PATH_MAXLINE], *user_ptr;
-	char host[MB_PATH_MAXLINE] = {""}, *host_ptr;
-	int first = MB_NO;
-	double min = 0.0;
-	double max = 0.0;
-	double NaN;
-	int nx_node_registration;
-	int i, j, k, kk;
-	char *ctime();
-	char *getenv();
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Function <%s> called\n", function_name);
+		fprintf(stderr, "\ndbg2  Function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       grdfile:    %s\n", grdfile);
@@ -401,16 +365,20 @@ int mb_write_gmt_grd(int verbose, char *grdfile, float *grid, float nodatavalue,
 	}
 
 	/* Initializing new GMT session */
-	if ((API = GMT_Create_Session(function_name, 2U, 0U, NULL)) == NULL) {
-		fprintf(stderr, "\nUnable to initialize a GMT session with GMT_Create_Session() in function %s\n", function_name);
+	void *API = GMT_Create_Session(__func__, 2U, 0U, NULL);
+	if (API == NULL) {
+		fprintf(stderr, "\nUnable to initialize a GMT session with GMT_Create_Session() in function %s\n", __func__);
 		fprintf(stderr, "Unable to write GMT grid file %s\n",grdfile);
 		fprintf(stderr, "Program terminated\n");
 		exit(EXIT_FAILURE);
 	}
 
+	unsigned int mode = GMT_GRID_ALL;
+
 	/* set grid creation control values */
 	/* GMT_GRID_NODE_REG (0) for node grids, GMT_GRID_PIXEL_REG (1) for pixel grids */
-	nx_node_registration = lround((xmax - xmin) / dx + 1);
+	const int nx_node_registration = lround((xmax - xmin) / dx + 1);
+	unsigned int registration;
 	if (n_columns == nx_node_registration) {
 		registration = GMT_GRID_NODE_REG;
 	}
@@ -421,76 +389,105 @@ int mb_write_gmt_grd(int verbose, char *grdfile, float *grid, float nodatavalue,
 		registration = GMT_GRID_DEFAULT_REG;
 	}
 
-	wesn[0] = xmin; /* Min/max x and y coordinates */
-	wesn[1] = xmax; /* Min/max x and y coordinates */
-	wesn[2] = ymin; /* Min/max x and y coordinates */
-	wesn[3] = ymax; /* Min/max x and y coordinates */
-	inc[0] = dx;    /* x and y increment */
-	inc[1] = dy;    /* x and y increment */
-	pad = 0;
+	/* Min/max x and y coordinates */
+	double wesn[4] = {xmin, xmax, ymin, ymax};
+	double inc[2] = {dx, dy};  /* x and y increment */
+	int pad = 0;
+
+	int status = MB_SUCCESS;
 
 	/* create structure for the grid */
-	if ((G = GMT_Create_Data(API, GMT_IS_GRID, GMT_IS_SURFACE, GMT_GRID_ALL, NULL, wesn, inc, registration, pad, NULL)) == NULL) {
+	struct GMT_GRID *G = GMT_Create_Data(API, GMT_IS_GRID, GMT_IS_SURFACE, GMT_GRID_ALL, NULL, wesn, inc, registration, pad, NULL);
+	if (G == NULL) {
 		status = MB_FAILURE;
 		*error = MB_ERROR_MEMORY_FAIL;
 		return (status);
 	}
 
 	/* Get some projection and user info needed for the grid remark field */
+	enum ModelType modeltype;
+	int epsgid;
+	int grid_projection_mode;
+	mb_path projectionname = "";
+	mb_path grid_projection_id = "";
+	int utmzone;
+	int nscan;
+	char NorS;
 	if ((nscan = sscanf(projection, "UTM%d%c", &utmzone, &NorS)) == 2) {
 		if (NorS == 'N') {
-			projectionid = 32600 + utmzone;
+			epsgid = 32600 + utmzone;
 		}
 		else if (NorS == 'S') {
-			projectionid = 32700 + utmzone;
+			epsgid = 32700 + utmzone;
 		}
 		else {
-			projectionid = 32600 + utmzone;
+			epsgid = 32600 + utmzone;
 		}
 		modeltype = ModelTypeProjected;
 		sprintf(projectionname, "UTM%2.2d%c", utmzone, NorS);
 		grid_projection_mode = MB_PROJECTION_PROJECTED;
-		sprintf(grid_projection_id, "epsg%d", projectionid);
+		sprintf(grid_projection_id, "epsg%d", epsgid);
 	}
-	else if ((nscan = sscanf(projection, "epsg%d", &projectionid)) == 1) {
-		sprintf(projectionname, "epsg%d", projectionid);
+	else if ((nscan = sscanf(projection, "EPSG:%d", &epsgid)) == 1) {
+		sprintf(projectionname, "EPSG:%d", epsgid);
 		modeltype = ModelTypeProjected;
 		grid_projection_mode = MB_PROJECTION_PROJECTED;
-		sprintf(grid_projection_id, "epsg%d", projectionid);
+		sprintf(grid_projection_id, "epsg%d", epsgid);
 	}
 	else {
 		strcpy(projectionname, "Geographic WGS84");
 		modeltype = ModelTypeGeographic;
-		projectionid = GCS_WGS_84;
+		epsgid = GCS_WGS_84;
 		grid_projection_mode = MB_PROJECTION_GEOGRAPHIC;
-		sprintf(grid_projection_id, "epsg%d", projectionid);
+		sprintf(grid_projection_id, "epsg%d", epsgid);
 	}
+
+	struct GMT_GRID_HEADER *header = G->header;
+	/* Rely on GDAL to tell us the Proj string of this EPSG code */
+	{
+		OGRErr eErr = OGRERR_NONE;
+		OGRSpatialReferenceH hSRS = OSRNewSpatialReference(NULL);
+		if ((eErr = OSRImportFromEPSG(hSRS, epsgid)) != OGRERR_NONE) {
+			fprintf(stderr, "Did not get the SRS from input EPSG  %d\n", epsgid);
+		}
+		if ((eErr = OSRExportToProj4(hSRS, &header->ProjRefPROJ4)) != OGRERR_NONE) {
+			fprintf(stderr, "Failed to convert the SRS to Proj syntax\n");
+		}
+		OSRDestroySpatialReference(hSRS);
+	}
+	fprintf(stderr,"header->ProjRefPROJ4:%s\n", header->ProjRefPROJ4);
+
+	mb_path program_name = "";
 	if (argc > 0)
 		strncpy(program_name, argv[0], MB_PATH_MAXLINE);
 	else
 		strcpy(program_name, "\0");
-	right_now = time((time_t *)0);
+	const time_t right_now = time((time_t *)0);
+	char date[32];
 	strcpy(date, ctime(&right_now));
 	date[strlen(date) - 1] = '\0';
-	if ((user_ptr = getenv("USER")) == NULL)
+	char user[MB_PATH_MAXLINE];
+	char *user_ptr = getenv("USER");
+	if (user_ptr == NULL)
 		if ((user_ptr = getenv("LOGNAME")) == NULL)
 			user_ptr = getenv("USERNAME");
 	if (user_ptr != NULL)
 		strcpy(user, user_ptr);
 	else
 		strcpy(user, "unknown");
+	char host[MB_PATH_MAXLINE] = {""};
 	gethostname(host, MB_PATH_MAXLINE);
 	if (host[0] == '\0') /* Don't know why but the above fails on Win. So get the same info from ENV */
 	{
-		host_ptr = getenv("USERDOMAIN");
+		const char *host_ptr = getenv("USERDOMAIN");
 		if (host_ptr != NULL)
 			strcpy(host, host_ptr);
 	}
+	mb_path remark = "";
 	sprintf(remark, "\n\tProjection: %s\n\tGrid created by %s\n\tMB-system Version %s\n\tRun by <%s> on <%s> at <%s>", projection,
 	        program_name, MB_VERSION, user, host, date);
 
 	/* set grid labels and remark */
-	header = G->header;
 	strcpy(header->command, program_name); /* name of generating command */
 	strcpy(header->x_units, xlab);         /* units in x-direction */
 	strcpy(header->y_units, ylab);         /* units in y-direction */
@@ -500,24 +497,28 @@ int mb_write_gmt_grd(int verbose, char *grdfile, float *grid, float nodatavalue,
 
 	/* recopy grid data, reordering from internal convention to grd file convention */
 	if (status == MB_SUCCESS) {
+		double NaN;
 		MB_MAKE_FNAN(NaN);
-		for (i = 0; i < n_columns; i++)
-			for (j = 0; j < n_rows; j++) {
-				k = i * n_rows + j;
-				kk = (n_rows - 1 - j) * n_columns + i;
+		/* int first = false; */
+		/* double min = 0.0; */
+		/* double max = 0.0; */
+		for (int i = 0; i < n_columns; i++)
+			for (int j = 0; j < n_rows; j++) {
+				const int k = i * n_rows + j;
+				const int kk = (n_rows - 1 - j) * n_columns + i;
 				if (grid[k] == nodatavalue)
 					G->data[kk] = NaN;
 				else {
 					G->data[kk] = grid[k];
-					if (first == MB_YES) {
-						min = grid[k];
-						max = grid[k];
-						first = MB_NO;
-					}
-					else {
-						min = MIN(min, grid[k]);
-						max = MAX(max, grid[k]);
-					}
+					/* if (first == true) { */
+						/* min = grid[k]; */
+						/* max = grid[k]; */
+						/* first = false; */
+					/* } */
+					/* else { */
+						/* min = MIN(min, grid[k]); */
+						/* max = MAX(max, grid[k]); */
+					/* } */
 				}
 			}
 	}
@@ -539,20 +540,19 @@ int mb_write_gmt_grd(int verbose, char *grdfile, float *grid, float nodatavalue,
 	else
 		mode = GMT_GRID_ALL | GMT_GRID_IS_CARTESIAN;
 
-	/* print info */
 	if (verbose > 0) {
 		fprintf(stderr, "\nGrid to be written:\n");
 		fprintf(stderr, "  Dimensions:     %d %d\n", header->n_columns, header->n_rows);
 		fprintf(stderr, "  Registration:   %d\n", header->registration);
 		if (modeltype == ModelTypeProjected) {
 			fprintf(stderr, "  Projected Coordinate System Name: %s\n", projectionname);
-			fprintf(stderr, "  Projected Coordinate System ID:   %d\n", projectionid);
+			fprintf(stderr, "  Projected Coordinate System ID:   %d\n", epsgid);
 			fprintf(stderr, "  Easting:    %f %f  %f\n", header->wesn[0], header->wesn[1], header->inc[0]);
 			fprintf(stderr, "  Northing:   %f %f  %f\n", header->wesn[2], header->wesn[3], header->inc[1]);
 		}
 		else {
 			fprintf(stderr, "  Geographic Coordinate System Name: %s\n", projectionname);
-			fprintf(stderr, "  Geographic Coordinate System ID:   %d\n", projectionid);
+			fprintf(stderr, "  Geographic Coordinate System ID:   %d\n", epsgid);
 			fprintf(stderr, "  Longitude:  %f %f  %f\n", header->wesn[0], header->wesn[1], header->inc[0]);
 			fprintf(stderr, "  Latitude:   %f %f  %f\n", header->wesn[2], header->wesn[3], header->inc[1]);
 		}
@@ -574,31 +574,27 @@ int mb_write_gmt_grd(int verbose, char *grdfile, float *grid, float nodatavalue,
 		fprintf(stderr, "    data ptr:               %p\n", G->data);
 	}
 
-	/* write out the grid */
 	if (GMT_Write_Data(API, GMT_IS_GRID, GMT_IS_FILE, GMT_IS_SURFACE, mode, NULL, grdfile, G) != 0) {
 		status = MB_FAILURE;
 		*error = MB_ERROR_WRITE_FAIL;
-		fprintf(stderr, "Unable to write GMT grid file %s with GMT_Write_Data() in function %s\n", grdfile, function_name);
+		fprintf(stderr, "Unable to write GMT grid file %s with GMT_Write_Data() in function %s\n", grdfile, __func__);
 	}
 
-	/* Destroy GMT session */
 	if (GMT_Destroy_Session(API) != 0) {
 		status = MB_FAILURE;
 		*error = MB_ERROR_WRITE_FAIL;
-		fprintf(stderr, "\nUnable to destroy a GMT session with GMT_Write_Data() in function %s\n", function_name);
+		fprintf(stderr, "\nUnable to destroy a GMT session with GMT_Write_Data() in function %s\n", __func__);
 		fprintf(stderr, "Unable to write GMT grid file %s\n",grdfile);
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/

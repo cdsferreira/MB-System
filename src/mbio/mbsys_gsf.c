@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_gsf.c	3.00	8/20/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -22,50 +21,37 @@
  *
  * Author:	D. W. Caress
  * Date:	March 5, 1998
- *
- *
  */
 
-/* standard include files */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
+#include "mb_status.h"
 #include "mbsys_gsf.h"
-
-static char rcs_id[] = "$Id$";
 
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mbsys_gsf_alloc";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* allocate memory for data structure */
-	status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_gsf_struct), store_ptr, error);
+	const int status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_gsf_struct), store_ptr, error);
 	memset(*store_ptr, 0, sizeof(struct mbsys_gsf_struct));
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)*store_ptr);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -73,20 +59,12 @@ int mbsys_gsf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mbsys_gsf_deall";
-	int status = MB_SUCCESS;
-	struct mbsys_gsf_struct *store;
-	gsfRecords *records;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -94,39 +72,25 @@ int mbsys_gsf_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
 	}
 
 	/* deallocate memory for data structure */
-	store = (struct mbsys_gsf_struct *)*store_ptr;
-	records = &(store->records);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)*store_ptr;
+	gsfRecords *records = &(store->records);
 	gsfFree(records);
-	status = mb_freed(verbose, __FILE__, __LINE__, (void **)store_ptr, error);
+	const int status = mb_freed(verbose, __FILE__, __LINE__, (void **)store_ptr, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss, int *error) {
-	char *function_name = "mbsys_gsf_dimensions";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
-	gsfTimeSeriesIntensity *snippet;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -134,12 +98,12 @@ int mbsys_gsf_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	dataID = &(store->dataID);
-	records = &(store->records);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfDataID *dataID = &(store->dataID);
+	gsfRecords *records = &(store->records);
 
 	/* get data kind */
 	*kind = store->kind;
@@ -147,7 +111,7 @@ int mbsys_gsf_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
 		/* get beam and pixel numbers */
-		mb_ping = &(records->mb_ping);
+		gsfSwathBathyPing *mb_ping = &(records->mb_ping);
 
 		if (mb_ping->depth != NULL)
 			*nbath = mb_ping->number_beams;
@@ -159,8 +123,8 @@ int mbsys_gsf_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 			*namp = 0;
 		*nss = 0;
 		if (mb_ping->brb_inten != NULL) {
-			for (i = 0; i < *nbath; i++) {
-				snippet = &(mb_ping->brb_inten->time_series[i]);
+			for (int i = 0; i < *nbath; i++) {
+				gsfTimeSeriesIntensity *snippet = &(mb_ping->brb_inten->time_series[i]);
 				(*nss) += snippet->sample_count;
 			}
 		}
@@ -172,9 +136,10 @@ int mbsys_gsf_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		*nss = 0;
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
@@ -185,23 +150,12 @@ int mbsys_gsf_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, int *error) {
-	char *function_name = "mbsys_gsf_sonartype";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -209,13 +163,13 @@ int mbsys_gsf_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonar
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	dataID = &(store->dataID);
-	records = &(store->records);
-	mb_ping = &(records->mb_ping);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfDataID *dataID = &(store->dataID);
+	gsfRecords *records = &(store->records);
+	gsfSwathBathyPing *mb_ping = &(records->mb_ping);
 
 	/* get sonar type */
 	if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_SEABEAM_SPECIFIC            /* 102 */
@@ -266,17 +220,19 @@ int mbsys_gsf_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonar
 	    || mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_EM2040_SPECIFIC          /* 149 */
 	    || mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_DELTA_T_SPECIFIC         /* 150 */
 	    || mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_R2SONIC_2022_SPECIFIC    /* 151 */
-	    || mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_R2SONIC_2024_SPECIFIC /* 152 */) {
+	    || mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_R2SONIC_2024_SPECIFIC    /* 152 */
+	    || mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_R2SONIC_2020_SPECIFIC    /* 153 */
+	    || mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_RESON_TSERIES_SPECIFIC   /* 154 */) {
 		*sonartype = MB_TOPOGRAPHY_TYPE_MULTIBEAM;
 	}
 	else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_GEOSWATH_PLUS_SPECIFIC /* 136 */
 	         || mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_KLEIN_5410_BSS_SPECIFIC /* 137 */) {
 		*sonartype = MB_TOPOGRAPHY_TYPE_INTERFEROMETRIC;
 	}
-	else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_GEOSWATH_PLUS_SPECIFIC /* 136 */
-	         || mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_KLEIN_5410_BSS_SPECIFIC /* 137 */) {
-		*sonartype = MB_TOPOGRAPHY_TYPE_SIDESCAN;
-	}
+//	else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_GEOSWATH_PLUS_SPECIFIC /* 136 */
+//	         || mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_KLEIN_5410_BSS_SPECIFIC /* 137 */) {
+//		*sonartype = MB_TOPOGRAPHY_TYPE_SIDESCAN;
+//	}
 	else if (mb_ping->sensor_id == GSF_SINGLE_BEAM_SUBRECORD_ECHOTRAC_SPECIFIC        /* 201 */
 	         || mb_ping->sensor_id == GSF_SINGLE_BEAM_SUBRECORD_BATHY2000_SPECIFIC    /* 202 */
 	         || mb_ping->sensor_id == GSF_SINGLE_BEAM_SUBRECORD_MGD77_SPECIFIC        /* 203 */
@@ -295,9 +251,10 @@ int mbsys_gsf_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonar
 		*sonartype = MB_TOPOGRAPHY_TYPE_UNKNOWN;
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       sensor_id:  %d\n", mb_ping->sensor_id);
 		fprintf(stderr, "dbg2       sonartype:  %d\n", *sonartype);
@@ -306,23 +263,12 @@ int mbsys_gsf_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonar
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, int *error) {
-	char *function_name = "mbsys_gsf_sidescantype";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -330,13 +276,13 @@ int mbsys_gsf_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	dataID = &(store->dataID);
-	records = &(store->records);
-	mb_ping = &(records->mb_ping);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfDataID *dataID = &(store->dataID);
+	gsfRecords *records = &(store->records);
+	gsfSwathBathyPing *mb_ping = &(records->mb_ping);
 
 	/* get sidescan type */
 	if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_SEABEAM_2112_SPECIFIC) {
@@ -346,9 +292,10 @@ int mbsys_gsf_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss
 		*ss_type = MB_SIDESCAN_LOGARITHMIC;
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       ss_type:    %d\n", *ss_type);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -356,7 +303,6 @@ int mbsys_gsf_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -364,23 +310,13 @@ int mbsys_gsf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
                       double *navlat, double *speed, double *heading, int *nbath, int *namp, int *nss, char *beamflag,
                       double *bath, double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss,
                       double *ssacrosstrack, double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mbsys_gsf_extract";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
 	gsfTimeSeriesIntensity *snippet;
 	double ss_spacing, ss_spacing_use;
 	double vertical, range, beam_foot, sint, angle;
 	int gsfstatus;
-	int i, j;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -388,19 +324,19 @@ int mbsys_gsf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	dataID = &(store->dataID);
-	records = &(store->records);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfDataID *dataID = &(store->dataID);
+	gsfRecords *records = &(store->records);
 
 	/* get data kind */
 	*kind = store->kind;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
-		mb_ping = &(records->mb_ping);
+		gsfSwathBathyPing *mb_ping = &(records->mb_ping);
 
 		/* get time */
 		*time_d = mb_ping->ping_time.tv_sec + 0.000000001 * mb_ping->ping_time.tv_nsec;
@@ -515,7 +451,7 @@ int mbsys_gsf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 		*nss = 0;
 
 		/* read depth and beam location values into storage arrays */
-		for (i = 0; i < *nbath; i++) {
+		for (int i = 0; i < *nbath; i++) {
 			/* set null beam flag if required */
 			if (mb_ping->depth[i] == 0.0 && mb_ping->across_track[i] == 0.0 && mb_ping->beam_flags[i] != MB_FLAG_NULL)
 				mb_ping->beam_flags[i] = MB_FLAG_NULL;
@@ -537,11 +473,11 @@ int mbsys_gsf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 
 		/* read amplitude values into storage arrays */
 		if (mb_ping->mc_amplitude != NULL)
-			for (i = 0; i < *namp; i++) {
+			for (int i = 0; i < *namp; i++) {
 				amp[i] = mb_ping->mc_amplitude[i];
 			}
 		else if (mb_ping->mr_amplitude != NULL)
-			for (i = 0; i < *namp; i++) {
+			for (int i = 0; i < *namp; i++) {
 				amp[i] = mb_ping->mr_amplitude[i];
 			}
 
@@ -566,7 +502,7 @@ int mbsys_gsf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 				ss_spacing = 750.0 / ((double)mb_ping->sensor_data.gsfEM3Specific.sample_rate);
 			}
 			*nss = 0;
-			for (i = 0; i < *nbath; i++) {
+			for (int i = 0; i < *nbath; i++) {
 				/* get pixel sample size */
 				snippet = &(mb_ping->brb_inten->time_series[i]);
 				vertical = mb_ping->depth[i] - mb_ping->depth_corrector;
@@ -578,7 +514,7 @@ int mbsys_gsf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 					ss_spacing_use = beam_foot / snippet->sample_count;
 				else
 					ss_spacing_use = ss_spacing / sint;
-				for (j = 0; j < snippet->sample_count; j++) {
+				for (int j = 0; j < snippet->sample_count; j++) {
 					ss[*nss] = snippet->samples[j];
 					ssacrosstrack[*nss] = bathacrosstrack[i] + ss_spacing_use * (j - snippet->detect_sample);
 					ssalongtrack[*nss] = bathalongtrack[i];
@@ -587,9 +523,8 @@ int mbsys_gsf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 			}
 		}
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -606,11 +541,11 @@ int mbsys_gsf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 			fprintf(stderr, "dbg4       speed:      %f\n", *speed);
 			fprintf(stderr, "dbg4       heading:    %f\n", *heading);
 			fprintf(stderr, "dbg4       nbath:      %d\n", *nbath);
-			for (i = 0; i < *nbath; i++)
+			for (int i = 0; i < *nbath; i++)
 				fprintf(stderr, "dbg4       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i], bathalongtrack[i]);
 			fprintf(stderr, "dbg4        namp:     %d\n", *namp);
-			for (i = 0; i < *namp; i++)
+			for (int i = 0; i < *namp; i++)
 				fprintf(stderr, "dbg4        beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 				        bathalongtrack[i]);
 		}
@@ -626,18 +561,16 @@ int mbsys_gsf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 		else
 			comment[0] = '\0';
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg4  Comment extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Comment extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  New ping values:\n");
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
 			fprintf(stderr, "dbg4       comment:    %s\n", comment);
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -660,25 +593,27 @@ int mbsys_gsf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 	}
 	if (verbose >= 2 && *error <= MB_ERROR_NO_ERROR && *kind == MB_DATA_DATA) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
-		for (i = 0; i < *nbath; i++)
+		for (int i = 0; i < *nbath; i++)
 			fprintf(stderr, "dbg2       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 			        bathacrosstrack[i], bathalongtrack[i]);
 		fprintf(stderr, "dbg2        namp:     %d\n", *namp);
-		for (i = 0; i < *namp; i++)
+		for (int i = 0; i < *namp; i++)
 			fprintf(stderr, "dbg2       beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 			        bathalongtrack[i]);
 		fprintf(stderr, "dbg2        nss:      %d\n", *nss);
-		for (i = 0; i < *nss; i++)
+		for (int i = 0; i < *nss; i++)
 			fprintf(stderr, "dbg2       pixel:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 			        ssalongtrack[i]);
 	}
+
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -686,20 +621,8 @@ int mbsys_gsf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int
                      double navlat, double speed, double heading, int nbath, int namp, int nss, char *beamflag, double *bath,
                      double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss, double *ssacrosstrack,
                      double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mbsys_gsf_insert";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
-	int anyunflagged;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -723,12 +646,12 @@ int mbsys_gsf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int
 	if (verbose >= 2 && kind == MB_DATA_DATA) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", nbath);
 		if (verbose >= 3)
-			for (i = 0; i < nbath; i++)
+			for (int i = 0; i < nbath; i++)
 				fprintf(stderr, "dbg3       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i], bathalongtrack[i]);
 		fprintf(stderr, "dbg2       namp:       %d\n", namp);
 		if (verbose >= 3)
-			for (i = 0; i < namp; i++)
+			for (int i = 0; i < namp; i++)
 				fprintf(stderr, "dbg3        beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 				        bathalongtrack[i]);
 	}
@@ -737,16 +660,18 @@ int mbsys_gsf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	records = &(store->records);
-	dataID = &(store->dataID);
-	mb_ping = &(records->mb_ping);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfRecords *records = &(store->records);
+	gsfDataID *dataID = &(store->dataID);
+	gsfSwathBathyPing *mb_ping = &(records->mb_ping);
 
 	/* set data kind */
 	store->kind = kind;
+
+	int status = MB_SUCCESS;
 
 	/* insert data in structure */
 	if (store->kind == MB_DATA_DATA) {
@@ -813,18 +738,18 @@ int mbsys_gsf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int
 		/* if ping flag set check for any unset
 		    beam flags - set or unset ping flag based on whether any
 		    unflagged beams are found */
-		anyunflagged = MB_NO;
-		for (i = 0; i < nbath; i++) {
+		bool anyunflagged = false;
+		for (int i = 0; i < nbath; i++) {
 			if (mb_beam_ok(beamflag[i]))
-				anyunflagged = MB_YES;
+				anyunflagged = true;
 		}
-		if (anyunflagged == MB_NO)
+		if (!anyunflagged)
 			mb_ping->ping_flags = GSF_IGNORE_PING;
 		else
 			mb_ping->ping_flags = 0;
 
 		/* read depth and beam location values into storage arrays */
-		for (i = 0; i < nbath; i++) {
+		for (int i = 0; i < nbath; i++) {
 			mb_ping->beam_flags[i] = beamflag[i];
 			if (beamflag[i] != MB_FLAG_NULL) {
 				mb_ping->depth[i] = bath[i];
@@ -840,16 +765,16 @@ int mbsys_gsf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int
 
 		/* read amplitude values into storage arrays */
 		if (mb_ping->mc_amplitude != NULL)
-			for (i = 0; i < namp; i++) {
+			for (int i = 0; i < namp; i++) {
 				mb_ping->mc_amplitude[i] = amp[i];
 			}
 		else if (mb_ping->mr_amplitude != NULL)
-			for (i = 0; i < namp; i++) {
+			for (int i = 0; i < namp; i++) {
 				mb_ping->mr_amplitude[i] = amp[i];
 			}
 
 		/* reset GSF scale factors if needed */
-		mbsys_gsf_setscalefactors(verbose, MB_NO, mb_ping, error);
+		mbsys_gsf_setscalefactors(verbose, false, mb_ping, error);
 	}
 
 	/* insert comment in structure */
@@ -870,36 +795,22 @@ int mbsys_gsf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, double *ttimes, double *angles,
                      double *angles_forward, double *angles_null, double *heave, double *alongtrack_offset, double *draft,
                      double *ssv, int *error) {
-	char *function_name = "mbsys_gsf_ttimes";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
-	double alpha, beta;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -913,26 +824,30 @@ int mbsys_gsf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, in
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	records = &(store->records);
-	dataID = &(store->dataID);
-	mb_ping = &(records->mb_ping);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfRecords *records = &(store->records);
+	gsfDataID *dataID = &(store->dataID);
+	gsfSwathBathyPing *mb_ping = &(records->mb_ping);
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
 		/* get nbeams */
 		*nbeams = mb_ping->number_beams;
 
+		double alpha;
+		double beta;
 		/* get travel times, angles */
 		if (mb_ping->travel_time != NULL && mb_ping->beam_angle != NULL) {
 			if (mb_ping->beam_angle_forward != NULL) {
-				for (i = 0; i < *nbeams; i++) {
+				for (int i = 0; i < *nbeams; i++) {
 					ttimes[i] = mb_ping->travel_time[i];
 					angles[i] = fabs(mb_ping->beam_angle[i]);
 					angles_forward[i] = mb_ping->beam_angle_forward[i];
@@ -945,7 +860,7 @@ int mbsys_gsf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, in
 				}
 			}
 			else {
-				for (i = 0; i < *nbeams; i++) {
+				for (int i = 0; i < *nbeams; i++) {
 					ttimes[i] = mb_ping->travel_time[i];
 					angles[i] = fabs(mb_ping->beam_angle[i]);
 					if (mb_ping->across_track[i] < 0.0 || mb_ping->beam_angle[i] < 0.0)
@@ -962,78 +877,78 @@ int mbsys_gsf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, in
 			if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_SEABEAM_SPECIFIC) {
 				*ssv = 1500.0;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = 0.0;
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_EM100_SPECIFIC) {
 				*ssv = 1500.0;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = angles[i];
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_EM950_SPECIFIC) {
 				*ssv = mb_ping->sensor_data.gsfEM950Specific.surface_velocity;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = angles[i];
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_EM121A_SPECIFIC) {
 				*ssv = mb_ping->sensor_data.gsfEM121ASpecific.surface_velocity;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = 0.0;
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_EM121_SPECIFIC) {
 				*ssv = mb_ping->sensor_data.gsfEM121Specific.surface_velocity;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = 0.0;
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_SEAMAP_SPECIFIC) {
 				*ssv = 1500.0;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = 50.0;
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_SEABAT_SPECIFIC) {
 				*ssv = mb_ping->sensor_data.gsfSeaBatSpecific.surface_velocity;
 				*draft = mb_ping->depth_corrector;
 				if (mb_ping->beam_angle_forward == NULL) {
-					for (i = 0; i < *nbeams; i++) {
+					for (int i = 0; i < *nbeams; i++) {
 						if (mb_ping->across_track[i] < 0.0 && mb_ping->beam_angle[i] > 0.0)
 							beta = 90.0 + mb_ping->beam_angle[i];
 						else
 							beta = 90.0 - mb_ping->beam_angle[i];
-						alpha = mb_ping->pitch;
+						const double alpha = mb_ping->pitch;
 						mb_rollpitch_to_takeoff(verbose, alpha, beta, &angles[i], &angles_forward[i], error);
 					}
 				}
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = angles[i];
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_EM1000_SPECIFIC) {
 				*ssv = mb_ping->sensor_data.gsfEM1000Specific.surface_velocity;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = angles[i];
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_TYPEIII_SEABEAM_SPECIFIC) {
 				*ssv = 1500.0;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = 0.0;
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_SB_AMP_SPECIFIC) {
 				*ssv = 1500.0;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = 0.0;
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_SEABAT_II_SPECIFIC) {
 				*ssv = mb_ping->sensor_data.gsfSeaBatIISpecific.surface_velocity;
 				*draft = mb_ping->depth_corrector;
 				if (mb_ping->beam_angle_forward == NULL) {
-					for (i = 0; i < *nbeams; i++) {
+					for (int i = 0; i < *nbeams; i++) {
 						if (mb_ping->across_track[i] < 0.0 && mb_ping->beam_angle[i] > 0.0)
 							beta = 90.0 + mb_ping->beam_angle[i];
 						else
@@ -1042,14 +957,14 @@ int mbsys_gsf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, in
 						mb_rollpitch_to_takeoff(verbose, alpha, beta, &angles[i], &angles_forward[i], error);
 					}
 				}
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = angles[i];
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_SEABAT_8101_SPECIFIC) {
 				*ssv = mb_ping->sensor_data.gsfSeaBat8101Specific.surface_velocity;
 				*draft = mb_ping->depth_corrector;
 				if (mb_ping->beam_angle_forward == NULL) {
-					for (i = 0; i < *nbeams; i++) {
+					for (int i = 0; i < *nbeams; i++) {
 						if (mb_ping->across_track[i] < 0.0 && mb_ping->beam_angle[i] > 0.0)
 							beta = 90.0 + mb_ping->beam_angle[i];
 						else
@@ -1058,38 +973,38 @@ int mbsys_gsf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, in
 						mb_rollpitch_to_takeoff(verbose, alpha, beta, &angles[i], &angles_forward[i], error);
 					}
 				}
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = angles[i];
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_RESON_8101_SPECIFIC) {
 				*ssv = mb_ping->sensor_data.gsfReson8100Specific.surface_velocity;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = angles[i];
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_SEABEAM_2112_SPECIFIC) {
 				*ssv = mb_ping->sensor_data.gsfSeaBeam2112Specific.surface_velocity;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = 0.0;
 			}
 			else if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_ELAC_MKII_SPECIFIC) {
 				*ssv = mb_ping->sensor_data.gsfElacMkIISpecific.sound_vel;
 				*draft = mb_ping->depth_corrector;
 				if (mb_ping->beam_angle_forward == NULL) {
-					for (i = 0; i < *nbeams; i++) {
+					for (int i = 0; i < *nbeams; i++) {
 						beta = 90.0 - mb_ping->beam_angle[i];
 						alpha = mb_ping->pitch;
 						mb_rollpitch_to_takeoff(verbose, alpha, beta, &angles[i], &angles_forward[i], error);
 					}
 				}
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = 37.5;
 			}
 			else {
 				*ssv = 1500.0;
 				*draft = mb_ping->depth_corrector;
-				for (i = 0; i < *nbeams; i++)
+				for (int i = 0; i < *nbeams; i++)
 					angles_null[i] = 0.0;
 			}
 		}
@@ -1115,9 +1030,8 @@ int mbsys_gsf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, in
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -1125,7 +1039,7 @@ int mbsys_gsf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, in
 		fprintf(stderr, "dbg2       draft:      %f\n", *draft);
 		fprintf(stderr, "dbg2       ssv:        %f\n", *ssv);
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: tt:%f  angle_xtrk:%f  angle_ltrk:%f  angle_null:%f  heave:%f  ltrk_off:%f\n", i,
 			        ttimes[i], angles[i], angles_forward[i], angles_null[i], heave[i], alongtrack_offset[i]);
 	}
@@ -1135,24 +1049,13 @@ int mbsys_gsf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, in
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, int *detects, int *error) {
-	char *function_name = "mbsys_gsf_detects";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1161,16 +1064,18 @@ int mbsys_gsf_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	records = &(store->records);
-	dataID = &(store->dataID);
-	mb_ping = &(records->mb_ping);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfRecords *records = &(store->records);
+	gsfDataID *dataID = &(store->dataID);
+	gsfSwathBathyPing *mb_ping = &(records->mb_ping);
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -1178,7 +1083,7 @@ int mbsys_gsf_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 		*nbeams = mb_ping->number_beams;
 
 		/* get detects */
-		for (i = 0; i < *nbeams; i++) {
+		for (int i = 0; i < *nbeams; i++) {
 			detects[i] = MB_DETECT_UNKNOWN;
 		}
 
@@ -1203,15 +1108,14 @@ int mbsys_gsf_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
 	if (verbose >= 2 && *error == MB_ERROR_NO_ERROR) {
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: detects:%d\n", i, detects[i]);
 	}
 	if (verbose >= 2) {
@@ -1220,27 +1124,13 @@ int mbsys_gsf_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, i
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *transducer_depth,
                                double *altitude, int *error) {
-	char *function_name = "mbsys_gsf_extract_altitude";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
-	double bath_best;
-	double xtrack_min;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1248,13 +1138,14 @@ int mbsys_gsf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	records = &(store->records);
-	dataID = &(store->dataID);
-	mb_ping = &(records->mb_ping);
+	int status = MB_SUCCESS;
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfRecords *records = &(store->records);
+	gsfDataID *dataID = &(store->dataID);
+	gsfSwathBathyPing *mb_ping = &(records->mb_ping);
 
 	/* get data kind */
 	*kind = store->kind;
@@ -1272,6 +1163,9 @@ int mbsys_gsf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int
 		/* get transducer_depth */
 		*transducer_depth = mb_ping->depth_corrector + mb_ping->heave;
 
+		double bath_best;
+                double xtrack_min;
+
 		/* get altitude if available */
 		if (mb_ping->sensor_id == GSF_SWATH_BATHY_SUBRECORD_SEAMAP_SPECIFIC) {
 			*altitude = mb_ping->sensor_data.gsfSeamapSpecific.altitude;
@@ -1285,7 +1179,7 @@ int mbsys_gsf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int
 			}
 			else {
 				xtrack_min = 99999999.9;
-				for (i = 0; i < mb_ping->number_beams; i++) {
+				for (int i = 0; i < mb_ping->number_beams; i++) {
 					if (mb_beam_ok(mb_ping->beam_flags[i]) && fabs(mb_ping->across_track[i]) < xtrack_min) {
 						xtrack_min = fabs(mb_ping->across_track[i]);
 						bath_best = mb_ping->depth[i];
@@ -1294,7 +1188,7 @@ int mbsys_gsf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int
 			}
 			if (bath_best <= 0.0) {
 				xtrack_min = 99999999.9;
-				for (i = 0; i < mb_ping->number_beams; i++) {
+				for (int i = 0; i < mb_ping->number_beams; i++) {
 					if (!mb_beam_check_flag(mb_ping->beam_flags[i]) && fabs(mb_ping->across_track[i]) < xtrack_min) {
 						xtrack_min = fabs(mb_ping->across_track[i]);
 						bath_best = mb_ping->depth[i];
@@ -1330,9 +1224,8 @@ int mbsys_gsf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       transducer_depth:  %f\n", *transducer_depth);
@@ -1342,24 +1235,13 @@ int mbsys_gsf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, double transducer_depth, double altitude,
                               int *error) {
-	char *function_name = "mbsys_gsf_insert_altitude";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:           %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:            %p\n", (void *)mbio_ptr);
@@ -1369,13 +1251,15 @@ int mbsys_gsf_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, doub
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	records = &(store->records);
-	dataID = &(store->dataID);
-	mb_ping = &(records->mb_ping);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfRecords *records = &(store->records);
+	gsfDataID *dataID = &(store->dataID);
+	gsfSwathBathyPing *mb_ping = &(records->mb_ping);
+
+	int status = MB_SUCCESS;
 
 	/* insert data into structure */
 	if (store->kind == MB_DATA_DATA) {
@@ -1410,34 +1294,22 @@ int mbsys_gsf_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, doub
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time_i[7], double *time_d, double *navlon,
                           double *navlat, double *speed, double *heading, double *draft, double *roll, double *pitch,
                           double *heave, int *error) {
-	char *function_name = "mbsys_gsf_extract_nav";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1445,16 +1317,18 @@ int mbsys_gsf_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	records = &(store->records);
-	dataID = &(store->dataID);
-	mb_ping = &(records->mb_ping);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfRecords *records = &(store->records);
+	gsfDataID *dataID = &(store->dataID);
+	gsfSwathBathyPing *mb_ping = &(records->mb_ping);
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -1508,9 +1382,8 @@ int mbsys_gsf_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		else
 			*heave = 0.0;
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -1549,9 +1422,8 @@ int mbsys_gsf_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -1579,24 +1451,13 @@ int mbsys_gsf_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_i[7], double time_d, double navlon, double navlat,
                          double speed, double heading, double draft, double roll, double pitch, double heave, int *error) {
-	char *function_name = "mbsys_gsf_insert_nav";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSwathBathyPing *mb_ping;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1620,13 +1481,15 @@ int mbsys_gsf_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	records = &(store->records);
-	dataID = &(store->dataID);
-	mb_ping = &(records->mb_ping);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfRecords *records = &(store->records);
+	gsfDataID *dataID = &(store->dataID);
+	gsfSwathBathyPing *mb_ping = &(records->mb_ping);
+
+	int status = MB_SUCCESS;
 
 	/* insert data in structure */
 	if (store->kind == MB_DATA_DATA) {
@@ -1681,34 +1544,21 @@ int mbsys_gsf_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_
 		// gsfSetDefaultScaleFactor(mb_ping);
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nsvp, double *depth, double *velocity,
                           int *error) {
-	char *function_name = "mbsys_gsf_extract_svp";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSVP *svp;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1716,16 +1566,18 @@ int mbsys_gsf_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	records = &(store->records);
-	dataID = &(store->dataID);
-	svp = &(records->svp);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfRecords *records = &(store->records);
+	gsfDataID *dataID = &(store->dataID);
+	gsfSVP *svp = &(records->svp);
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_VELOCITY_PROFILE) {
@@ -1733,7 +1585,7 @@ int mbsys_gsf_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		*nsvp = svp->number_points;
 
 		/* get profile */
-		for (i = 0; i < *nsvp; i++) {
+		for (int i = 0; i < *nsvp; i++) {
 			depth[i] = svp->depth[i];
 			velocity[i] = svp->sound_speed[i];
 		}
@@ -1755,54 +1607,41 @@ int mbsys_gsf_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       nsvp:              %d\n", *nsvp);
-		for (i = 0; i < *nsvp; i++)
+		for (int i = 0; i < *nsvp; i++)
 			fprintf(stderr, "dbg2       depth[%d]: %f   velocity[%d]: %f\n", i, depth[i], i, velocity[i]);
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp, double *depth, double *velocity, int *error) {
-	char *function_name = "mbsys_gsf_insert_svp";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	gsfDataID *dataID;
-	gsfRecords *records;
-	gsfSVP *svp;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 		fprintf(stderr, "dbg2       nsvp:       %d\n", nsvp);
-		for (i = 0; i < nsvp; i++)
+		for (int i = 0; i < nsvp; i++)
 			fprintf(stderr, "dbg2       depth[%d]: %f   velocity[%d]: %f\n", i, depth[i], i, velocity[i]);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	records = &(store->records);
-	dataID = &(store->dataID);
-	svp = &(records->svp);
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	gsfRecords *records = &(store->records);
+	gsfDataID *dataID = &(store->dataID);
+	gsfSVP *svp = &(records->svp);
 
 	/* insert data in structure */
 	if (store->kind == MB_DATA_VELOCITY_PROFILE) {
@@ -1816,36 +1655,28 @@ int mbsys_gsf_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp,
 		svp->number_points = nsvp;
 
 		/* get profile */
-		for (i = 0; i < svp->number_points; i++) {
+		for (int i = 0; i < svp->number_points; i++) {
 			svp->depth[i] = depth[i];
 			svp->sound_speed[i] = velocity[i];
 		}
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error) {
-	char *function_name = "mbsys_gsf_copy";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_gsf_struct *store;
-	struct mbsys_gsf_struct *copy;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1854,11 +1685,11 @@ int mbsys_gsf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr,
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointers */
-	store = (struct mbsys_gsf_struct *)store_ptr;
-	copy = (struct mbsys_gsf_struct *)copy_ptr;
+	struct mbsys_gsf_struct *store = (struct mbsys_gsf_struct *)store_ptr;
+	struct mbsys_gsf_struct *copy = (struct mbsys_gsf_struct *)copy_ptr;
 
 	/* clear copy structure */
 	gsfFree(&(copy->records));
@@ -1866,21 +1697,20 @@ int mbsys_gsf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr,
 	copy->kind = store->kind;
 	copy->dataID = store->dataID;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_gsf_setscalefactors(int verbose, int reset_all, gsfSwathBathyPing *mb_ping, int *error) {
-	char *function_name = "mbsys_gsf_setscalefactors";
 	int status = MB_SUCCESS;
 
 	const double GSF_DEPTH_ASSUMED_HIGHEST_PRECISION = 10000;
@@ -1910,7 +1740,6 @@ int mbsys_gsf_setscalefactors(int verbose, int reset_all, gsfSwathBathyPing *mb_
 	const double GSF_DOPPLER_CORRECTION_ASSUMED_HIGHEST_PRECISION = 100;
 	const double GSF_SONAR_VERT_UNCERT_ASSUMED_HIGHEST_PRECISION = 10000;
 
-	int i, j;                                  /* iterators */
 	double *dptr;                              /* pointer to ping array */
 	unsigned short *usptr;                     /* pointer to ping array */
 	unsigned char *ucptr;                      /* pointer to ping array */
@@ -1920,17 +1749,15 @@ int mbsys_gsf_setscalefactors(int verbose, int reset_all, gsfSwathBathyPing *mb_
 	double highest_precision;                  /* starting value for multiplier */
 	double multiplier, offset, multiplier_min, multiplier_max;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:     %d\n", verbose);
 		fprintf(stderr, "dbg2       reset_all:   %d\n", reset_all);
 		fprintf(stderr, "dbg2       mb_ping:     %p\n", (void *)mb_ping);
 	}
 
-	for (i = 1; i <= GSF_MAX_PING_ARRAY_SUBRECORDS; i++) {
+	for (int i = 1; i <= GSF_MAX_PING_ARRAY_SUBRECORDS; i++) {
 		dptr = NULL;
 		usptr = NULL;
 
@@ -2196,7 +2023,7 @@ int mbsys_gsf_setscalefactors(int verbose, int reset_all, gsfSwathBathyPing *mb_
 			min = DBL_MAX;
 
 			if (dptr != NULL) {
-				for (j = 0; j < mb_ping->number_beams; j++) {
+				for (int j = 0; j < mb_ping->number_beams; j++) {
 					if (dptr[j] > max)
 						max = dptr[j];
 					if (dptr[j] < min)
@@ -2204,7 +2031,7 @@ int mbsys_gsf_setscalefactors(int verbose, int reset_all, gsfSwathBathyPing *mb_
 				}
 			}
 			else if (usptr != NULL) {
-				for (j = 0; j < mb_ping->number_beams; j++) {
+				for (int j = 0; j < mb_ping->number_beams; j++) {
 					if (usptr[j] > max)
 						max = (double)usptr[j];
 					if (usptr[j] < min)
@@ -2212,7 +2039,7 @@ int mbsys_gsf_setscalefactors(int verbose, int reset_all, gsfSwathBathyPing *mb_
 				}
 			}
 			else if (ucptr != NULL) {
-				for (j = 0; j < mb_ping->number_beams; j++) {
+				for (int j = 0; j < mb_ping->number_beams; j++) {
 					if (ucptr[j] > max)
 						max = (double)ucptr[j];
 					if (ucptr[j] < min)
@@ -2236,44 +2063,30 @@ int mbsys_gsf_setscalefactors(int verbose, int reset_all, gsfSwathBathyPing *mb_
 				multiplier_min = floor(min_scale_factor / (min + mb_ping->scaleFactors.scaleTable[id - 1].offset));
 			multiplier = MAX(MIN(multiplier_min, multiplier_max), 1.0);
 
-			if (reset_all == MB_YES || multiplier < mb_ping->scaleFactors.scaleTable[id - 1].multiplier) {
-				/* fprintf(stderr,"BEFORE Scale Factors %2d of %2d: minmax: %10f %10f compressionFlag:%5x offset:%10f
-				multiplier:%10f\n", id, GSF_MAX_PING_ARRAY_SUBRECORDS, min, max, mb_ping->scaleFactors.scaleTable[id -
-				1].compressionFlag, mb_ping->scaleFactors.scaleTable[id - 1].offset, mb_ping->scaleFactors.scaleTable[id -
-				1].multiplier); fprintf(stderr,"     highest_precision:%f offset:%f multiplier_min:%f multiplier_max:%f
-				multiplier:%f\n", highest_precision,offset,multiplier_min,multiplier_max,multiplier); */
-
+			if (reset_all == true || multiplier < mb_ping->scaleFactors.scaleTable[id - 1].multiplier) {
 				mb_ping->scaleFactors.scaleTable[id - 1].multiplier = multiplier;
 				mb_ping->scaleFactors.scaleTable[id - 1].offset = offset;
-
-				/* fprintf(stderr,"AFTER  Scale Factors %2d of %2d: minmax: %10f %10f compressionFlag:%5x offset:%10f
-				multiplier:%10f\n\n", id, GSF_MAX_PING_ARRAY_SUBRECORDS, min, max, mb_ping->scaleFactors.scaleTable[id -
-				1].compressionFlag, mb_ping->scaleFactors.scaleTable[id - 1].offset, mb_ping->scaleFactors.scaleTable[id -
-				1].multiplier); */
 			}
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 4) {
-		fprintf(stderr, "\ndbg4  GSF Scale Factors Calculated in MBIO function <%s>\n", function_name);
-		for (i = 1; i <= GSF_MAX_PING_ARRAY_SUBRECORDS; i++) {
+		fprintf(stderr, "\ndbg4  GSF Scale Factors Calculated in MBIO function <%s>\n", __func__);
+		for (int i = 1; i <= GSF_MAX_PING_ARRAY_SUBRECORDS; i++) {
 			fprintf(stderr, "dbg4       Scale Factors %2d of %2d: compressionFlag:%5x offset:%10f multiplier:%10f\n", i,
 			        GSF_MAX_PING_ARRAY_SUBRECORDS, mb_ping->scaleFactors.scaleTable[i - 1].compressionFlag,
 			        mb_ping->scaleFactors.scaleTable[i - 1].offset, mb_ping->scaleFactors.scaleTable[i - 1].multiplier);
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 

@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbbs_wrhdrfields.c	3/3/2014
- *	$Id$
  *
- *    Copyright (c) 2014-2017 by
+ *    Copyright (c) 2014-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -36,24 +35,23 @@
 
 #include <stdio.h>
 
+#include "mbbs.h"
 #include "mbbs_defines.h"
 
 extern unsigned long bs_iobytecnt;
 
-int mbbs_wrfflagssetbits(FILE *fp, unsigned int bitmask)
 /*
    Set the bits from bitmask in the file header flags field.
 */
+int mbbs_wrfflagssetbits(FILE *fp, unsigned int bitmask)
 {
-	XDR xdr;
-	int version, count;
-	unsigned int flags;
-
 	if (fseek(fp, (long)0, SEEK_SET) != 0)
 		return BS_FSEEK;
+	XDR xdr;
 	xdrstdio_create(&xdr, fp, XDR_DECODE);
 
 	bs_iobytecnt = 0;
+	int version;
 	if (!xdr_int(&xdr, &version))
 		return BS_READ;
 	switch (version) {
@@ -67,9 +65,11 @@ int mbbs_wrfflagssetbits(FILE *fp, unsigned int bitmask)
 		break;
 	}
 	bs_iobytecnt += 4;
+	int count;
 	if (!xdr_int(&xdr, &count))
 		return BS_READ;
 	bs_iobytecnt += 4;
+	unsigned int flags;
 	if (!xdr_u_int(&xdr, &flags))
 		return BS_READ;
 	bs_iobytecnt += 4;
@@ -91,20 +91,18 @@ int mbbs_wrfflagssetbits(FILE *fp, unsigned int bitmask)
 	return BS_SUCCESS;
 }
 
-int mbbs_wrfflagsclrbits(FILE *fp, unsigned int bitmask)
 /*
    Clear the bits of bitmask from the file header flags field.
 */
+int mbbs_wrfflagsclrbits(FILE *fp, unsigned int bitmask)
 {
-	XDR xdr;
-	int version, count;
-	unsigned int flags;
-
 	if (fseek(fp, (long)0, SEEK_SET) != 0)
 		return BS_FSEEK;
+	XDR xdr;
 	xdrstdio_create(&xdr, fp, XDR_DECODE);
 
 	bs_iobytecnt = 0;
+	int version;
 	if (!xdr_int(&xdr, &version))
 		return BS_READ;
 	switch (version) {
@@ -118,9 +116,11 @@ int mbbs_wrfflagsclrbits(FILE *fp, unsigned int bitmask)
 		break;
 	}
 	bs_iobytecnt += 4;
+	int count;
 	if (!xdr_int(&xdr, &count))
 		return BS_READ;
 	bs_iobytecnt += 4;
+	unsigned int flags;
 	if (!xdr_u_int(&xdr, &flags))
 		return BS_READ;
 	bs_iobytecnt += 4;
@@ -142,14 +142,12 @@ int mbbs_wrfflagsclrbits(FILE *fp, unsigned int bitmask)
 	return BS_SUCCESS;
 }
 
-int mbbs_wrpflags(int version, FILE *fp, long phoffset, unsigned int flags)
 /*
    Writes the ping flags field of a ping header
    located at an arbitrary file byte offset.
 */
+int mbbs_wrpflags(int version, FILE *fp, long phoffset, unsigned int flags)
 {
-	XDR xdr;
-
 	bs_iobytecnt = 0;
 
 	switch (version) {
@@ -168,6 +166,7 @@ int mbbs_wrpflags(int version, FILE *fp, long phoffset, unsigned int flags)
 
 	if (fseek(fp, phoffset, SEEK_SET) != 0)
 		return BS_FSEEK;
+	XDR xdr;
 	xdrstdio_create(&xdr, fp, XDR_ENCODE);
 	if (!xdr_u_int(&xdr, &flags))
 		return BS_WRITE;
@@ -178,15 +177,12 @@ int mbbs_wrpflags(int version, FILE *fp, long phoffset, unsigned int flags)
 	return BS_SUCCESS;
 }
 
-int mbbs_wrpflagssetbits(int version, FILE *fp, long phoffset, unsigned int bitmask)
 /*
    Set the bits from bitmask in the ping flags field of
    a ping header located at an arbitrary file byte offset.
 */
+int mbbs_wrpflagssetbits(int version, FILE *fp, long phoffset, unsigned int bitmask)
 {
-	XDR xdr;
-	unsigned int flags;
-
 	bs_iobytecnt = 0;
 
 	switch (version) {
@@ -205,7 +201,9 @@ int mbbs_wrpflagssetbits(int version, FILE *fp, long phoffset, unsigned int bitm
 
 	if (fseek(fp, phoffset, SEEK_SET) != 0)
 		return BS_FSEEK;
+	XDR xdr;
 	xdrstdio_create(&xdr, fp, XDR_DECODE);
+	unsigned int flags;
 	if (!xdr_u_int(&xdr, &flags))
 		return BS_READ;
 	bs_iobytecnt += 4;
@@ -226,15 +224,12 @@ int mbbs_wrpflagssetbits(int version, FILE *fp, long phoffset, unsigned int bitm
 	return BS_SUCCESS;
 }
 
-int mbbs_wrpflagsclrbits(int version, FILE *fp, long phoffset, unsigned int bitmask)
 /*
    Clear the bits in bitmask from the ping flags field of
    a ping header located at an arbitrary file byte offset.
 */
+int mbbs_wrpflagsclrbits(int version, FILE *fp, long phoffset, unsigned int bitmask)
 {
-	XDR xdr;
-	unsigned int flags;
-
 	bs_iobytecnt = 0;
 
 	switch (version) {
@@ -253,7 +248,9 @@ int mbbs_wrpflagsclrbits(int version, FILE *fp, long phoffset, unsigned int bitm
 
 	if (fseek(fp, phoffset, SEEK_SET) != 0)
 		return BS_FSEEK;
+	XDR xdr;
 	xdrstdio_create(&xdr, fp, XDR_DECODE);
+	unsigned int flags;
 	if (!xdr_u_int(&xdr, &flags))
 		return BS_READ;
 	bs_iobytecnt += 4;
@@ -274,14 +271,12 @@ int mbbs_wrpflagsclrbits(int version, FILE *fp, long phoffset, unsigned int bitm
 	return BS_SUCCESS;
 }
 
-int mbbs_wrsllc(int version, FILE *fp, long phoffset, double slon, double slat, float scourse)
 /*
    Writes ship longitude, latitude and course fields
    of a ping header located at an arbitrary file byte offset.
 */
+int mbbs_wrsllc(int version, FILE *fp, long phoffset, double slon, double slat, float scourse)
 {
-	XDR xdr;
-
 	bs_iobytecnt = 0;
 
 	switch (version) {
@@ -303,6 +298,7 @@ int mbbs_wrsllc(int version, FILE *fp, long phoffset, double slon, double slat, 
 
 	if (fseek(fp, phoffset, SEEK_SET) != 0)
 		return BS_FSEEK;
+	XDR xdr;
 	xdrstdio_create(&xdr, fp, XDR_ENCODE);
 
 	if (!xdr_double(&xdr, &slon))
@@ -321,14 +317,12 @@ int mbbs_wrsllc(int version, FILE *fp, long phoffset, double slon, double slat, 
 	return BS_SUCCESS;
 }
 
-int mbbs_wrtllc(int version, FILE *fp, long phoffset, double tlon, double tlat, float tcourse)
 /*
    Writes towfish longitude, latitude and course fields
    of a ping header located at an arbitrary file byte offset.
 */
+int mbbs_wrtllc(int version, FILE *fp, long phoffset, double tlon, double tlat, float tcourse)
 {
-	XDR xdr;
-
 	bs_iobytecnt = 0;
 
 	switch (version) {
@@ -350,6 +344,7 @@ int mbbs_wrtllc(int version, FILE *fp, long phoffset, double tlon, double tlat, 
 
 	if (fseek(fp, phoffset, SEEK_SET) != 0)
 		return BS_FSEEK;
+	XDR xdr;
 	xdrstdio_create(&xdr, fp, XDR_ENCODE);
 
 	if (!xdr_double(&xdr, &tlon))
@@ -368,14 +363,12 @@ int mbbs_wrtllc(int version, FILE *fp, long phoffset, double tlon, double tlat, 
 	return BS_SUCCESS;
 }
 
-int mbbs_wrtll(int version, FILE *fp, long phoffset, double tlon, double tlat)
 /*
    Writes towfish longitude and latitude fields of a
    ping header located at an arbitrary file byte offset.
 */
+int mbbs_wrtll(int version, FILE *fp, long phoffset, double tlon, double tlat)
 {
-	XDR xdr;
-
 	bs_iobytecnt = 0;
 
 	switch (version) {
@@ -397,6 +390,7 @@ int mbbs_wrtll(int version, FILE *fp, long phoffset, double tlon, double tlat)
 
 	if (fseek(fp, phoffset, SEEK_SET) != 0)
 		return BS_FSEEK;
+	XDR xdr;
 	xdrstdio_create(&xdr, fp, XDR_ENCODE);
 
 	if (!xdr_double(&xdr, &tlon))

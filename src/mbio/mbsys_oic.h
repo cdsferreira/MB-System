@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_oic.h	3/1/99
- *	$Id$
  *
- *    Copyright (c) 1999-2017 by
+ *    Copyright (c) 1999-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -64,6 +63,9 @@
  *      sonar type value.
  *
  */
+
+#ifndef MBSYS_OIC_H_
+#define MBSYS_OIC_H_
 
 /* defines sizes of things */
 #define MBSYS_OIC_MAX_CLIENT 252
@@ -247,3 +249,5 @@ int mbsys_oic_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 int mbsys_oic_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_i[7], double time_d, double navlon, double navlat,
                          double speed, double heading, double draft, double roll, double pitch, double heave, int *error);
 int mbsys_oic_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
+
+#endif  /* MBSYS_OIC_H_ */

@@ -2,7 +2,7 @@ dnl--------------------------------------------------------------------
 dnl    The MB-system:    configure.ac    12/7/2011
 dnl    $Id$
 dnl
-dnl    Copyright (c) 2011-2017 by
+dnl    Copyright (c) 2011-2019 by
 dnl    D. W. Caress (caress@lamont.ldgo.columbia.edu)
 dnl    and D. N. Chayes (dale@lamont.ldgo.columbia.edu)
 dnl    Lamont-Doherty Earth Observatory
@@ -19,11 +19,12 @@ define([AC_CACHE_LOAD], )
 define([AC_CACHE_SAVE], )
 
 dnl Initialize and set version and version date
-AC_INIT([mbsystem],[5.5.2350],[http://listserver.mbari.org/sympa/arc/mbsystem],[mbsystem],[http://www.mbari.org/data/mbsystem/])
+AC_INIT([mbsystem],[5.7.6beta16],[http://listserver.mbari.org/sympa/arc/mbsystem],[mbsystem],[http://www.mbari.org/data/mbsystem/])
 
 AC_CONFIG_MACRO_DIR(m4)
 AC_LANG(C)
-AC_DEFINE(VERSION_DATE, "6 September 2018", [Set VERSION_DATE define in mb_config.h])
+# AC_LANG([C++])
+AC_DEFINE(VERSION_DATE, "29 October 2019", [Set VERSION_DATE define in mb_config.h])
 
 dnl Check system arch
 AC_CANONICAL_HOST
@@ -34,7 +35,7 @@ AS_ECHO(["----------------------------------------------------------------------
 AS_ECHO(["    The MB-system:    configure    12/7/2011"])
 AS_ECHO(["    $Id$"])
 AS_ECHO([" "])
-AS_ECHO(["    Copyright (c) 2011-2017 by"])
+AS_ECHO(["    Copyright (c) 2011-2019 by"])
 AS_ECHO(["    D. W. Caress (caress@lamont.ldgo.columbia.edu)"])
 AS_ECHO(["    and D. N. Chayes (dale@lamont.ldgo.columbia.edu)"])
 AS_ECHO(["    Lamont-Doherty Earth Observatory"])
@@ -99,6 +100,10 @@ AS_ECHO(["        --with-opengl-lib     - location of OpenGL libs (optional)"])
 AS_ECHO(["        --with-opengl-include - location of OpenGL headers (optional)"])
 AS_ECHO(["        --with-otps-dir       - location of OTPS installation (optional)"])
 AS_ECHO(["        --enable-mbtrn        - enable building terrain relative navigation (TRN) tools (optional)"])
+AS_ECHO(["        --enable-mbtnav       - enable building terrain relative navigation (TRN) tools (optional)"])
+AS_ECHO(["        --disable-mbtools     - disable building graphical tools (use with --enable-mbtrn and --enable-mbtnav)"])
+AS_ECHO(["        --enable-hardening    - Enable compiler and linker options to frustrate memory corruption exploits  (e.g. -fPIE and -pie) (optional)"])
+AS_ECHO(["        --enable-test         - Enable building unit tests in test/ and third-party/"])
 AS_ECHO([" "])
 AS_ECHO(["    After configure you can run the make utility in the usual fashion"])
 AS_ECHO(["        make"])
@@ -115,13 +120,15 @@ AS_ECHO(["MB-System Version $PACKAGE_VERSION"])
 AS_ECHO(["HOST System Type: ${host}"])
 AS_ECHO([" "])
 
-AM_INIT_AUTOMAKE([no-dist])
+AM_INIT_AUTOMAKE([no-dist subdir-objects])
 AM_MAINTAINER_MODE
 AC_CONFIG_HEADERS([src/mbio/mb_config.h])
 
 dnl Check for programs
 AC_PROG_CC
 AM_PROG_CC_C_O
+AC_PROG_CC_STDC
+AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_AS
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
@@ -130,6 +137,8 @@ AC_PROG_MAKE_SET
 LT_INIT
 AC_SUBST([LIBTOOL_DEPS])
 LT_LIB_M
+AM_PATH_PYTHON([3.6],, [:])
+AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 
 dnl Check Endian size
 BYTESWAP=no
@@ -203,6 +212,88 @@ AC_CHECK_FUNC(xdrmem_create, XDR_LIB=, [
 AC_SUBST(XDR_LIB)
 
 dnl--------------------------------------------------------------------
+dnl Set up to check compiler support for specific flags.
+dnl There is no way to make clang's "argument unused" warning fatal,
+dnl so when using check_cc_cxx_flag and check_link_flag modify CC, CXX,
+dnl and LD to invoke the compiler through a wrapper script called
+dnl ./flag-check.sh that greps for this message (and then restore
+dnl CC, CXX, and LD when done).
+dnl--------------------------------------------------------------------
+AC_DEFUN([check_cc_cxx_flag], [AC_LANG_PUSH(C) AX_CHECK_COMPILE_FLAG([$1],
+  [AC_LANG_PUSH(C) AX_CHECK_COMPILE_FLAG([$1], [$2], [$3], [-Werror $4])
+    AC_LANG_POP(C)], [$3], [-Werror $4]) AC_LANG_POP(C)])
+AC_DEFUN([check_link_flag], [AX_CHECK_LINK_FLAG([$1], [$2], [$3], [-Werror $4])])
+
+dnl--------------------------------------------------------------------
+dnl Enable compiler and linker options to frustrate memory corruption exploits
+dnl including generating Position Independent Executables (PIE)
+dnl using --enable-hardening
+dnl--------------------------------------------------------------------
+dnl HARDENING START
+dnl This is taken from https://github.com/kmcallister/autoharden
+dnl With some very small modifications (to remove C++ checking for instance)
+dnl made by https://git.insomnia247.nl/irc/unreal4/blob/unreal40/configure.ac
+dnl
+# Save the raw compiler names.
+saved_CC="$CC"
+saved_CXX="$CXX"
+saved_LD="$LD"
+flag_wrap="./flag-check.sh"
+CC="$flag_wrap $CC"
+CXX="$flag_wrap $CXX"
+LD="$flag_wrap $LD"
+
+AC_ARG_ENABLE([hardening],
+  [AS_HELP_STRING([--enable-hardening],
+    [Enable compiler and linker options to frustrate memory corruption exploits @<:@yes@:>@])],
+  [hardening="$enableval"],
+  [hardening="no"])
+
+HARDEN_CFLAGS=""
+HARDEN_LDFLAGS=""
+AS_ECHO(["Checking for hardening enabled.... $hardening"])
+
+AS_IF([test x"$hardening" != x"no"], [
+  check_cc_cxx_flag([-fno-strict-overflow], [HARDEN_CFLAGS="$HARDEN_CFLAGS -fno-strict-overflow"])
+
+  # This one will likely succeed, even on platforms where it does nothing.
+  check_cc_cxx_flag([-D_FORTIFY_SOURCE=2], [HARDEN_CFLAGS="$HARDEN_CFLAGS -D_FORTIFY_SOURCE=2"])
+
+  check_cc_cxx_flag([-fstack-protector-all],
+   [check_link_flag([-fstack-protector-all],
+     [HARDEN_CFLAGS="$HARDEN_CFLAGS -fstack-protector-all"
+      check_cc_cxx_flag([-Wstack-protector], [HARDEN_CFLAGS="$HARDEN_CFLAGS -Wstack-protector"],
+        [], [-fstack-protector-all])
+      check_cc_cxx_flag([--param ssp-buffer-size=1], [HARDEN_CFLAGS="$HARDEN_CFLAGS --param ssp-buffer-size=1"],
+        [], [-fstack-protector-all])])])
+
+  # At the link step, we might want -pie (GCC) or -Wl,-pie (Clang on OS X)
+  #
+  # The linker checks also compile code, so we need to include -fPIE as well.
+  check_cc_cxx_flag([-fPIE],
+   [check_link_flag([-fPIE -pie],
+     [HARDEN_BINCFLAGS="-fPIE"
+      HARDEN_BINLDFLAGS="-pie"],
+     [check_link_flag([-fPIE -Wl,-pie],
+       [HARDEN_BINCFLAGS="-fPIE"
+        HARDEN_BINLDFLAGS="-Wl,-pie"])])])
+
+  check_link_flag([-Wl,-z,relro],
+   [HARDEN_LDFLAGS="$HARDEN_LDFLAGS -Wl,-z,relro"
+    check_link_flag([-Wl,-z,now], [HARDEN_LDFLAGS="$HARDEN_LDFLAGS -Wl,-z,now"])])
+    ])
+AC_SUBST([HARDEN_CFLAGS])
+AC_SUBST([HARDEN_LDFLAGS])
+AC_SUBST([HARDEN_BINCFLAGS])
+AC_SUBST([HARDEN_BINLDFLAGS])
+
+# End of flag tests.
+CC="$saved_CC"
+CXX="$saved_CXX"
+LD="$saved_LD"
+dnl HARDENING END
+
+dnl--------------------------------------------------------------------
 dnl Shared Data Section
 dnl--------------------------------------------------------------------
 
@@ -228,20 +319,23 @@ dnl--------------------------------------------------------------------
 dnl PROJ Section
 dnl--------------------------------------------------------------------
 
-dnl Check for Proj.4 library libproj
-AS_ECHO(["Check for Proj.4 library libproj"])
+dnl Check for PROJ library libproj
+AS_ECHO(["Check for PROJ library libproj"])
 GOT_PROJ=no
-PROJ_SETTING=no
-AC_ARG_WITH(proj-lib, [  --with-proj-lib=DIR    Location of PROJ library],
+FOUND_PROJ_LIB=no
+AC_ARG_WITH(proj-lib, [ --with-proj-lib=DIR Location of PROJ library],
     [proj_libdir="${withval}"] [GOT_PROJ=yes], [GOT_PROJ=no])
 if test "$GOT_PROJ" = "yes" ; then
     dnl PROJ library location specified: $proj_libdir - check if libproj is there...
     AS_ECHO(["PROJ library location specified: $proj_libdir - check if libproj is there..."])
     save_LDFLAGS=$LDFLAGS
     LDFLAGS="$LDFLAGS -L$proj_libdir"
-    AC_CHECK_LIB([proj], [pj_init_plus], [PROJ_SETTING=yes], [PROJ_SETTING=no], )
+    AC_CHECK_LIB([proj], [proj_create], [FOUND_PROJ_LIB=yes], [FOUND_PROJ_LIB=no], )
+    if test "$FOUND_PROJ_LIB" = "no"; then
+        AC_CHECK_LIB([proj], [pj_init_plus], [FOUND_PROJ_LIB=yes], [FOUND_PROJ_LIB=no], )
+    fi
     LDFLAGS="$save_LDFLAGS"
-    if test "$PROJ_SETTING" = "no"; then
+    if test "$FOUND_PROJ_LIB" = "no"; then
         AC_MSG_ERROR([Did not find libproj according to --with-proj-lib - check the installation!])
     fi
     libproj_LIBS="-L$proj_libdir -R $proj_libdir -lproj"
@@ -249,17 +343,19 @@ if test "$GOT_PROJ" = "yes" ; then
 else
     dnl Look for pkg-config PROJ package...
     AS_ECHO(["Look for pkg-config PROJ package..."])
-    PKG_CHECK_MODULES([libproj], [proj], [GOT_PROJ=yes], [GOT_PROJ=no])
+    PKG_CHECK_MODULES([libproj], [proj], [FOUND_PROJ_LIB=yes], [FOUND_PROJ_LIB=no])
     libproj_LIBS="-lproj"
     libproj_LDFLAGS=""
 fi
-if test "$GOT_PROJ" = "no" ; then
+if test "$FOUND_PROJ_LIB" = "no" ; then
     dnl Did not find PROJ library pkg-config package, looking in the usual places...
     AS_ECHO(["Did not find PROJ library pkg-config package, looking in the usual places..."])
-    AC_CHECK_LIB([proj], [pj_init_plus], [PROJ_SETTING=yes], [PROJ_SETTING=no],)
-    if test "$PROJ_SETTING" = "yes" ; then
-        GOT_PROJ=yes
-        AS_ECHO(["Using pre-installed libproj..."])
+    AC_CHECK_LIB([proj], [proj_create], [FOUND_PROJ_LIB=yes], [FOUND_PROJ_LIB=no],)
+    if test "$FOUND_PROJ_LIB" = "no"; then
+        AC_CHECK_LIB([proj], [pj_init_plus], [FOUND_PROJ_LIB=yes], [FOUND_PROJ_LIB=no], )
+    fi
+    if test "$FOUND_PROJ_LIB" = "yes" ; then
+        AS_ECHO(["Found PROJ library libproj..."])
         libproj_LIBS="-lproj"
         libproj_LDFLAGS=""
     else
@@ -267,40 +363,53 @@ if test "$GOT_PROJ" = "no" ; then
         AC_MSG_ERROR([Did not find PROJ library anywhere, use --with-proj-lib to set the location])
     fi
 fi
-dnl Done checking for Proj.4 library libproj
+dnl Done checking for PROJ library libproj
 
 dnl Check if proj header location specified on the command line
 AS_ECHO(["Check if proj header location specified on the command line"])
 GOT_PROJ=no
-PROJ_SETTING=no
+FOUND_PROJ_HEADERS=no
 AC_ARG_WITH(proj-include, [  --with-proj-include=DIR    Location of PROJ headers],
         [libproj_CPPFLAGS="-I${withval}"] [GOT_PROJ=yes], [GOT_PROJ=no])
 if test "$GOT_PROJ" = "yes" ; then
-    dnl PROJ header location specified: $libproj_CPPFLAGS - check if proj_api.h is there...
-    AS_ECHO(["PROJ header location specified: $libproj_CPPFLAGS - check if proj_api.h is there..."])
-    save_CPPFLAGS=$CPPFLAGS
-    save_CFLAGS=$CFLAGS
-    CPPFLAGS="$CPPFLAGS $libproj_CPPFLAGS"
-    CFLAGS="$CFLAGS $libproj_CPPFLAGS"
-    AC_CHECK_HEADER(proj_api.h, [PROJ_SETTING=yes], [PROJ_SETTING=no],)
-    CPPFLAGS=$save_CPPFLAGS
-    CFLAGS=$save_CFLAGS
-    if test "$PROJ_SETTING" = "no"; then
-       AC_MSG_ERROR([Did not find PROJ headers according to --with-proj-include - check the installation!])
-    fi
+    dnl PROJ header location specified: $libproj_CPPFLAGS - check if proj.h or proj_api.h is there...
+    AS_ECHO(["PROJ header location specified: $libproj_CPPFLAGS - check if proj.h or proj_api.h is there..."])
 else
     dnl Looking for PROJ headers in the usual places...
     AS_ECHO(["Looking for PROJ headers in the usual places..."])
-    AC_CHECK_HEADER(proj_api.h, [PROJ_SETTING=yes], [PROJ_SETTING=no])
-    if test "$PROJ_SETTING" = "yes" ; then
-        GOT_PROJ=yes
-        AS_ECHO(["Found PROJ headers..."])
-    else
-        AS_ECHO(["Did not find PROJ headers anywhere, use --with-proj-include to set the location"])
-        AC_MSG_ERROR([Did not find PROJ headers anywhere, use --with-proj-include to set the location])
-    fi
 fi
-dnl Done checking for PROJ headers
+save_CPPFLAGS=$CPPFLAGS
+save_CFLAGS=$CFLAGS
+CPPFLAGS="$CPPFLAGS $libproj_CPPFLAGS"
+CFLAGS="$CFLAGS $libproj_CPPFLAGS"
+AC_CHECK_HEADER(proj.h, [FOUND_PROJ6=yes], [FOUND_PROJ6=no],)
+if test "$FOUND_PROJ6" = "yes"; then
+  dnl Found PROJ6 headers
+  FOUND_PROJ_HEADERS="yes"
+  AS_ECHO(["Found PROJ6 headers - using the PROJ6 API"])
+else
+  AC_CHECK_HEADER(proj_api.h, [FOUND_PROJ4=yes], [FOUND_PROJ4=no],)
+  if test "$FOUND_PROJ4" = "yes"; then
+    FOUND_PROJ_HEADERS="yes"
+    libproj_CPPFLAGS="$libproj_CPPFLAGS -DUSE_PROJ4_API"
+    AS_ECHO(["Found PROJ4 headers - using the deprecated PROJ4 API"])
+  else
+    FOUND_PROJ_HEADERS="no"
+    if test "$GOT_PROJ" = "yes" ; then
+      AS_ECHO(["Did not find PROJ headers according to --with-proj-include - check the installation!"])
+      AC_MSG_ERROR([Did not find PROJ headers according to --with-proj-include - check the installation!])
+    else
+      AS_ECHO(["Did not find PROJ headers anywhere, use --with-proj-include to set the location"])
+      AC_MSG_ERROR([Did not find PROJ headers anywhere, use --with-proj-include to set the location])
+    fi
+
+  fi
+fi
+CPPFLAGS=$save_CPPFLAGS
+CFLAGS=$save_CFLAGS
+if test "$FOUND_PROJ6" = "yes"; then
+  CFLAGS="$CFLAGS $libproj_CPPFLAGS -DACCEPT_USE_OF_DEPRECATED_PROJ_API_H"
+fi
 dnl Done checking for PROJ library libproj and PROJ headers
 
 dnl Substitute PROJ library and header arguments
@@ -418,21 +527,21 @@ else
 fi
 if test -x "$GMT_CONF" ; then
     AC_MSG_CHECKING(for GMT includes)
-    GMT_INC=`$GMT_CONF --cflags`
+    GMT_INC=`$GMT_CONF --cflags 2>/dev/null`
     AC_MSG_RESULT($GMT_INC)
     AC_MSG_CHECKING(for GMT libs)
-    GMT_LIB=`$GMT_CONF --libs`
-    DEP_LIBS=`$GMT_CONF --dep-libs`
+    GMT_LIB=`$GMT_CONF --libs 2>/dev/null`
+    DEP_LIBS=`$GMT_CONF --dep-libs 2>/dev/null`
     AC_MSG_RESULT($GMT_LIB)
     GMT_LIB_PATH=`echo $GMT_LIB | sed 's/^-L//;s/\ .*//'`
     rpath="$GMT_LIB_PATH"
     AC_MSG_CHECKING(for 32/64-bit GMT5 installation)
-    bits=`$GMT_CONF --bits`
+    bits=`$GMT_CONF --bits 2>/dev/null`
     GCC_64="-m${bits}"
     LDFLAGS="$LDFLAGS -m${bits}"
     AC_MSG_RESULT(found ${bits}-bit)
     AC_MSG_CHECKING(for GMT plugin location)
-    GMT_PLUGINDIR=`$GMT_CONF --plugindir`
+    GMT_PLUGINDIR=`$GMT_CONF --plugindir 2>/dev/null`
     AC_MSG_RESULT($GMT_PLUGINDIR)
 
     libgmt_CPPFLAGS="$GMT_INC"
@@ -560,7 +669,7 @@ fi
 GOT_MOTIF=no
 MOTIF_SETTING=no
 if test "$GOT_X11" = "yes" ; then
-    
+
     dnl Check for Motif library libXm
     AS_ECHO(["Check for Motif library libXm"])
     AC_ARG_WITH(motif-lib, [  --with-motif-lib=DIR    Location of MOTIF library],
@@ -635,7 +744,7 @@ if test "$GOT_X11" = "yes" ; then
         fi
         dnl Done checking for Motif headers
     fi
-    
+
     dnl Substitute Motif library and header arguments
     AC_SUBST([libmotif_LIBS], [$libmotif_LIBS])
     AC_SUBST([libmotif_CPPFLAGS], [$libmotif_CPPFLAGS])
@@ -653,7 +762,7 @@ AS_ECHO(["Check for OpenGL libraries libGL libGLU and header files GL/gl.h GL/gl
 GOT_OPENGL=no
 OPENGL_SETTING=no
 if test "$GOT_MOTIF" = "yes" ; then
-    
+
     dnl Check for OpenGL libraries libGLU libGL
     AS_ECHO(["Check for OpenGL libraries libGLU libGL"])
     AC_ARG_WITH(opengl-lib, [  --with-opengl-lib=DIR    Location of OpenGL library],
@@ -734,7 +843,7 @@ if test "$GOT_MOTIF" = "yes" ; then
         fi
         dnl Done checking for OpenGL headers
     fi
-    
+
     dnl Substitute OpenGL library and header arguments
     AC_SUBST([libopengl_LIBS], [$libopengl_LIBS])
     AC_SUBST([libopengl_CPPFLAGS], [$libopengl_CPPFLAGS])
@@ -776,12 +885,118 @@ else
 fi
 
 dnl--------------------------------------------------------------------
+dnl MBTNAV Section - optionally build terrain relative navigation (TRN) tools
+dnl--------------------------------------------------------------------
+
+dnl Check if the mbtnav tools should be built
+AS_ECHO(["Check if the mbtnav tools should be built"])
+AC_ARG_ENABLE(mbtnav, [AS_HELP_STRING([--enable-mbtnav], [build mbtnav tools])],
+[build_mbtnav=yes], [build_mbtnav=no])
+AM_CONDITIONAL([BUILD_MBTNAV], [test x$build_mbtnav = xyes])
+if test "$build_mbtnav" = "yes" ; then
+dnl Building mbtnav tools
+AS_ECHO(["Building mbtnav tools"])
+AC_DEFINE(MBTNAV_ENABLED, 1, [Build libmbtnav])
+else
+dnl Not building mbtnav tools
+AS_ECHO(["Not building mbtnav tools"])
+fi
+
+dnl--------------------------------------------------------------------
+dnl UTILS Section - optionally build utils
+dnl--------------------------------------------------------------------
+
+dnl Check if the mbsys tools should be built
+AS_ECHO(["Check if the graphical utils should be built"])
+AC_ARG_ENABLE(mbtools, [AS_HELP_STRING([--disable-mbtools], [do not build graphical tools])],
+        [build_mbtools=no], [build_mbtools=yes])
+AM_CONDITIONAL([BUILD_MBUTILS], [test x$build_mbtools = xyes])
+if test "$build_mbtools" = "yes" ; then
+    dnl Building mbsys tools
+    AS_ECHO(["Building graphical tools"])
+    AC_DEFINE(MBUTILS_ENABLED, 1, [Build graphical tools])
+else
+    dnl Not building mbsys tools
+    AS_ECHO(["Not building graphical tools"])
+fi
+
+dnl--------------------------------------------------------------------
+dnl Point Cloud Library Section - optionally build ICP based feature matching
+dnl in mbnavadjust - uses ICP algorithm in Point Cloud Library (PCL)
+dnl--------------------------------------------------------------------
+
+dnl Check if programs using PCL should be built
+AS_ECHO(["Check if programs using PCL should be built"])
+AC_ARG_ENABLE(pcltools, [AS_HELP_STRING([--enable-pcltools],
+        [build tools using PCL])], [build_pcltools=yes], [build_mbpcltools=no])
+AM_CONDITIONAL([BUILD_PCLTOOLS], [test x$build_pcltools = xyes])
+if test "$build_pcltools" = "yes" ; then
+    dnl Build tools using PCL
+    AS_ECHO(["Build tools using PCL"])
+    AC_DEFINE(PCLTOOLS_ENABLED, 1, [Build tools using PCL])
+else
+    dnl Not building tools using PCL
+    AS_ECHO(["Not building tools using PCL"])
+fi
+
+dnl If tools using PCL are being built then look for PCL libraries and headers
+if test "$build_pcltools" = "yes" ; then
+    AC_CHECK_LIB([libpcl_common], [XSendEvent], [GOT_libpcl_common=yes], [GOT_libpcl_common=no])
+fi
+
+dnl--------------------------------------------------------------------
+dnl Test Section - optionally build unit tests in mbsystem/test and mbsystem/third-party
+dnl--------------------------------------------------------------------
+
+dnl Check if the testing tools should be built
+AS_ECHO(["Check if the unit tests should be built"])
+AC_ARG_ENABLE(test, [AS_HELP_STRING([--enable-test], [build test tools])],
+        [build_test=yes], [build_test=no])
+AM_CONDITIONAL([BUILD_TEST], [test x$build_test = xyes])
+if test "$build_test" = "yes" ; then
+    dnl Building unit tests
+    AS_ECHO(["Building unit tests"])
+    AC_DEFINE(TEST_ENABLED, 1, [Build unit tests])
+else
+    dnl Not building unit tests
+    AS_ECHO(["Not building unit tests"])
+fi
+
+dnl--------------------------------------------------------------------
+dnl Configure pthreads.
+dnl Force to yes.
+dnl--------------------------------------------------------------------
+
+AM_CONDITIONAL([HAVE_PTHREADS],[test "xyes" = "xyes"])
+AC_SUBST(PTHREAD_CFLAGS)
+AC_SUBST(PTHREAD_LIBS)
+
+
+dnl--------------------------------------------------------------------
+dnl GSF Section - optionally disable inclusion of GSF format i/o module
+dnl--------------------------------------------------------------------
+
+AS_ECHO(["Check if the GSF driver should be built"])
+AC_ARG_ENABLE(gsf, [AS_HELP_STRING([--disable-gsf], [build without the GSF driver])],
+        [GOT_GSF=yes], [GOT_GSF=no])
+if test "$GOT_GSF" = "no" ; then
+  enable_gsf=yes
+fi
+AM_CONDITIONAL([BUILD_GSF], [test $enable_gsf = yes])
+if test "$enable_gsf" = "yes" ; then
+  AC_DEFINE([ENABLE_GSF], 1, [Build with GSF])
+fi
+
+dnl--------------------------------------------------------------------
 dnl Generate Makefiles
 dnl--------------------------------------------------------------------
 
 AS_ECHO([" "])
 AS_ECHO(["About to create Makefiles..."])
-AC_CONFIG_FILES([Makefile src/Makefile src/mbio/Makefile \
+AC_CONFIG_FILES([\
+      Makefile \
+      src/Makefile \
+      src/mbio/Makefile \
       src/surf/Makefile \
       src/bsio/Makefile \
       src/gsf/Makefile \
@@ -795,6 +1010,8 @@ AC_CONFIG_FILES([Makefile src/Makefile src/mbio/Makefile \
       src/mbnavadjust/Makefile \
       src/otps/Makefile \
       src/mbtrn/Makefile \
+      src/mbtrnav/Makefile \
+      src/mbtrnutils/Makefile \
       src/mbview/Makefile \
       src/mbgrdviz/Makefile \
       src/mbeditviz/Makefile  \
@@ -803,7 +1020,14 @@ AC_CONFIG_FILES([Makefile src/Makefile src/mbio/Makefile \
       src/man/man3/Makefile \
       src/html/Makefile \
       src/ps/Makefile \
-      src/share/Makefile])
+      src/share/Makefile \
+      third_party/Makefile \
+      third_party/googletest/Makefile \
+      third_party/googlemock/Makefile \
+      test/Makefile \
+      test/mbio/Makefile \
+      test/utilities/Makefile \
+      ])
 AC_OUTPUT
 
 dnl--------------------------------------------------------------------
@@ -825,15 +1049,27 @@ if test "x$enable_shared" = xyes ; then
 else
     AS_ECHO(["Building Shared Libs: No"])
 fi
+if test x"$hardening" != x"no" ; then
+    AS_ECHO(["Hardening Enabled: Yes"])
+    AS_ECHO(["HARDEN_CFLAGS:     $HARDEN_CFLAGS"])
+    AS_ECHO(["HARDEN_LDFLAGS:    $HARDEN_LDFLAGS"])
+    AS_ECHO(["HARDEN_BINCFLAGS:  $HARDEN_BINCFLAGS"])
+    AS_ECHO(["HARDEN_BINLDFLAGS: $HARDEN_BINLDFLAGS"])
+else
+    AS_ECHO(["Hardening Enabled: No"])
+fi
 if test $BYTESWAP = "yes" ; then
     AS_ECHO(["Byteswapping: Enabled"])
 else
     AS_ECHO(["Byteswapping: Disabled"])
 fi
-AS_ECHO(["libgmt_CPPFLAGS:  $libgmt_CPPFLAGS"])
-AS_ECHO(["libgmt_LIBS:      $libgmt_LIBS"])
-AS_ECHO(["libgmt_LDFLAGS:   $libgmt_LDFLAGS"])
-AS_ECHO(["GMT PLUGIN DIR:   $GMT_PLUGINDIR"])
+AS_ECHO(["libgmt_CPPFLAGS:     $libgmt_CPPFLAGS"])
+AS_ECHO(["libgmt_LIBS:         $libgmt_LIBS"])
+AS_ECHO(["libgmt_LDFLAGS:      $libgmt_LDFLAGS"])
+AS_ECHO(["GMT PLUGIN DIR:      $GMT_PLUGINDIR"])
+AS_ECHO(["libgdal_CPPFLAGS:    $libgdal_CPPFLAGS"])
+AS_ECHO(["libgdal_LIBS:        $libgdal_LIBS"])
+AS_ECHO(["libgdal_LDFLAGS:     $libgdal_LDFLAGS"])
 AS_ECHO(["libnetcdf_CPPFLAGS:  $libnetcdf_CPPFLAGS"])
 AS_ECHO(["libnetcdf_LIBS:      $libnetcdf_LIBS"])
 AS_ECHO(["libnetcdf_LDFLAGS:   $libnetcdf_LDFLAGS"])
@@ -861,6 +1097,31 @@ if test "$build_mbtrn" = "yes" ; then
     AS_ECHO(["Build mbtrn tools: Enabled"])
 else
     AS_ECHO(["Build mbtrn tools: Disabled"])
+fi
+if test "$build_mbtnav" = "yes" ; then
+	AS_ECHO(["Build mbtnav tools: Enabled"])
+else
+	AS_ECHO(["Build mbtnav tools: Disabled"])
+fi
+if test "$build_mbtools" = "yes" ; then
+	AS_ECHO(["Build graphical tools: Enabled"])
+else
+	AS_ECHO(["Build graphical tools: Disabled"])
+fi
+if test "$build_pcltools" = "yes" ; then
+    AS_ECHO(["Build PCL tools: Enabled"])
+else
+    AS_ECHO(["Build PCL tools: Disabled"])
+fi
+if test "$build_test" = "yes" ; then
+    AS_ECHO(["Build unit tests: Enabled"])
+else
+    AS_ECHO(["Build unit tests: Disabled"])
+fi
+if test $enable_gsf = yes ; then
+    AS_ECHO(["Build driver gsf: Enabled"])
+else
+    AS_ECHO(["Build driver gsf: Disabled"])
 fi
 
 AS_ECHO(["------------------------------------------------------------------------------"])

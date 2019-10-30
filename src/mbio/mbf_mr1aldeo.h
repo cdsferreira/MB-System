@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_mr1aldeo.h	3/3/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -38,6 +37,9 @@
  *      time values for each bathymetry beam - this is an
  *      addition to the HIG MR1 post processing format.
  */
+
+#ifndef MBF_MR1ALDEO_H_
+#define MBF_MR1ALDEO_H_
 
 /* maximum number of bathymetry beams per side for MR1 */
 #define MBF_MR1ALDEO_BEAMS_SIDE 1500
@@ -118,3 +120,5 @@ struct mbf_mr1aldeo_struct {
 	/* comment */
 	char comment[MBF_MR1ALDEO_MAXLINE];
 };
+
+#endif  /* MBF_MR1ALDEO_H_ */

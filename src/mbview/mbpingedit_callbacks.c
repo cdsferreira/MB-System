@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbpingedit_callbacks.c		11/13/2007
- *    $Id$
  *
- *    Copyright (c) 2007-2017 by
+ *    Copyright (c) 2007-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -27,7 +26,6 @@
  * Code Generator Xcessory 6.1.3 (08/19/04) CGX Scripts 6.1 Motif 2.1
  *
  */
-#include <Xm/Xm.h>
 
 /*
  * Standard includes for builtins.
@@ -36,6 +34,15 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+
+/* Need to include windows.h BEFORE the the Xm stuff otherwise VC14+ barf with conflicts */
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+#	ifndef WIN32
+#		define WIN32
+#	endif
+#	include <WinSock2.h>
+#include <windows.h>
+#endif
 
 /* Motif required Headers */
 #include <X11/StringDefs.h>
@@ -53,11 +60,6 @@
 #include "Mb3dsdg.h"
 
 /* OpenGL include files */
-#ifdef WIN32
-#undef BOOL /* It was defined by a chain of inclusions in the (patched) X11/Xmd.h */
-#include <windows.h>
-#endif
-
 #include <GL/gl.h>
 #include <GL/glu.h>
 #ifndef WIN32
@@ -80,7 +82,6 @@
 
 /* local variables */
 
-static char rcs_id[] = "$Id$";
 
 /* function prototypes */
 /*------------------------------------------------------------------------------*/
@@ -122,15 +123,13 @@ WidgetList BxWidgetIdsFromNames PROTOTYPE((Widget, char *, char *));
 
 int mbpingedit_startup(int verbose, Widget parent, XtAppContext app, int *error) {
 	/* local variables */
-	char *function_name = "mbpingedit_startup";
 
 	/* set local verbosity */
 	mbp_verbose = verbose;
 
 	/* print starting debug statements */
 	if (mbp_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                 %d\n", verbose);
@@ -141,7 +140,7 @@ int mbpingedit_startup(int verbose, Widget parent, XtAppContext app, int *error)
 	/* set parent widget and app context */
 	mbp_parent_widget = parent;
 	mbp_app_context = app;
-	mbp_work_function_set = MB_NO;
+	mbp_work_function_set = false;
 	mbp_timer_count = 0;
 
 	/* initialize window */
@@ -152,7 +151,7 @@ int mbpingedit_startup(int verbose, Widget parent, XtAppContext app, int *error)
 
 	/* print output debug statements */
 	if (mbp_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:        %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");

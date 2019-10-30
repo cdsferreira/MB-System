@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_simrad3.h	2/22/2008
- *	$Id$
  *
- *    Copyright (c) 2008-2017 by
+ *    Copyright (c) 2008-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -168,10 +167,11 @@
  *
  */
 
-/* include mb_define.h */
-#ifndef MB_DEFINE_DEF
+#ifndef MBSYS_SIMRAD3_H_
+#define MBSYS_SIMRAD3_H_
+
 #include "mb_define.h"
-#endif
+
 
 /* sonar models */
 #define MBSYS_SIMRAD3_UNKNOWN 0
@@ -503,6 +503,7 @@ the water column have been applied. */
 	   as measured by heave  */
 
 	/* raw travel time and angle data version 4 */
+	// TODO(schwehr): bool.
 	int png_raw_read;       /* flag indicating actual reading of raw beam record */
 	int png_raw_date;       /* date = year*10000 + month*100 + day
 	                    Feb 26, 1995 = 19950226 */
@@ -600,6 +601,7 @@ the water column have been applied. */
 	    defined by Xavier Lurton. Others have not yet been defined */
 
 	/* sidescan */
+	// TODO(schwehr): bool.
 	int png_ss_read;          /* flag indicating actual reading of sidescan record */
 	int png_ss_date;          /* date = year*10000 + month*100 + day
 	                      Feb 26, 1995 = 19950226 */
@@ -613,8 +615,7 @@ the water column have been applied. */
 	int png_bsn;              /* normal incidence backscatter (BSN) (0.1 dB) */
 	int png_bso;              /* oblique incidence backscatter (BSO) (0.1 dB) */
 	int png_tx;               /* Tx beamwidth (0.1 deg) */
-	int png_tvg_crossover;
-	/* TVG law crossover angle (0.1 deg) */
+	int png_tvg_crossover; /* TVG law crossover angle (0.1 deg) */
 	int png_nbeams_ss; /* number of beams with sidescan */
 	int png_npixels;   /* number of pixels of sidescan */
 	int png_sort_direction[MBSYS_SIMRAD3_MAXBEAMS];
@@ -1372,7 +1373,7 @@ int mbsys_simrad3_deall(int verbose, void *mbio_ptr, void **store_ptr, int *erro
 int mbsys_simrad3_zero_ss(int verbose, void *store_ptr, int *error);
 int mbsys_simrad3_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss,
                              int *error);
-int mbsys_simrad3_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error);
+int mbsys_simrad3_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error);
 int mbsys_simrad3_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, int *error);
 int mbsys_simrad3_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, int *error);
 int mbsys_simrad3_preprocess(int verbose, void *mbio_ptr, void *store_ptr, void *platform_ptr, void *preprocess_pars_ptr,
@@ -1410,3 +1411,5 @@ int mbsys_simrad3_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int n
 int mbsys_simrad3_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
 int mbsys_simrad3_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel_size_set, double *pixel_size,
                          int swath_width_set, double *swath_width, int pixel_int, int *error);
+
+#endif  /* MBSYS_SIMRAD3_H_ */

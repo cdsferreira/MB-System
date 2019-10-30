@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsegypsd.c	11/2/2009
- *    $Id$
  *
- *    Copyright (c) 2009-2017 by
+ *    Copyright (c) 2009-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -19,77 +18,183 @@
  *
  * Author:	D. W. Caress
  * Date:	November 2, 2009
- *
- * $Log: mbsegypsd.c,v $
- *
  */
 
-/* standard include files */
+#include <getopt.h>
+#include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <math.h>
 #include <string.h>
-#include <time.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
 
-/* FFTW include files */
 #include "fftw3.h"
-
-/* MBIO include files */
-#include "mb_status.h"
-#include "mb_format.h"
-#include "mb_define.h"
-#include "mb_segy.h"
 #include "mb_aux.h"
+#include "mb_define.h"
+#include "mb_format.h"
+#include "mb_segy.h"
+#include "mb_status.h"
 
-/* local options */
-#define MBSEGYPSD_USESHOT 0
-#define MBSEGYPSD_USECMP 1
-#define MBSEGYPSD_WINDOW_OFF 0
-#define MBSEGYPSD_WINDOW_ON 1
-#define MBSEGYPSD_WINDOW_SEAFLOOR 2
-#define MBSEGYPSD_WINDOW_DEPTH 3
+const int MBSEGYPSD_USESHOT = 0;
+const int MBSEGYPSD_USECMP = 1;
+const int MBSEGYPSD_WINDOW_OFF = 0;
+const int MBSEGYPSD_WINDOW_ON = 1;
+const int MBSEGYPSD_WINDOW_SEAFLOOR = 2;
+const int MBSEGYPSD_WINDOW_DEPTH = 3;
 
 /* NaN value */
 float NaN;
-
-int get_segy_limits(int verbose, char *segyfile, int *tracemode, int *tracestart, int *traceend, int *chanstart, int *chanend,
-                    double *timesweep, double *timedelay, int *error);
-char *ctime();
-char *getenv();
-
 /* output stream for basic stuff (stdout if verbose <= 1,
     stderr if verbose > 1) */
 FILE *outfp;
 
-static char rcs_id[] = "$Id$";
-char program_name[] = "mbsegypsd";
-char help_message[] = "mbsegypsd calculates the power spectral density function of each trace in a segy data file, \noutputting "
-                      "the results as a GMT grid file.";
-char usage_message[] = "mbsegypsd -Ifile -Oroot [-Ashotscale \n\
-          -Ddecimatex -R \n\
-          -Smode[/start/end[/schan/echan]] -Tsweep[/delay] \n\
-          -Wmode/start/end -H -V]";
+static const char program_name[] = "mbsegypsd";
+static const char help_message[] =
+    "mbsegypsd calculates the power spectral density function of each trace in a segy data file, \noutputting "
+    "the results as a GMT grid file.";
+static const char usage_message[] =
+    "mbsegypsd -Ifile -Oroot [-Ashotscale\n"
+    "          -Ddecimatex -R\n"
+    "          -Smode[/start/end[/schan/echan]] -Tsweep[/delay]\n"
+    "          -Wmode/start/end -H -V]";
+
+/*--------------------------------------------------------------------*/
+/*
+ * function get_segy_limits gets info for default segy gridding
+ */
+int get_segy_limits(int verbose, char *segyfile, int *tracemode, int *tracestart, int *traceend, int *chanstart, int *chanend,
+                    double *timesweep, double *timedelay, int *error) {
+	if (verbose >= 2) {
+		fprintf(outfp, "\ndbg2  Function <%s> called\n", __func__);
+		fprintf(outfp, "dbg2  Input arguments:\n");
+		fprintf(outfp, "dbg2       verbose:    %d\n", verbose);
+		fprintf(outfp, "dbg2       segyfile:   %s\n", segyfile);
+	}
+
+	/* set sinf filename */
+	char sinffile[MB_PATH_MAXLINE] = "";
+	sprintf(sinffile, "%s.sinf", segyfile);
+
+	/* check status of segy and sinf file */
+	int datmodtime = 0;
+	int sinfmodtime = 0;
+	struct stat file_status;
+	int fstat = stat(segyfile, &file_status);
+	if (fstat == 0 && (file_status.st_mode & S_IFMT) != S_IFDIR) {
+		datmodtime = file_status.st_mtime;
+	}
+        fstat = stat(sinffile, &file_status);
+	if (fstat == 0 && (file_status.st_mode & S_IFMT) != S_IFDIR) {
+		sinfmodtime = file_status.st_mtime;
+	}
+
+	/* if sinf file is missing or out of date, make it */
+	if (datmodtime > 0 && datmodtime > sinfmodtime) {
+		if (verbose >= 1)
+			fprintf(stderr, "\nGenerating sinf file for %s\n", segyfile);
+		char command[MB_PATH_MAXLINE] = "";
+		sprintf(command, "mbsegyinfo -I %s -O", segyfile);
+		/* int shellstatus = */ system(command);
+	}
+
+	double delay0 = 0.0;
+	double delaydel = 0.0;
+	int shot0 = 0;
+	int shot1 = 0;
+	int shottrace0 = 0;
+	int shottrace1 = 0;
+	int rp0 = 0;
+	int rp1 = 0;
+	int rpdel = 0;
+	int rptrace0 = 0;
+	int rptrace1 = 0;
+
+	/* read sinf file if possible */
+	sprintf(sinffile, "%s.sinf", segyfile);
+	FILE *sfp = fopen(sinffile, "r");
+	if (sfp != NULL) {
+		/* read the sinf file */
+		char line[MB_PATH_MAXLINE] = "";
+		while (fgets(line, MB_PATH_MAXLINE, sfp) != NULL) {
+			if (strncmp(line, "  Trace length (sec):", 21) == 0) {
+				/* nscan = */ sscanf(line, "  Trace length (sec):%lf", timesweep);
+			}
+			else if (strncmp(line, "    Delay (sec):", 16) == 0) {
+				double delay1 = 0.0;
+				/* nscan = */ sscanf(line, "    Delay (sec): %lf %lf %lf", &delay0, &delay1, &delaydel);
+			}
+			else if (strncmp(line, "    Shot number:", 16) == 0) {
+				int shotdel = 0;
+				/* nscan = */ sscanf(line, "    Shot number: %d %d %d", &shot0, &shot1, &shotdel);
+			}
+			else if (strncmp(line, "    Shot trace:", 15) == 0) {
+				int shottracedel = 0;
+				/* nscan = */ sscanf(line, "    Shot trace: %d %d %d", &shottrace0, &shottrace1, &shottracedel);
+			}
+			else if (strncmp(line, "    RP number:", 14) == 0) {
+				/* nscan = */ sscanf(line, "    RP number: %d %d %d", &rp0, &rp1, &rpdel);
+			}
+			else if (strncmp(line, "    RP trace:", 13) == 0) {
+				int rptracedel = 0;
+				/* nscan = */ sscanf(line, "    RP trace: %d %d %d", &rptrace0, &rptrace1, &rptracedel);
+			}
+		}
+		fclose(sfp);
+	}
+
+	/* set the trace mode */
+	if (rpdel > 1) {
+		*tracemode = MBSEGYPSD_USECMP;
+		*tracestart = rp0;
+		*traceend = rp1;
+		*chanstart = rptrace0;
+		*chanend = rptrace1;
+	}
+	else {
+		*tracemode = MBSEGYPSD_USESHOT;
+		*tracestart = shot0;
+		*traceend = shot1;
+		*chanstart = shottrace0;
+		*chanend = shottrace1;
+	}
+
+	/* set the sweep and delay */
+	if (delaydel > 0.0) {
+		*timesweep += delaydel;
+	}
+	*timedelay = delay0;
+
+	const int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(outfp, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(outfp, "dbg2  Return values:\n");
+		fprintf(outfp, "dbg2       tracemode:  %d\n", *tracemode);
+		fprintf(outfp, "dbg2       tracestart: %d\n", *tracestart);
+		fprintf(outfp, "dbg2       traceend:   %d\n", *traceend);
+		fprintf(outfp, "dbg2       chanstart:  %d\n", *chanstart);
+		fprintf(outfp, "dbg2       chanend:    %d\n", *chanend);
+		fprintf(outfp, "dbg2       timesweep:  %f\n", *timesweep);
+		fprintf(outfp, "dbg2       timedelay:  %f\n", *timedelay);
+		fprintf(outfp, "dbg2       error:      %d\n", *error);
+		fprintf(outfp, "dbg2  Return status:\n");
+		fprintf(outfp, "dbg2       status:     %d\n", status);
+	}
+
+	return (status);
+}
 
 /*--------------------------------------------------------------------*/
 
 int main(int argc, char **argv) {
-	extern char *optarg;
-	int errflg = 0;
-	int c;
-	int help = 0;
-	int flag = 0;
-
-	/* MBIO status variables */
-	int status = MB_SUCCESS;
 	int verbose = 0;
 	int error = MB_ERROR_NO_ERROR;
-	char *message;
 
 	/* segy data */
-	char segyfile[MB_PATH_MAXLINE];
+	char segyfile[MB_PATH_MAXLINE] = "";
 	void *mbsegyioptr;
 	struct mb_segyasciiheader_struct asciiheader;
 	struct mb_segyfileheader_struct fileheader;
@@ -109,9 +214,9 @@ int main(int argc, char **argv) {
 	int nsection;
 
 	/* grid controls */
-	char fileroot[MB_PATH_MAXLINE];
-	char gridfile[MB_PATH_MAXLINE];
-	char psdfile[MB_PATH_MAXLINE];
+	char fileroot[MB_PATH_MAXLINE] = "";
+	char gridfile[MB_PATH_MAXLINE] = "";
+	char psdfile[MB_PATH_MAXLINE] = "";
 	int decimatex = 1;
 	int tracemode = MBSEGYPSD_USESHOT;
 	int tracestart = 0;
@@ -136,16 +241,16 @@ int main(int argc, char **argv) {
 	double dy;
 	double gridmintot = 0.0;
 	double gridmaxtot = 0.0;
-	char projection[MB_PATH_MAXLINE];
-	char xlabel[MB_PATH_MAXLINE];
-	char ylabel[MB_PATH_MAXLINE];
-	char zlabel[MB_PATH_MAXLINE];
-	char title[MB_PATH_MAXLINE];
-	char plot_cmd[MB_PATH_MAXLINE];
-	int scale2distance = MB_NO;
+	char projection[MB_PATH_MAXLINE] = "";
+	char xlabel[MB_PATH_MAXLINE] = "";
+	char ylabel[MB_PATH_MAXLINE] = "";
+	char zlabel[MB_PATH_MAXLINE] = "";
+	char title[MB_PATH_MAXLINE] = "";
+	char plot_cmd[MB_PATH_MAXLINE] = "";
+	bool scale2distance = false;
 	double shotscale = 1.0;
 	double frequencyscale = 1.0;
-	int logscale = MB_NO;
+	bool logscale = false;
 
 	int sinftracemode = MBSEGYPSD_USESHOT;
 	int sinftracestart = 0;
@@ -162,7 +267,7 @@ int main(int argc, char **argv) {
 
 	FILE *fp;
 	int nread;
-	int tracecount, tracenum, channum, traceok;
+	int tracecount, tracenum, channum;
 	double tracemin, tracemax;
 	double xwidth, ywidth;
 	int ix, iy, iys;
@@ -172,8 +277,6 @@ int main(int argc, char **argv) {
 	double stimesave = 0.0;
 	double dtimesave = 0.0;
 	int plot_status;
-	int kstart, kend;
-	int i, j, k, n;
 
 	/* set file to null */
 	segyfile[0] = '\0';
@@ -182,138 +285,132 @@ int main(int argc, char **argv) {
 	MB_MAKE_FNAN(NaN);
 
 	/* process argument list */
-	while ((c = getopt(argc, argv, "A:a:D:d:I:i:LlN:n:O:o:PpS:s:T:t:VvW:w:Hh")) != -1)
-		switch (c) {
-		case 'H':
-		case 'h':
-			help++;
-			break;
-		case 'V':
-		case 'v':
-			verbose++;
-			break;
-		case 'A':
-		case 'a':
-			n = sscanf(optarg, "%lf/%lf", &shotscale, &frequencyscale);
-			if (n == 2)
-				scale2distance = MB_YES;
-			flag++;
-			break;
-		case 'D':
-		case 'd':
-			n = sscanf(optarg, "%d", &decimatex);
-			flag++;
-			break;
-		case 'I':
-		case 'i':
-			sscanf(optarg, "%s", segyfile);
-			flag++;
-			break;
-		case 'L':
-		case 'l':
-			logscale = MB_YES;
-			flag++;
-			break;
-		case 'N':
-		case 'n':
-			n = sscanf(optarg, "%d", &nfft);
-			flag++;
-			break;
-		case 'G':
-		case 'O':
-		case 'o':
-			sscanf(optarg, "%s", fileroot);
-			flag++;
-			break;
-		case 'S':
-		case 's':
-			n = sscanf(optarg, "%d/%d/%d/%d/%d", &tracemode, &tracestart, &traceend, &chanstart, &chanend);
-			if (n < 5) {
-				chanstart = 0;
-				chanend = -1;
+	{
+		bool errflg = false;
+		int c;
+		bool help = false;
+		while ((c = getopt(argc, argv, "A:a:D:d:I:i:LlN:n:O:o:PpS:s:T:t:VvW:w:Hh")) != -1)
+			switch (c) {
+			case 'H':
+			case 'h':
+				help = true;
+				break;
+			case 'V':
+			case 'v':
+				verbose++;
+				break;
+			case 'A':
+			case 'a':
+			{
+				const int n = sscanf(optarg, "%lf/%lf", &shotscale, &frequencyscale);
+				if (n == 2)
+					scale2distance = true;
+				break;
 			}
-			if (n < 3) {
-				tracestart = 0;
-				traceend = 0;
+			case 'D':
+			case 'd':
+				sscanf(optarg, "%d", &decimatex);
+				break;
+			case 'I':
+			case 'i':
+				sscanf(optarg, "%s", segyfile);
+				break;
+			case 'L':
+			case 'l':
+				logscale = true;
+				break;
+			case 'N':
+			case 'n':
+				sscanf(optarg, "%d", &nfft);
+				break;
+			case 'G':
+			case 'O':
+			case 'o':
+				sscanf(optarg, "%s", fileroot);
+				break;
+			case 'S':
+			case 's':
+			{
+				const int n = sscanf(optarg, "%d/%d/%d/%d/%d", &tracemode, &tracestart, &traceend, &chanstart, &chanend);
+				if (n < 5) {
+					chanstart = 0;
+					chanend = -1;
+				}
+				if (n < 3) {
+					tracestart = 0;
+					traceend = 0;
+				}
+				if (n < 1) {
+					tracemode = MBSEGYPSD_USESHOT;
+				}
+				break;
 			}
-			if (n < 1) {
-				tracemode = MBSEGYPSD_USESHOT;
+			case 'T':
+			case 't':
+			{
+				const int n = sscanf(optarg, "%lf/%lf", &timesweep, &timedelay);
+				if (n < 2)
+					timedelay = 0.0;
+				break;
 			}
-			flag++;
-			break;
-		case 'T':
-		case 't':
-			n = sscanf(optarg, "%lf/%lf", &timesweep, &timedelay);
-			if (n < 2)
-				timedelay = 0.0;
-			flag++;
-			break;
-		case 'W':
-		case 'w':
-			n = sscanf(optarg, "%d/%lf/%lf", &windowmode, &windowstart, &windowend);
-			flag++;
-			break;
-		case '?':
-			errflg++;
+			case 'W':
+			case 'w':
+				sscanf(optarg, "%d/%lf/%lf", &windowmode, &windowstart, &windowend);
+				break;
+			case '?':
+				errflg = true;
+			}
+
+		if (verbose >= 2)
+			outfp = stderr;
+		else
+			outfp = stdout;
+
+		if (errflg) {
+			fprintf(outfp, "usage: %s\n", usage_message);
+			fprintf(outfp, "\nProgram <%s> Terminated\n", program_name);
+			exit(MB_ERROR_BAD_USAGE);
 		}
 
-	/* set output stream to stdout or stderr */
-	if (verbose >= 2)
-		outfp = stderr;
-	else
-		outfp = stdout;
+		if (verbose == 1 || help) {
+			fprintf(outfp, "\nProgram %s\n", program_name);
+			fprintf(outfp, "MB-system Version %s\n", MB_VERSION);
+		}
 
-	/* if error flagged then print it and exit */
-	if (errflg) {
-		fprintf(outfp, "usage: %s\n", usage_message);
-		fprintf(outfp, "\nProgram <%s> Terminated\n", program_name);
-		error = MB_ERROR_BAD_USAGE;
-		exit(error);
-	}
+		if (verbose >= 2) {
+			fprintf(outfp, "\ndbg2  Program <%s>\n", program_name);
+			fprintf(outfp, "dbg2  MB-system Version %s\n", MB_VERSION);
+			fprintf(outfp, "dbg2  Control Parameters:\n");
+			fprintf(outfp, "dbg2       verbose:        %d\n", verbose);
+			fprintf(outfp, "dbg2       help:           %d\n", help);
+			fprintf(outfp, "dbg2       segyfile:       %s\n", segyfile);
+			fprintf(outfp, "dbg2       fileroot:       %s\n", fileroot);
+			fprintf(outfp, "dbg2       nfft:           %d\n", nfft);
+			fprintf(outfp, "dbg2       decimatex:      %d\n", decimatex);
+			fprintf(outfp, "dbg2       tracemode:      %d\n", tracemode);
+			fprintf(outfp, "dbg2       tracestart:     %d\n", tracestart);
+			fprintf(outfp, "dbg2       traceend:       %d\n", traceend);
+			fprintf(outfp, "dbg2       chanstart:      %d\n", chanstart);
+			fprintf(outfp, "dbg2       chanend:        %d\n", chanend);
+			fprintf(outfp, "dbg2       timesweep:      %f\n", timesweep);
+			fprintf(outfp, "dbg2       timedelay:      %f\n", timedelay);
+			fprintf(outfp, "dbg2       ngridx:         %d\n", ngridx);
+			fprintf(outfp, "dbg2       ngridy:         %d\n", ngridy);
+			fprintf(outfp, "dbg2       ngridxy:        %d\n", ngridxy);
+			fprintf(outfp, "dbg2       windowmode:     %d\n", windowmode);
+			fprintf(outfp, "dbg2       windowstart:    %f\n", windowstart);
+			fprintf(outfp, "dbg2       windowend:      %f\n", windowend);
+			fprintf(outfp, "dbg2       scale2distance: %d\n", scale2distance);
+			fprintf(outfp, "dbg2       shotscale:      %f\n", shotscale);
+			fprintf(outfp, "dbg2       frequencyscale: %f\n", frequencyscale);
+			fprintf(outfp, "dbg2       logscale:       %d\n", logscale);
+		}
 
-	/* print starting message */
-	if (verbose == 1 || help) {
-		fprintf(outfp, "\nProgram %s\n", program_name);
-		fprintf(outfp, "Version %s\n", rcs_id);
-		fprintf(outfp, "MB-system Version %s\n", MB_VERSION);
-	}
-
-	/* print starting debug statements */
-	if (verbose >= 2) {
-		fprintf(outfp, "\ndbg2  Program <%s>\n", program_name);
-		fprintf(outfp, "dbg2  Version %s\n", rcs_id);
-		fprintf(outfp, "dbg2  MB-system Version %s\n", MB_VERSION);
-		fprintf(outfp, "dbg2  Control Parameters:\n");
-		fprintf(outfp, "dbg2       verbose:        %d\n", verbose);
-		fprintf(outfp, "dbg2       help:           %d\n", help);
-		fprintf(outfp, "dbg2       segyfile:       %s\n", segyfile);
-		fprintf(outfp, "dbg2       fileroot:       %s\n", fileroot);
-		fprintf(outfp, "dbg2       nfft:           %d\n", nfft);
-		fprintf(outfp, "dbg2       decimatex:      %d\n", decimatex);
-		fprintf(outfp, "dbg2       tracemode:      %d\n", tracemode);
-		fprintf(outfp, "dbg2       tracestart:     %d\n", tracestart);
-		fprintf(outfp, "dbg2       traceend:       %d\n", traceend);
-		fprintf(outfp, "dbg2       chanstart:      %d\n", chanstart);
-		fprintf(outfp, "dbg2       chanend:        %d\n", chanend);
-		fprintf(outfp, "dbg2       timesweep:      %f\n", timesweep);
-		fprintf(outfp, "dbg2       timedelay:      %f\n", timedelay);
-		fprintf(outfp, "dbg2       ngridx:         %d\n", ngridx);
-		fprintf(outfp, "dbg2       ngridy:         %d\n", ngridy);
-		fprintf(outfp, "dbg2       ngridxy:        %d\n", ngridxy);
-		fprintf(outfp, "dbg2       windowmode:     %d\n", windowmode);
-		fprintf(outfp, "dbg2       windowstart:    %f\n", windowstart);
-		fprintf(outfp, "dbg2       windowend:      %f\n", windowend);
-		fprintf(outfp, "dbg2       scale2distance: %d\n", scale2distance);
-		fprintf(outfp, "dbg2       shotscale:      %f\n", shotscale);
-		fprintf(outfp, "dbg2       frequencyscale: %f\n", frequencyscale);
-		fprintf(outfp, "dbg2       logscale:       %d\n", logscale);
-	}
-
-	/* if help desired then print it and exit */
-	if (help) {
-		fprintf(outfp, "\n%s\n", help_message);
-		fprintf(outfp, "\nusage: %s\n", usage_message);
-		exit(error);
+		if (help) {
+			fprintf(outfp, "\n%s\n", help_message);
+			fprintf(outfp, "\nusage: %s\n", usage_message);
+			exit(error);
+		}
 	}
 
 	/* get segy limits if required */
@@ -349,6 +446,7 @@ int main(int argc, char **argv) {
 
 	/* initialize reading the segy file */
 	if (mb_segy_read_init(verbose, segyfile, &mbsegyioptr, &asciiheader, &fileheader, &error) != MB_SUCCESS) {
+		char *message;
 		mb_error(verbose, error, &message);
 		fprintf(outfp, "\nMBIO Error returned from function <mb_segy_read_init>:\n%s\n", message);
 		fprintf(outfp, "\nSEGY File <%s> not initialized for reading\n", segyfile);
@@ -387,11 +485,11 @@ int main(int argc, char **argv) {
 	}
 
 	/* allocate memory for grid array */
-	status = mb_mallocd(verbose, __FILE__, __LINE__, 2 * ngridxy * sizeof(float), (void **)&grid, &error);
-	status = mb_mallocd(verbose, __FILE__, __LINE__, ngridy * sizeof(double), (void **)&spsd, &error);
-	status = mb_mallocd(verbose, __FILE__, __LINE__, ngridy * sizeof(double), (void **)&wpsd, &error);
-	status = mb_mallocd(verbose, __FILE__, __LINE__, ngridy * sizeof(double), (void **)&spsdtot, &error);
-	status = mb_mallocd(verbose, __FILE__, __LINE__, ngridy * sizeof(double), (void **)&wpsdtot, &error);
+	int status = mb_mallocd(verbose, __FILE__, __LINE__, 2 * ngridxy * sizeof(float), (void **)&grid, &error);
+	status &= mb_mallocd(verbose, __FILE__, __LINE__, ngridy * sizeof(double), (void **)&spsd, &error);
+	status &= mb_mallocd(verbose, __FILE__, __LINE__, ngridy * sizeof(double), (void **)&wpsd, &error);
+	status &= mb_mallocd(verbose, __FILE__, __LINE__, ngridy * sizeof(double), (void **)&spsdtot, &error);
+	status &= mb_mallocd(verbose, __FILE__, __LINE__, ngridy * sizeof(double), (void **)&wpsdtot, &error);
 
 	/* zero working psd array */
 	for (iy = 0; iy < ngridy; iy++) {
@@ -429,7 +527,7 @@ int main(int argc, char **argv) {
 		fprintf(outfp, "     NaN values used to flag regions with no data\n");
 		fprintf(outfp, "     shotscale:          %f\n", shotscale);
 		fprintf(outfp, "     frequencyscale:     %f\n", frequencyscale);
-		if (scale2distance == MB_YES) {
+		if (scale2distance) {
 			fprintf(outfp, "     trace numbers scaled to distance in meters\n");
 			fprintf(outfp, "     scaled grid xmin    %f\n", 0.0);
 			fprintf(outfp, "     scaled grid xmax:   %f\n", shotscale * (xmax - xmin));
@@ -442,13 +540,15 @@ int main(int argc, char **argv) {
 	if (status == MB_SUCCESS) {
 
 		/* fill grid with NaNs */
-		for (i = 0; i < ngridxy; i++)
+		for (int i = 0; i < ngridxy; i++)
 			grid[i] = NaN;
 
 		/* generate the fftw plan */
 		fftw_in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nfft);
 		fftw_out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nfft);
 		plan = fftw_plan_dft_1d(nfft, fftw_in, fftw_out, FFTW_FORWARD, FFTW_MEASURE);
+
+		bool traceok;
 
 		/* read and print data */
 		nread = 0;
@@ -507,24 +607,24 @@ int main(int argc, char **argv) {
 				iys = (btime - timedelay) / sampleinterval;
 
 				/* now check if this is a trace of interest */
-				traceok = MB_YES;
+				traceok = true;
 				if (tracenum < tracestart || tracenum > traceend)
-					traceok = MB_NO;
+					traceok = false;
 				else if (chanend >= chanstart && (channum < chanstart || channum > chanend))
-					traceok = MB_NO;
+					traceok = false;
 				else if (tracecount % decimatex != 0)
-					traceok = MB_NO;
+					traceok = false;
 
 				/* get trace min and max */
 				tracemin = trace[0];
 				tracemax = trace[0];
-				for (i = 0; i < traceheader.nsamps; i++) {
+				for (int i = 0; i < traceheader.nsamps; i++) {
 					tracemin = MIN(tracemin, trace[i]);
 					tracemax = MAX(tracemin, trace[i]);
 				}
 
 				if ((verbose == 0 && nread % 250 == 0) || (nread % 25 == 0)) {
-					if (traceok == MB_YES)
+					if (traceok)
 						fprintf(outfp, "PROCESS ");
 					else
 						fprintf(outfp, "IGNORE  ");
@@ -538,7 +638,7 @@ int main(int argc, char **argv) {
 				}
 
 				/* now actually process traces of interest */
-				if (traceok == MB_YES) {
+				if (traceok) {
 					/* zero working psd array */
 					for (iy = 0; iy < ngridy; iy++) {
 						spsd[iy] = 0.0;
@@ -561,17 +661,17 @@ int main(int argc, char **argv) {
 					nsection = (itend - itstart + 1) / nfft;
 					if (((itend - itstart + 1) % nfft) > 0)
 						nsection++;
-					for (j = 0; j < nsection; j++) {
+					for (int j = 0; j < nsection; j++) {
 						/* initialize normalization factors */
 						normraw = 0.0;
 						normtaper = 0.0;
 						normfft = 0.0;
 
 						/* extract data section to be fft'd with taper */
-						kstart = itstart + j * nfft;
-						kend = MIN(kstart + nfft, itend);
-						for (i = 0; i < nfft; i++) {
-							k = itstart + j * nfft + i;
+						const int kstart = itstart + j * nfft;
+						const int kend = MIN(kstart + nfft, itend);
+						for (int i = 0; i < nfft; i++) {
+							const int k = itstart + j * nfft + i;
 							if (k <= kend) {
 								sint = sin(M_PI * ((double)(k - kstart)) / ((double)(kend - kstart)));
 								taper = sint * sint;
@@ -588,19 +688,18 @@ int main(int argc, char **argv) {
 							fftw_in[i][1] = 0.0;
 						}
 						soundpressurelevel = 20.0 * log10(normraw / nfft);
-						/*fprintf(stderr,"Sound Pressure Level: %f dB re 1 uPa\n",soundpressurelevel);*/
 
 						/* execute the fft */
 						fftw_execute(plan);
 
 						/* get normalization factor - require variance of transform to equal variance of input */
-						for (i = 1; i < nfft; i++) {
+						for (int i = 1; i < nfft; i++) {
 							normfft += fftw_out[i][0] * fftw_out[i][0] + fftw_out[i][1] * fftw_out[i][1];
 						}
 						norm = normraw / normfft;
 
 						/* apply normalization factor */
-						for (i = 1; i < nfft; i++) {
+						for (int i = 1; i < nfft; i++) {
 							fftw_out[i][0] = norm * fftw_out[i][0];
 							fftw_out[i][1] = norm * fftw_out[i][1];
 						}
@@ -608,39 +707,29 @@ int main(int argc, char **argv) {
 						/* calculate psd from result of transform */
 						spsd[0] += fftw_out[0][0] * fftw_out[0][0] + fftw_out[0][1] * fftw_out[0][1];
 						wpsd[0] += 1.0;
-						/* fprintf(stderr,"FFT result: i:%d  %f %f  %f\n",
-						0,fftw_out[0][0],fftw_out[0][1],fftw_out[0][0] * fftw_out[0][0] + fftw_out[0][1] * fftw_out[0][1]);*/
-						for (i = 1; i < nfft / 2; i++) {
+
+						int i = 1;  // Used after for.
+						for (; i < nfft / 2; i++) {
 							spsd[i] += 2.0 * (fftw_out[i][0] * fftw_out[i][0] + fftw_out[i][1] * fftw_out[i][1]);
 							wpsd[i] += 1.0;
-							/* fprintf(stderr,"FFT result: i:%d  %f %f  %f\n",
-							i,fftw_out[i][0],fftw_out[i][1],2.0 * fftw_out[i][0] * fftw_out[i][0] + fftw_out[i][1] *
-							fftw_out[i][1]);*/
 						}
 						if (nfft % 2 == 0) {
 							spsd[i] +=
 							    fftw_out[nfft / 2][0] * fftw_out[nfft / 2][0] + fftw_out[nfft / 2][1] * fftw_out[nfft / 2][1];
 							wpsd[i] += 1.0;
-							/* fprintf(stderr,"FFT result: i:%d  %f %f  %f\n",
-							nfft/2,fftw_out[nfft/2][0],fftw_out[nfft/2][1],fftw_out[nfft/2][0] * fftw_out[nfft/2][0] +
-							fftw_out[nfft/2][1] * fftw_out[nfft/2][1]); */
 						}
 					}
 
 					/* output psd for this trace to the grid */
-					/*fprintf(stderr,"N:%d Normalization: %f %f %f    ratios: %f %f     %f %f\n",
-					nfft,normraw,normtaper,normfft,normraw/normfft,normfft/normraw,normtaper/normfft,normfft/normtaper);*/
 					for (iy = 0; iy < ngridy; iy++) {
-						k = (ngridy - 1 - iy) * ngridx + ix;
+						const int k = (ngridy - 1 - iy) * ngridx + ix;
 						if (wpsd[iy] > 0.0) {
-							if (logscale == MB_NO)
+							if (!logscale)
 								grid[k] = spsd[iy] / wpsd[iy];
 							else
 								grid[k] = 20.0 * log10(spsd[iy] / wpsd[iy]);
 							spsdtot[iy] += grid[k];
 							wpsdtot[iy] += 1.0;
-							/*fprintf(stderr,"ix:%d iy:%d k:%d spsd:%f wpsd:%f     f:%f p:%f\n",
-							ix,iy,k,spsd[iy],wpsd[iy],ymax * iy / ngridy,grid[k]);*/
 							gridmintot = MIN(grid[k], gridmintot);
 							gridmaxtot = MAX(grid[k], gridmaxtot);
 						}
@@ -663,7 +752,7 @@ int main(int argc, char **argv) {
 	error = MB_ERROR_NO_ERROR;
 	status = MB_SUCCESS;
 	strcpy(projection, "GenericLinear");
-	if (scale2distance == MB_YES) {
+	if (scale2distance) {
 		strcpy(xlabel, "Distance (m)");
 		strcpy(ylabel, "Frequency (Hz)");
 		xmax *= shotscale;
@@ -675,7 +764,7 @@ int main(int argc, char **argv) {
 		strcpy(ylabel, "Frequency (Hz)");
 		dx = (double)decimatex;
 	}
-	if (logscale == MB_YES)
+	if (logscale)
 		strcpy(zlabel, "dB/Hz");
 	else
 		strcpy(zlabel, "Intensity/Hz");
@@ -735,145 +824,12 @@ int main(int argc, char **argv) {
 	if (verbose >= 4)
 		status = mb_memory_list(verbose, &error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
 		fprintf(outfp, "\ndbg2  Program <%s> completed\n", program_name);
 		fprintf(outfp, "dbg2  Ending status:\n");
 		fprintf(outfp, "dbg2       status:  %d\n", status);
 	}
 
-	/* end it all */
 	exit(error);
-}
-/*--------------------------------------------------------------------*/
-/*
- * function get_segy_limits gets info for default segy gridding
- */
-int get_segy_limits(int verbose, char *segyfile, int *tracemode, int *tracestart, int *traceend, int *chanstart, int *chanend,
-                    double *timesweep, double *timedelay, int *error) {
-	char *function_name = "get_segy_limits";
-	int status = MB_SUCCESS;
-	char sinffile[MB_PATH_MAXLINE];
-	char command[MB_PATH_MAXLINE];
-	char line[MB_PATH_MAXLINE];
-	FILE *sfp;
-	int datmodtime = 0;
-	int sinfmodtime = 0;
-	struct stat file_status;
-	int fstat;
-	double delay0 = 0.0;
-	double delay1 = 0.0;
-	double delaydel = 0.0;
-	int shot0 = 0;
-	int shot1 = 0;
-	int shotdel = 0;
-	int shottrace0 = 0;
-	int shottrace1 = 0;
-	int shottracedel = 0;
-	int rp0 = 0;
-	int rp1 = 0;
-	int rpdel = 0;
-	int rptrace0 = 0;
-	int rptrace1 = 0;
-	int rptracedel = 0;
-	int nscan;
-	int shellstatus;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(outfp, "\ndbg2  Function <%s> called\n", function_name);
-		fprintf(outfp, "dbg2  Input arguments:\n");
-		fprintf(outfp, "dbg2       verbose:    %d\n", verbose);
-		fprintf(outfp, "dbg2       segyfile:   %s\n", segyfile);
-	}
-
-	/* set sinf filename */
-	sprintf(sinffile, "%s.sinf", segyfile);
-
-	/* check status of segy and sinf file */
-	datmodtime = 0;
-	sinfmodtime = 0;
-	if ((fstat = stat(segyfile, &file_status)) == 0 && (file_status.st_mode & S_IFMT) != S_IFDIR) {
-		datmodtime = file_status.st_mtime;
-	}
-	if ((fstat = stat(sinffile, &file_status)) == 0 && (file_status.st_mode & S_IFMT) != S_IFDIR) {
-		sinfmodtime = file_status.st_mtime;
-	}
-
-	/* if sinf file is missing or out of date, make it */
-	if (datmodtime > 0 && datmodtime > sinfmodtime) {
-		if (verbose >= 1)
-			fprintf(stderr, "\nGenerating sinf file for %s\n", segyfile);
-		sprintf(command, "mbsegyinfo -I %s -O", segyfile);
-		shellstatus = system(command);
-	}
-
-	/* read sinf file if possible */
-	sprintf(sinffile, "%s.sinf", segyfile);
-	if ((sfp = fopen(sinffile, "r")) != NULL) {
-		/* read the sinf file */
-		while (fgets(line, MB_PATH_MAXLINE, sfp) != NULL) {
-			if (strncmp(line, "  Trace length (sec):", 21) == 0) {
-				nscan = sscanf(line, "  Trace length (sec):%lf", timesweep);
-			}
-			else if (strncmp(line, "    Delay (sec):", 16) == 0) {
-				nscan = sscanf(line, "    Delay (sec): %lf %lf %lf", &delay0, &delay1, &delaydel);
-			}
-			else if (strncmp(line, "    Shot number:", 16) == 0) {
-				nscan = sscanf(line, "    Shot number: %d %d %d", &shot0, &shot1, &shotdel);
-			}
-			else if (strncmp(line, "    Shot trace:", 15) == 0) {
-				nscan = sscanf(line, "    Shot trace: %d %d %d", &shottrace0, &shottrace1, &shottracedel);
-			}
-			else if (strncmp(line, "    RP number:", 14) == 0) {
-				nscan = sscanf(line, "    RP number: %d %d %d", &rp0, &rp1, &rpdel);
-			}
-			else if (strncmp(line, "    RP trace:", 13) == 0) {
-				nscan = sscanf(line, "    RP trace: %d %d %d", &rptrace0, &rptrace1, &rptracedel);
-			}
-		}
-		fclose(sfp);
-	}
-
-	/* set the trace mode */
-	if (rpdel > 1) {
-		*tracemode = MBSEGYPSD_USECMP;
-		*tracestart = rp0;
-		*traceend = rp1;
-		*chanstart = rptrace0;
-		*chanend = rptrace1;
-	}
-	else {
-		*tracemode = MBSEGYPSD_USESHOT;
-		*tracestart = shot0;
-		*traceend = shot1;
-		*chanstart = shottrace0;
-		*chanend = shottrace1;
-	}
-
-	/* set the sweep and delay */
-	if (delaydel > 0.0) {
-		*timesweep += delaydel;
-	}
-	*timedelay = delay0;
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(outfp, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(outfp, "dbg2  Return values:\n");
-		fprintf(outfp, "dbg2       tracemode:  %d\n", *tracemode);
-		fprintf(outfp, "dbg2       tracestart: %d\n", *tracestart);
-		fprintf(outfp, "dbg2       traceend:   %d\n", *traceend);
-		fprintf(outfp, "dbg2       chanstart:  %d\n", *chanstart);
-		fprintf(outfp, "dbg2       chanend:    %d\n", *chanend);
-		fprintf(outfp, "dbg2       timesweep:  %f\n", *timesweep);
-		fprintf(outfp, "dbg2       timedelay:  %f\n", *timedelay);
-		fprintf(outfp, "dbg2       error:      %d\n", *error);
-		fprintf(outfp, "dbg2  Return status:\n");
-		fprintf(outfp, "dbg2       status:     %d\n", status);
-	}
-
-	/* return status */
-	return (status);
 }
 /*--------------------------------------------------------------------*/

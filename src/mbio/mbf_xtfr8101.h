@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_xtfr8101.h	8/24/01
- *	$Id$
  *
- *    Copyright (c) 2001-2017 by
+ *    Copyright (c) 2001-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -27,6 +26,9 @@
  *   1. Reson SeaBat products are high frequency,
  *
  */
+
+#ifndef MBF_XTFR8101_H_
+#define MBF_XTFR8101_H_
 
 /* maximum number of beams and pixels */
 #define MBF_XTFR8101_MAXBEAMS 240
@@ -586,3 +588,5 @@ struct mbf_xtfr8101_struct {
 	/* comment */
 	char comment[MBF_XTFR8101_COMMENT_LENGTH];
 };
+
+#endif  /* MBF_XTFR8101_H_ */

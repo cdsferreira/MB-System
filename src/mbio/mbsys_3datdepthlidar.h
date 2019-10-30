@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_3datdepthlidar.h	11/29/2013
- *	$Id$
  *
- *    Copyright (c) 2013-2017 by
+ *    Copyright (c) 2013-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -177,10 +176,10 @@
  *
  */
 
-/* include mb_define.h */
-#ifndef MB_DEFINE_DEF
+#ifndef MBSYS_3DATDEPTHLIDAR_H_
+#define MBSYS_3DATDEPTHLIDAR_H_
+
 #include "mb_define.h"
-#endif
 
 /* defines */
 #define MBF_3DDEPTHP_MAGICNUMBER 0x3D46        /* '=''F' */
@@ -320,7 +319,7 @@ int mbsys_3datdepthlidar_alloc(int verbose, void *mbio_ptr, void **store_ptr, in
 int mbsys_3datdepthlidar_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error);
 int mbsys_3datdepthlidar_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss,
                                     int *error);
-int mbsys_3datdepthlidar_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error);
+int mbsys_3datdepthlidar_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error);
 int mbsys_3datdepthlidar_preprocess(int verbose, void *mbio_ptr, void *store_ptr, void *platform_ptr, void *preprocess_pars_ptr,
                                     int *error);
 int mbsys_3datdepthlidar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time_i[7], double *time_d,
@@ -356,3 +355,5 @@ int mbsys_3datdepthlidar_insert_svp(int verbose, void *mbio_ptr, void *store_ptr
 int mbsys_3datdepthlidar_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
 int mbsys_3datdepthlidar_print_store(int verbose, void *store_ptr, int *error);
 int mbsys_3datdepthlidar_calculatebathymetry(int verbose, void *mbio_ptr, void *store_ptr, int *error);
+
+#endif  /* MBSYS_3DATDEPTHLIDAR_H_ */

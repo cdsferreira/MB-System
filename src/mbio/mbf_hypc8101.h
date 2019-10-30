@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_hypc8101.h	8/21/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -412,6 +411,11 @@
  *
  */
 
+#ifndef MBF_HYPC8101_H_
+#define MBF_HYPC8101_H_
+
+#include "mbsys_reson.h"
+
 /* maximum number of beams and pixels */
 #define MBF_HYPC8101_MAXBEAMS 101
 #define MBF_HYPC8101_COMMENT_LENGTH 200
@@ -536,3 +540,5 @@ struct mbf_hypc8101_struct {
 	double angle0;
 	double angle_inc;
 };
+
+#endif  /* MBF_HYPC8101_H_ */

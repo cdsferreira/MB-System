@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_hysweep.h	12/23/2011
- *	$Id$
  *
- *    Copyright (c) 2011-2017 by
+ *    Copyright (c) 2011-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -95,6 +94,11 @@
  *	MSS	Sidescan laid out on seafloor - MB-System extension
  *
  */
+
+#ifndef MBSYS_HYSWEEP_H_
+#define MBSYS_HYSWEEP_H_
+
+#include "mb_define.h"
 
 /* HYSWEEP record type */
 #define MBSYS_HYSWEEP_RECORDTYPE_NONE 0 /* No record */
@@ -276,6 +280,7 @@ struct mbsys_hysweep_device_struct {
 	                   0040 - tide
 	                   0200 - MRU (heave, pitch, and roll compensation) */
 	int DV2_towfish;           /* 1 if device is mountedc on a tow fish */
+	// TODO(schwehr): Make DV2_enabled be a bool.
 	int DV2_enabled;           /* 1 if device is enabled */
 
 	/* OF2: Hysweep device offsets  */
@@ -847,6 +852,10 @@ struct mbsys_hysweep_struct {
 	char COM_comment[MB_COMMENT_MAXLINE]; /* comment string */
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* system specific function prototypes */
 int mbsys_hysweep_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error);
 int mbsys_hysweep_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error);
@@ -854,7 +863,7 @@ int mbsys_hysweep_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *
                              int *error);
 int mbsys_hysweep_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, int *error);
 int mbsys_hysweep_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, int *error);
-int mbsys_hysweep_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error);
+int mbsys_hysweep_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error);
 int mbsys_hysweep_extract_platform(int verbose, void *mbio_ptr, void *store_ptr, int *kind, void **platform_ptr, int *error);
 int mbsys_hysweep_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time_i[7], double *time_d, double *navlon,
                           double *navlat, double *speed, double *heading, int *nbath, int *namp, int *nss, char *beamflag,
@@ -881,3 +890,10 @@ int mbsys_hysweep_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int t
 int mbsys_hysweep_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
 int mbsys_hysweep_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel_size_set, double *pixel_size,
                          int swath_width_set, double *swath_width, int pixel_int, int *error);
+
+#ifdef __cplusplus
+}  /* extern "C" */
+#endif
+
+
+#endif  /* MBSYS_HYSWEEP_H_ */

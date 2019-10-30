@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_swathplus.h	1/28/2014
- *	$Id$
  *
- *    Copyright (c) 2014-2017 by
+ *    Copyright (c) 2014-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -81,10 +80,11 @@
  *
  */
 
-/* include mb_define.h */
-#ifndef MB_DEFINE_DEF
+#ifndef MBSYS_SWATHPLUS_H_
+#define MBSYS_SWATHPLUS_H_
+
 #include "mb_define.h"
-#endif
+
 
 /*---------------------------------------------------------------
    Record ID definitions (if needed for use in data reading and writing) */
@@ -489,7 +489,7 @@ int mbsys_swathplus_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *er
 int mbsys_swathplus_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error);
 int mbsys_swathplus_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss,
                                int *error);
-int mbsys_swathplus_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error);
+int mbsys_swathplus_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error);
 int mbsys_swathplus_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, int *error);
 int mbsys_swathplus_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, int *error);
 
@@ -650,3 +650,5 @@ int swpls_pr_pos_offset(int verbose, FILE *fout, swpls_pos_offset *pos_offset, i
 int swpls_pr_imu_offset(int verbose, FILE *fout, swpls_imu_offset *imu_offset, int *error);
 int swpls_pr_txer_offset(int verbose, FILE *fout, swpls_txer_offset *txer_offset, int *error);
 int swpls_pr_wl_offset(int verbose, FILE *fout, swpls_wl_offset *wl_offset, int *error);
+
+#endif  /* MBSYS_SWATHPLUS_H_ */

@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_sbifremr.h	3/29/96
- *	$Id$
  *
- *    Copyright (c) 1996-2017 by
+ *    Copyright (c) 1996-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -55,6 +54,9 @@
  * ascii comment record (kind = 2).
  */
 
+#ifndef MBF_SBIFREMR_H_
+#define MBF_SBIFREMR_H_
+
 /* maximum comment length in characters */
 #define MBF_SBIFREMR_MAXLINE 200
 
@@ -92,3 +94,5 @@ struct mbf_sbifremr_struct {
 	/* latitudes of beam values */
 	char comment[MBF_SBIFREMR_MAXLINE];
 };
+
+#endif  /* MBF_SBIFREMR_H_ */

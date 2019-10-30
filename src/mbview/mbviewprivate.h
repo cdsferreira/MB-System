@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbviewprivate.h	9/24/2003
- *    $Id$
  *
- *    Copyright (c) 2003-2017 by
+ *    Copyright (c) 2003-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -83,7 +82,7 @@
 
 #define MBV_NUM_COLORS 11
 
-#define MBV_NUM_ACTIONS 20
+#define MBV_NUM_ACTIONS 25
 
 /* Spheroid parameters */
 #define MBV_SPHEROID_RADIUS 6371000.0
@@ -130,7 +129,7 @@ struct mbview_world_struct {
 	Window xid;
 	XVisualInfo *vi;
 	int glx_init;
-#ifdef WIN32
+#ifdef _WIN32
 	HGLRC glx_context;
 #else
 	GLXContext glx_context;
@@ -145,7 +144,7 @@ struct mbview_world_struct {
 	Widget prglwmda;
 	XVisualInfo *prvi;
 	int prglx_init;
-#ifdef WIN32
+#ifdef _WIN32
 	HGLRC prglx_context;
 #else
 	GLXContext prglx_context;

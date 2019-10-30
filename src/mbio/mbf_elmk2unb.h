@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_elmk2unb.h	6/6/97
- *	$Id$
  *
- *    Copyright (c) 1997-2017 by
+ *    Copyright (c) 1997-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -50,6 +49,10 @@
  *      the ping telegrams using the program mbmerge.
  *
  */
+
+
+#ifndef MBF_ELMK2UNB_H_
+#define MBF_ELMK2UNB_H_
 
 /* maximum number of beams and pixels */
 #define MBF_ELMK2UNB_MAXBEAMS 126
@@ -171,3 +174,5 @@ struct mbf_elmk2unb_struct {
 	int beams_bath; /* number of beams stored */
 	struct mbf_elmk2unb_beam_struct beams[MBF_ELMK2UNB_MAXBEAMS];
 };
+
+#endif  /* MBF_ELMK2UNB_H_ */

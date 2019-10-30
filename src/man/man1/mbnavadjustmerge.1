@@ -1,45 +1,116 @@
-.TH mbnavadjustmerge 1 "21 April 2016" "MB-System 5.0" "MB-System 5.0"
+.TH mbnavadjustmerge 1 "30 September 2019" "MB-System 5.0" "MB-System 5.0"
 .SH NAME
-\fBmbnavadjustmerge\fP \- Tool to merge two MBnavadjust projects,
-either adding one to the first or outputting a new project combining
-both existing projects.
+\fBmbnavadjustmerge\fP \- Tool to modify MBnavadjust projects,
+including merging projects, adding global ties, setting tie modes, exporting
+or importing crossing ties, and pre-generating the triangular meshes .
 
 .SH VERSION
 Version 5.0
 
 .SH SYNOPSIS
 \fBmbnavadjustmerge\fP --input=project-base
-[--input=project-add --output=project-output
+.br
+[--input=project_path
+.br
+--output=project_path
+.br
 --set-global-tie=file:section[:snav]/xoffset/yoffset/zoffset[/xsigma/ysigma/zsigma]
+.br
 --set-global-tie-xyz=file:section[:snav]
+.br
 --set-global-tie-xyonly=file:section[:snav]
+.br
 --set-global-tie-zonly=file:section[:snav]
+.br
 --unset-global-tie=file:section
+.br
+--unset-all-global-ties
+.br
 --add-crossing=file1:section1/file2:section2
+.br
+--set-tie=file1/file2/xoffset/yoffset/zoffset
+.br
 --set-tie=file1:section1/file2:section2/xoffset/yoffset/zoffset
+.br
+--set-tie=file1:section1/file2:section2/xoffset/yoffset/zoffset/xsigma/ysigma/zsigma
+.br
 --set-tie-xyz=file1:section1/file2:section2
+.br
 --set-tie-xyonly=file1:section1/file2:section2
+.br
 --set-tie-zonly=file1:section1/file2:section2
---unset-tie=file1:section1/file2:section2
+.br
 --set-ties-xyz-all
+.br
 --set-ties-xyonly-all
+.br
 --set-ties-zonly-all
+.br
 --set-ties-xyz-with-file=file
+.br
 --set-ties-xyonly-with-file=file
+.br
 --set-ties-zonly-with-file=file
+.br
 --set-ties-xyz-by-survey=survey
+.br
 --set-ties-xyonly-by-survey=survey
+.br
 --set-ties-zonly-by-survey=survey
+.br
 --set-ties-xyz-by-block=survey1/survey2
+.br
 --set-ties-xyonly-by-block=survey1/survey2
+.br
 --set-ties-zonly-by-block=survey1/survey2
+.br
 --set-ties-zoffset-by-block=survey1/survey2/zoffset
---set-ties-xyonly-by-time=dt
+.br
+--set-ties-xyonly-by-time=timethreshold
+.br
+--unset-tie=file1:section1/file2:section2
+.br
+--unset-ties-with-file=file
+.br
+--unset-ties-with-survey=survey
+.br
+--unset-ties-by-survey=survey
+.br
+--unset-ties-by-block=survey1/survey2
+.br
+--unset-ties-all
+.br
 --skip-unset-crossings
+.br
+--unset-skipped-crossings-by-block=survey1/survey2
+.br
+--unset-skipped-crossings-between-surveys
+.br
 --insert-discontinuity=file:section
---import-tie-list=filename
---export-tie-list=filename
---verbose --help ]
+.br
+--reimport-file=file
+.br
+--reimport-all-files
+.br
+--import-tie-list=file
+.br
+--export-tie-list=file
+.br
+--triangulate
+.br
+--triangulate-all
+.br
+--triangulate-scale=scale
+.br
+--triangulate-section=file:section
+.br
+--unset-short-section-ties=min_length
+.br
+--skip-short-section-crossings=min_length
+.br
+--verbose
+.br
+--help]
 
 .SH DESCRIPTION
 \fBMBnavadjustmerge\fP is a command line program that merges two
@@ -62,24 +133,24 @@ single input project must be specified, along with one or more
 of the modification commands. These can include adding crossings,
 setting tie z-offset values, setting tie offsets (even if no
 corresponding crossing already exists), setting tie modes
-(xy only, z only, xyz),  and deleting ties.
+(xy only, z only, xyz), and deleting ties.
 
 .SH MB-SYSTEM AUTHORSHIP
 David W. Caress
 .br
-  Monterey Bay Aquarium Research Institute
+ Monterey Bay Aquarium Research Institute
 .br
 Dale N. Chayes
 .br
-  Center for Coastal and Ocean Mapping
+ Center for Coastal and Ocean Mapping
 .br
-  University of New Hampshire
+ University of New Hampshire
 .br
 Christian do Santos Ferreira
 .br
-  MARUM - Center for Marine Environmental Sciences
+ MARUM - Center for Marine Environmental Sciences
 .br
-  University of Bremen
+ University of Bremen
 
 .SH OPTIONS
 .TP
@@ -92,7 +163,7 @@ can be used twice to specify two input projects. The first
 use of \fB--input\fP defines the base input project, and the second
 defines the add input project. In the case where the \fB--output\fP
 option is used to define an output project, the two input projects
-will both be copied to the new output project (\fIproject-base\fP 
+will both be copied to the new output project (\fIproject-base\fP
 first followed by \fIproject-add\fP). If the \fBoutput\fP option is
 not specified, then the \fIproject-base\fP project is used as the
 output, and the \fIproject-add\fP project is added on to the
@@ -103,7 +174,7 @@ more of the "add", "delete", "skip", or "set" commands.
 .B \--output=project-output
 This option defines the new \fBMBnavadjust output project. The two
 input projects will both be copied to the new output project
-(\fIproject-base\fP  first followed by \fIproject-add\fP).
+(\fIproject-base\fP first followed by \fIproject-add\fP).
 If the \fBoutput\fP option is
 not specified, then the \fIproject-base\fP project is used as the
 output, and the \fIproject-add\fP project is added on to the
@@ -138,15 +209,16 @@ for an optimal navigation model.
 .TP
 .B \--unset-global-tie=file:section
 This option unsets (deletes) the specified global tie in the
-\fBMBnavadjust\fP project. 
+\fBMBnavadjust\fP project.
 .TP
 .B \--add-crossing=file1:section1/file2:section2
 This option adds the specified crossing to the \fBMBnavadjust\fP project.
 .TP
-.B \--set-tie=file1:section1/file2:section2/xoffset/yoffset/zoffset
+.B \--set-tie=file1:section1/file2:section2/xoffset/yoffset/zoffset[/xsigma/ysigma/zsigma]
 This option adds the specified tie to the \fBMBnavadjust\fP project.
 If the corresponding crossing does not already exist, it will be
-created.
+created. If the uncertainties in the tie (xsigma, ysigma, zsigma)
+are not specified, then xsigma = ysigma = 10 m and zsigma = 0.5 m are assumed.
 .TP
 .B \--set-tie-xyz=file1:section1/file2:section2
 This option sets the mode of the existing specified tie in the
@@ -168,7 +240,7 @@ for an optimal navigation model.
 .TP
 .B \--unset-tie=file1:section1/file2:section2
 This option unsets (deletes) the specified tie in the
-\fBMBnavadjust\fP project. 
+\fBMBnavadjust\fP project.
 .TP
 .B \--set-ties-xyz-all
 This option sets the mode of all ties in the \fBMBnavadjust\fP project to be "XYZ". This means all three
@@ -267,14 +339,34 @@ larger in the \fBMBnavadjust\fP project to be "XY". This means only the horizont
 coordinates of these ties will be used as constraints in the inversion
 for an optimal navigation model.
 .TP
+.B \--unset-ties-with-file=file
+This option unsets (deletes) all ties involved with the specified
+file in the \fBMBnavadjust\fP project.
+.TP
+.B \--unset-ties-with-survey=survey
+This option unsets (deletes) all ties involved with the specified
+survey in the \fBMBnavadjust\fP project.
+.TP
+.B \--unset-ties-by-survey=survey
+This option unsets (deletes) all ties between two sections in the specified
+survey in the \fBMBnavadjust\fP project.
+.TP
+.B \--unset-ties-by-block=survey1/survey2
+This option unsets (deletes) all ties between sections of the specified
+two surveys in the \fBMBnavadjust\fP project.
+.TP
+.B \--unset-ties-all
+This option unsets (deletes) all ties in the \fBMBnavadjust\fP project. The
+command \--unset-all-ties is also accepted.
+.TP
 .B \--skip-unset-crossings
 This option sets all unset crossings in the input projects to be
 skipped. This does not apply to any new crossings between the two
 merged projects.
 .TP
 .B \--unset-skipped-crossings-by-block=survey1/survey2
-This option sets all skipped crossings  in the specified
-two surveys to be unset. 
+This option sets all skipped crossings in the specified
+two surveys to be unset.
 .TP
 .B \--unset-skipped-crossings-between-surveys
 This option sets all skipped crossings between different surveys in the input
@@ -288,13 +380,47 @@ file and section.
 .B \--import-tie-list=filename
 Import a listing of navigation ties that has been exported from a different
 \fBmbnavadjust\fP project using the \fB--export-tie-list\fP
-command. 
+command.
 .TP
 .B \--export-tie-list=filename
 Output the current navigation ties as a text file that can be imported into
 a different \fBmbnavadjust\fP project using the \fB--import-tie-list\fP
 command. The ties that are output reflect all modifications specified by other
 commands.
+.TP
+.B \--triangulate
+This command causes \fBmbnavadjustmerge\fP to pre-generate triangular meshes
+used by \fBmbnavadjust\fP for contouring each section as part of the graphical
+analysis of crossings. These meshes are stored within the project
+directory as a *.tri file in parallel with each *.mb71 section file. Any section
+triangle mesh files that already exist are not recreated. The region including
+each section is divided into a grid with a cell size determined by the \fIscale\fP
+value set by the \fB\--triangulate-scale\fP option; the triangle vertices
+are selected as the least deep (shoalest) soundings within each grid cell.
+.TP
+.B \--triangulate-all
+This command causes \fBmbnavadjustmerge\fP to pre-generate triangular meshes
+used by \fBmbnavadjust\fP for contouring each section as part of the graphical
+analysis of crossings. All section triangle mesh files are created; any pre-existing
+triangle files are overwritten.
+.TP
+.B \--triangulate-scale=scale
+This option sets the scale (size) of the triangles generated by the \fB\--triangulate\fP
+or \fB\--triangulate-all\fP commands. By default, the scale is calculated as 1/100 of the
+width or height (whichever is longer) of the region covered by the section.
+.TP
+.B \--triangulate-section=file:section
+This command causes \fBmbnavadjustmerge\fP to pre-generate the triangular mesh
+for the specified section.
+.TP
+.B \--unset-short-section-ties=min_length
+This option unsets (deletes) all ties for which one or both data sections have a
+navigation track length less than \fImin_length\fP.
+.TP
+.B \--skip-short-section-crossings=min_length
+This option sets all crossings for which one or both data sections have a
+navigation track length less than \fImin_length\fP to "skipped" mode. Any ties
+associated with these crossings are deleted.
 .TP
 .B \--verbose
 This option increases the verbosity of \fBMBnavadjustmerge\fP, which
@@ -316,7 +442,7 @@ respectively, then there exist project files with a ".nvh" suffix and project
 directories with a ".dir" suffix. To create a new \fBMBnavadjust\fP project
 combining the two existing projects, the following will suffice:
 .br
-     mbnavadjustmerge --input=Navadjust20140515m1.nvh \
+    mbnavadjustmerge --input=Navadjust20140515m1.nvh \
                       --input=Navadjust20140515m2.nvh \
                       --output=Navadjust20140515All.nvh
 

@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_mr1prhig.h	3/3/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -35,6 +34,9 @@
  *   6. The data structure defined below includes all of the values
  *      which are passed in the MR1 post processing format.
  */
+
+#ifndef MBF_MR1PRHIG_H_
+#define MBF_MR1PRHIG_H_
 
 /* maximum number of bathymetry beams per side for MR1 */
 #define MBF_MR1PRHIG_BEAMS_SIDE 1500
@@ -110,3 +112,5 @@ struct mbf_mr1prhig_struct {
 	/* comment */
 	char comment[MBF_MR1PRHIG_MAXLINE];
 };
+
+#endif  /* MBF_MR1PRHIG_H_ */

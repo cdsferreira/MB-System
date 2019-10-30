@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_netcdf.c	4/11/2002
- *	$Id$
  *
- *    Copyright (c) 2002-2017 by
+ *    Copyright (c) 2002-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -24,46 +23,33 @@
  *
  */
 
-/* standard include files */
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
+#include "mb_status.h"
 #include "mbsys_netcdf.h"
-
-static char rcs_id[] = "$Id$";
 
 /*--------------------------------------------------------------------*/
 int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mbsys_netcdf_alloc";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-	char c;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* allocate memory for data structure */
-	status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_netcdf_struct), (void **)store_ptr, error);
+	const int status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_netcdf_struct), (void **)store_ptr, error);
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)*store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)*store_ptr;
 
 	/* now initialize everything */
 	if (status == MB_SUCCESS) {
@@ -95,7 +81,8 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		store->mbEastLongitude = 0.;
 		store->mbWestLongitude = 0.;
 		strcpy(store->mbMeridian180, " ");
-		for (i = 0; i < MBSYS_NETCDF_ATTRIBUTELEN; i++) {
+		for (int i = 0; i < MBSYS_NETCDF_ATTRIBUTELEN; i++) {
+			char c;
 			if (i < MBSYS_NETCDF_ATTRIBUTELEN - 1)
 				c = ' ';
 			else
@@ -108,16 +95,16 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		store->mbEllipsoidInvF = 0.;
 		store->mbEllipsoidE2 = 0.;
 		store->mbProjType = -1;
-		for (i = 0; i < 10; i++)
+		for (int i = 0; i < 10; i++)
 			store->mbProjParameterValue[i] = 0.;
 		store->mbSounder = MBSYS_NETCDF_SONAR_UNKNOWN;
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 			store->mbAntennaOffset[i] = 0.;
 		store->mbAntennaDelay = 0.;
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 			store->mbSounderOffset[i] = 0.;
 		store->mbSounderDelay = 0.;
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 			store->mbVRUOffset[i] = 0.;
 		store->mbVRUDelay = 0.;
 		store->mbHeadingBias = 0.;
@@ -130,7 +117,8 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		store->mbMinDepth = 0.;
 		store->mbMaxDepth = 0.;
 		store->mbCycleCounter = 0;
-		for (i = 0; i < MBSYS_NETCDF_COMMENTLEN - 1; i++) {
+		for (int i = 0; i < MBSYS_NETCDF_COMMENTLEN - 1; i++) {
+			char c;
 			if (i < MBSYS_NETCDF_COMMENTLEN - 1)
 				c = ' ';
 			else
@@ -177,7 +165,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbHistCode_long_name, "History code");
 		strcpy(store->mbHistCode_name_code, "MB_HISTORY_CODE");
 		strcpy(store->mbHistCode_units, "");
-		strcpy(store->mbHistCode_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbHistCode_unit_code, "falseT_DEFINED");
 		store->mbHistCode_add_offset = 0;
 		store->mbHistCode_scale_factor = 1;
 		store->mbHistCode_minimum = 1;
@@ -200,7 +188,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbCycle_long_name, "Cycle number");
 		strcpy(store->mbCycle_name_code, "MB_CYCLE_NUMBER");
 		strcpy(store->mbCycle_units, "");
-		strcpy(store->mbCycle_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbCycle_unit_code, "falseT_DEFINED");
 		store->mbCycle_add_offset = 0;
 		store->mbCycle_scale_factor = 1;
 		store->mbCycle_minimum = 1;
@@ -270,7 +258,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbFrequency_long_name, "Frequency of cycle");
 		strcpy(store->mbFrequency_name_code, "MB_CYCLE_FREQUENCY");
 		strcpy(store->mbFrequency_units, "");
-		strcpy(store->mbFrequency_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbFrequency_unit_code, "falseT_DEFINED");
 		store->mbFrequency_add_offset = 0;
 		store->mbFrequency_scale_factor = 1;
 		store->mbFrequency_minimum = 1;
@@ -298,7 +286,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbSounderMode_long_name, "Sounder mode");
 		strcpy(store->mbSounderMode_name_code, "MB_CYCLE_MODE");
 		strcpy(store->mbSounderMode_units, "");
-		strcpy(store->mbSounderMode_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbSounderMode_unit_code, "falseT_DEFINED");
 		store->mbSounderMode_add_offset = 0;
 		store->mbSounderMode_scale_factor = 1;
 		store->mbSounderMode_minimum = 1;
@@ -466,7 +454,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbVerticalDepth_long_name, "Vertical depth");
 		strcpy(store->mbVerticalDepth_name_code, "MB_CYCLE_DEPTH");
 		strcpy(store->mbVerticalDepth_units, "");
-		strcpy(store->mbVerticalDepth_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbVerticalDepth_unit_code, "falseT_DEFINED");
 		store->mbVerticalDepth_add_offset = 0;
 		store->mbVerticalDepth_scale_factor = 1;
 		store->mbVerticalDepth_minimum = -2147483647;
@@ -480,7 +468,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbCQuality_long_name, "Quality factor");
 		strcpy(store->mbCQuality_name_code, "MB_CYCLE_QUALITY");
 		strcpy(store->mbCQuality_units, "");
-		strcpy(store->mbCQuality_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbCQuality_unit_code, "falseT_DEFINED");
 		store->mbCQuality_add_offset = 0;
 		store->mbCQuality_scale_factor = 1;
 		store->mbCQuality_minimum = 1;
@@ -494,7 +482,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbCFlag_long_name, "Flag of cycle");
 		strcpy(store->mbCFlag_name_code, "MB_CYCLE_FLAG");
 		strcpy(store->mbCFlag_units, "");
-		strcpy(store->mbCFlag_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbCFlag_unit_code, "falseT_DEFINED");
 		store->mbCFlag_add_offset = 0;
 		store->mbCFlag_scale_factor = 1;
 		store->mbCFlag_minimum = -127;
@@ -508,7 +496,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbInterlacing_long_name, "Interlacing 1=Port 2=Starboard");
 		strcpy(store->mbInterlacing_name_code, "MB_CYCLE_INTERLACING");
 		strcpy(store->mbInterlacing_units, "");
-		strcpy(store->mbInterlacing_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbInterlacing_unit_code, "falseT_DEFINED");
 		store->mbInterlacing_add_offset = 0;
 		store->mbInterlacing_scale_factor = 1;
 		store->mbInterlacing_minimum = 1;
@@ -536,7 +524,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbCompensationLayerMode_long_name, "Compensation layer mode");
 		strcpy(store->mbCompensationLayerMode_name_code, "MB_CYCLE_COMPLAYER_MODE");
 		strcpy(store->mbCompensationLayerMode_units, "");
-		strcpy(store->mbCompensationLayerMode_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbCompensationLayerMode_unit_code, "falseT_DEFINED");
 		store->mbCompensationLayerMode_add_offset = 0;
 		store->mbCompensationLayerMode_scale_factor = 1;
 		store->mbCompensationLayerMode_minimum = 1;
@@ -578,7 +566,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbTransmitPulseLength_long_name, "Transmit PulseLength");
 		strcpy(store->mbTransmitPulseLength_name_code, "MB_TRANSMIT_PULSELENGTH");
 		strcpy(store->mbTransmitPulseLength_units, "");
-		strcpy(store->mbTransmitPulseLength_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbTransmitPulseLength_unit_code, "falseT_DEFINED");
 		store->mbTransmitPulseLength_add_offset = 0;
 		store->mbTransmitPulseLength_scale_factor = 1;
 		store->mbTransmitPulseLength_minimum = 1;
@@ -592,7 +580,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbAlongDistance_long_name, "Along distance");
 		strcpy(store->mbAlongDistance_name_code, "MB_SOUNDING_X");
 		strcpy(store->mbAlongDistance_units, "");
-		strcpy(store->mbAlongDistance_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbAlongDistance_unit_code, "falseT_DEFINED");
 		store->mbAlongDistance_add_offset = 0;
 		store->mbAlongDistance_scale_factor = 1;
 		store->mbAlongDistance_minimum = -32767;
@@ -606,7 +594,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbAcrossDistance_long_name, "Across distance");
 		strcpy(store->mbAcrossDistance_name_code, "MB_SOUNDING_Y");
 		strcpy(store->mbAcrossDistance_units, "");
-		strcpy(store->mbAcrossDistance_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbAcrossDistance_unit_code, "falseT_DEFINED");
 		store->mbAcrossDistance_add_offset = 0;
 		store->mbAcrossDistance_scale_factor = 1;
 		store->mbAcrossDistance_minimum = -32767;
@@ -620,7 +608,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbDepth_long_name, "Depth");
 		strcpy(store->mbDepth_name_code, "MB_SOUNDING_Z");
 		strcpy(store->mbDepth_units, "");
-		strcpy(store->mbDepth_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbDepth_unit_code, "falseT_DEFINED");
 		store->mbDepth_add_offset = 0;
 		store->mbDepth_scale_factor = 1;
 		store->mbDepth_minimum = -2147483647;
@@ -662,7 +650,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbRange_long_name, "Range");
 		strcpy(store->mbRange_name_code, "MB_SOUNDING_RANGE");
 		strcpy(store->mbRange_units, "");
-		strcpy(store->mbRange_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbRange_unit_code, "falseT_DEFINED");
 		store->mbRange_add_offset = 0;
 		store->mbRange_scale_factor = 1;
 		store->mbRange_minimum = 1;
@@ -690,7 +678,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbSQuality_long_name, "Quality factor");
 		strcpy(store->mbSQuality_name_code, "MB_SOUNDING_QUALITY");
 		strcpy(store->mbSQuality_units, "");
-		strcpy(store->mbSQuality_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbSQuality_unit_code, "falseT_DEFINED");
 		store->mbSQuality_add_offset = 0;
 		store->mbSQuality_scale_factor = 1;
 		store->mbSQuality_minimum = 1;
@@ -760,7 +748,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbSFlag_long_name, "Flag of sounding");
 		strcpy(store->mbSFlag_name_code, "MB_SOUNDING_FLAG");
 		strcpy(store->mbSFlag_units, "");
-		strcpy(store->mbSFlag_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbSFlag_unit_code, "falseT_DEFINED");
 		store->mbSFlag_add_offset = 0;
 		store->mbSFlag_scale_factor = 1;
 		store->mbSFlag_minimum = -127;
@@ -774,7 +762,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbSLengthOfDetection_long_name, "Length of detection");
 		strcpy(store->mbSLengthOfDetection_name_code, "MB_LENGTH_DETECTION");
 		strcpy(store->mbSLengthOfDetection_units, "");
-		strcpy(store->mbSLengthOfDetection_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbSLengthOfDetection_unit_code, "falseT_DEFINED");
 		store->mbSLengthOfDetection_add_offset = 0;
 		store->mbSLengthOfDetection_scale_factor = 1;
 		store->mbSLengthOfDetection_minimum = 1;
@@ -788,7 +776,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbAntenna_long_name, "Antenna index");
 		strcpy(store->mbAntenna_name_code, "MB_BEAM_ANTENNA");
 		strcpy(store->mbAntenna_units, "");
-		strcpy(store->mbAntenna_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbAntenna_unit_code, "falseT_DEFINED");
 		store->mbAntenna_add_offset = 0;
 		store->mbAntenna_scale_factor = 1;
 		store->mbAntenna_minimum = 0;
@@ -816,7 +804,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbBFlag_long_name, "Flag of beam");
 		strcpy(store->mbBFlag_name_code, "MB_BEAM_FLAG");
 		strcpy(store->mbBFlag_units, "");
-		strcpy(store->mbBFlag_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbBFlag_unit_code, "falseT_DEFINED");
 		store->mbBFlag_add_offset = 0;
 		store->mbBFlag_scale_factor = 1;
 		store->mbBFlag_minimum = -127;
@@ -830,7 +818,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbBeam_long_name, "Number of beams");
 		strcpy(store->mbBeam_name_code, "MB_ANTENNA_BEAM");
 		strcpy(store->mbBeam_units, "");
-		strcpy(store->mbBeam_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbBeam_unit_code, "falseT_DEFINED");
 		store->mbBeam_add_offset = 0;
 		store->mbBeam_scale_factor = 1;
 		store->mbBeam_minimum = 1;
@@ -844,7 +832,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbAFlag_long_name, "Flag of antenna");
 		strcpy(store->mbAFlag_name_code, "MB_ANTENNA_FLAG");
 		strcpy(store->mbAFlag_units, "");
-		strcpy(store->mbAFlag_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbAFlag_unit_code, "falseT_DEFINED");
 		store->mbAFlag_add_offset = 0;
 		store->mbAFlag_scale_factor = 1;
 		store->mbAFlag_minimum = -127;
@@ -861,7 +849,7 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		strcpy(store->mbVelProfilIdx_long_name, "Index of the sound velocity profil");
 		strcpy(store->mbVelProfilIdx_name_code, "MB_PROFIL_IDX");
 		strcpy(store->mbVelProfilIdx_units, "");
-		strcpy(store->mbVelProfilIdx_unit_code, "MB_NOT_DEFINED");
+		strcpy(store->mbVelProfilIdx_unit_code, "falseT_DEFINED");
 		store->mbVelProfilIdx_add_offset = 0;
 		store->mbVelProfilIdx_scale_factor = 1;
 		store->mbVelProfilIdx_minimum = 0;
@@ -1045,9 +1033,8 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		*/
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)*store_ptr);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -1055,20 +1042,12 @@ int mbsys_netcdf_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_netcdf_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mbsys_netcdf_deall";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1076,10 +1055,12 @@ int mbsys_netcdf_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)*store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)*store_ptr;
+
+	int status = MB_SUCCESS;
 
 	/* deallocate any allocated arrays */
 	if (store->mbHistDate != NULL)
@@ -1200,30 +1181,21 @@ int mbsys_netcdf_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error
 	/* deallocate memory for data structure */
 	status = mb_freed(verbose, __FILE__, __LINE__, (void **)store_ptr, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_netcdf_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss,
                             int *error) {
-	char *function_name = "mbsys_netcdf_dimensions";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1231,10 +1203,10 @@ int mbsys_netcdf_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *k
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
@@ -1255,9 +1227,10 @@ int mbsys_netcdf_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		*nss = 0;
 	}
 
-	/* print output debug statements */
+	int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
@@ -1268,7 +1241,6 @@ int mbsys_netcdf_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -1276,17 +1248,8 @@ int mbsys_netcdf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind
                          double *navlat, double *speed, double *heading, int *nbath, int *namp, int *nss, char *beamflag,
                          double *bath, double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss,
                          double *ssacrosstrack, double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mbsys_netcdf_extract";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-	double depthscale, distancescale;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1294,17 +1257,17 @@ int mbsys_netcdf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
 
 	/* reset error and status */
 	*error = MB_ERROR_NO_ERROR;
-	status = MB_SUCCESS;
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -1333,9 +1296,9 @@ int mbsys_netcdf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		if (store->mbReflectivity_id >= 0)
 			*namp = store->mbBeamNbr;
 		*nss = 0;
-		depthscale = store->mbDepthScale[0] * store->mbDepthScale_scale_factor;
-		distancescale = store->mbDistanceScale[0] * store->mbDistanceScale_scale_factor;
-		for (i = 0; i < *nbath; i++) {
+		const double depthscale = store->mbDepthScale[0] * store->mbDepthScale_scale_factor;
+		const double distancescale = store->mbDistanceScale[0] * store->mbDistanceScale_scale_factor;
+		for (int i = 0; i < *nbath; i++) {
 			if (store->mbSFlag[i] == 0)
 				beamflag[i] = MB_FLAG_NULL;
 			else if (store->mbSFlag[i] == 2)
@@ -1350,9 +1313,8 @@ int mbsys_netcdf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 			}
 		}
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -1369,15 +1331,15 @@ int mbsys_netcdf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 			fprintf(stderr, "dbg4       speed:      %f\n", *speed);
 			fprintf(stderr, "dbg4       heading:    %f\n", *heading);
 			fprintf(stderr, "dbg4       nbath:      %d\n", *nbath);
-			for (i = 0; i < *nbath; i++)
+			for (int i = 0; i < *nbath; i++)
 				fprintf(stderr, "dbg4       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i], bathalongtrack[i]);
 			fprintf(stderr, "dbg4        namp:     %d\n", *namp);
-			for (i = 0; i < *namp; i++)
+			for (int i = 0; i < *namp; i++)
 				fprintf(stderr, "dbg4        beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 				        bathalongtrack[i]);
 			fprintf(stderr, "dbg4        nss:      %d\n", *nss);
-			for (i = 0; i < *nss; i++)
+			for (int i = 0; i < *nss; i++)
 				fprintf(stderr, "dbg4        pixel:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 				        ssalongtrack[i]);
 		}
@@ -1390,9 +1352,8 @@ int mbsys_netcdf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		/* copy comment */
 		strcpy(comment, store->comment);
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg4  New ping read by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  New ping read by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  New ping values:\n");
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
 			fprintf(stderr, "dbg4       comment:    %s\n", comment);
@@ -1406,9 +1367,8 @@ int mbsys_netcdf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -1431,15 +1391,15 @@ int mbsys_netcdf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 	}
 	if (verbose >= 2 && *error <= MB_ERROR_NO_ERROR && *kind == MB_DATA_DATA) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
-		for (i = 0; i < *nbath; i++)
+		for (int i = 0; i < *nbath; i++)
 			fprintf(stderr, "dbg2       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 			        bathacrosstrack[i], bathalongtrack[i]);
 		fprintf(stderr, "dbg2        namp:     %d\n", *namp);
-		for (i = 0; i < *namp; i++)
+		for (int i = 0; i < *namp; i++)
 			fprintf(stderr, "dbg2       beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 			        bathalongtrack[i]);
 		fprintf(stderr, "dbg2        nss:      %d\n", *nss);
-		for (i = 0; i < *nss; i++)
+		for (int i = 0; i < *nss; i++)
 			fprintf(stderr, "dbg2        pixel:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 			        ssalongtrack[i]);
 	}
@@ -1449,7 +1409,6 @@ int mbsys_netcdf_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -1457,18 +1416,8 @@ int mbsys_netcdf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, 
                         double navlat, double speed, double heading, int nbath, int namp, int nss, char *beamflag, double *bath,
                         double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss, double *ssacrosstrack,
                         double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mbsys_netcdf_insert";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-	double depthscale, distancescale;
-	double depthmax, distancemax;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1492,17 +1441,17 @@ int mbsys_netcdf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, 
 	if (verbose >= 2 && kind == MB_DATA_DATA) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", nbath);
 		if (verbose >= 3)
-			for (i = 0; i < nbath; i++)
+			for (int i = 0; i < nbath; i++)
 				fprintf(stderr, "dbg3       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i], bathalongtrack[i]);
 		fprintf(stderr, "dbg2       namp:       %d\n", namp);
 		if (verbose >= 3)
-			for (i = 0; i < namp; i++)
+			for (int i = 0; i < namp; i++)
 				fprintf(stderr, "dbg3        beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 				        bathalongtrack[i]);
 		fprintf(stderr, "dbg2        nss:       %d\n", nss);
 		if (verbose >= 3)
-			for (i = 0; i < nss; i++)
+			for (int i = 0; i < nss; i++)
 				fprintf(stderr, "dbg3        pixel:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 				        ssalongtrack[i]);
 	}
@@ -1511,10 +1460,10 @@ int mbsys_netcdf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, 
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)store_ptr;
 
 	/* set data kind */
 	store->kind = kind;
@@ -1599,7 +1548,7 @@ int mbsys_netcdf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, 
 		}
 
 		/* allocate arrays */
-		status = mb_mallocd(verbose, __FILE__, __LINE__, store->mbAntennaNbr * sizeof(short), (void **)&store->mbCycle, error);
+		int status = mb_mallocd(verbose, __FILE__, __LINE__, store->mbAntennaNbr * sizeof(short), (void **)&store->mbCycle, error);
 		status = mb_mallocd(verbose, __FILE__, __LINE__, store->mbAntennaNbr * sizeof(int), (void **)&store->mbDate, error);
 		status = mb_mallocd(verbose, __FILE__, __LINE__, store->mbAntennaNbr * sizeof(int), (void **)&store->mbTime, error);
 		status = mb_mallocd(verbose, __FILE__, __LINE__, store->mbAntennaNbr * sizeof(int), (void **)&store->mbOrdinate, error);
@@ -1734,7 +1683,7 @@ int mbsys_netcdf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, 
 			status = MB_FAILURE;
 			*error = MB_ERROR_MEMORY_FAIL;
 			if (verbose >= 2) {
-				fprintf(stderr, "\ndbg2  MBIO function <%s> terminated with error\n", function_name);
+				fprintf(stderr, "\ndbg2  MBIO function <%s> terminated with error\n", __func__);
 				fprintf(stderr, "dbg2  Return values:\n");
 				fprintf(stderr, "dbg2       error:      %d\n", *error);
 				fprintf(stderr, "dbg2  Return status:\n");
@@ -1781,7 +1730,7 @@ int mbsys_netcdf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, 
 		}
 
 		/* get stuff */
-		for (i = 0; i < store->mbAntennaNbr; i++) {
+		for (int i = 0; i < store->mbAntennaNbr; i++) {
 			/* get time */
 			store->mbDate[i] = (int)(time_d / SECINDAY);
 			store->mbTime[i] = (int)(1000 * (time_d - store->mbDate[0] * SECINDAY));
@@ -1795,29 +1744,29 @@ int mbsys_netcdf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, 
 		}
 
 		/* get depth and distance scales */
-		depthmax = 0.0;
-		distancemax = 0.0;
-		for (i = 0; i < nbath; i++) {
+		double depthmax = 0.0;
+		double distancemax = 0.0;
+		for (int i = 0; i < nbath; i++) {
 			if (beamflag[i] != MB_FLAG_NULL) {
 				depthmax = MAX(fabs(bath[i]), depthmax);
 				distancemax = MAX(fabs(bathacrosstrack[i]), distancemax);
 			}
 		}
-		depthscale = 2.1 * depthmax / ((double)store->mbDepth_valid_maximum);
-		distancescale = 2.1 * distancemax / store->mbAcrossDistance_valid_maximum;
+		double depthscale = 2.1 * depthmax / ((double)store->mbDepth_valid_maximum);
+		double distancescale = 2.1 * distancemax / store->mbAcrossDistance_valid_maximum;
 
 		/* put distance, depth, and backscatter values
 		    into data structure */
 		store->mbBeamNbr = nbath;
 		/* if (store->mbDepthScale[0] <= 0
 		    || (depthmax */
-		for (i = 0; i < store->mbAntennaNbr; i++) {
+		for (int i = 0; i < store->mbAntennaNbr; i++) {
 			store->mbDepthScale[i] = 1 + (int)(depthscale / store->mbDepthScale_scale_factor);
 			store->mbDistanceScale[i] = 1 + (int)(distancescale / store->mbDistanceScale_scale_factor);
 		}
 		depthscale = store->mbDepthScale[0] * store->mbDepthScale_scale_factor;
 		distancescale = store->mbDistanceScale[0] * store->mbDistanceScale_scale_factor;
-		for (i = 0; i < nbath; i++) {
+		for (int i = 0; i < nbath; i++) {
 			if (beamflag[i] == MB_FLAG_NONE)
 				store->mbSFlag[i] = 2;
 			else if (beamflag[i] == MB_FLAG_NULL)
@@ -1835,7 +1784,7 @@ int mbsys_netcdf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, 
 				store->mbAlongDistance[i] = 0;
 			}
 		}
-		for (i = 0; i < namp; i++) {
+		for (int i = 0; i < namp; i++) {
 			if (beamflag[i] != MB_FLAG_NULL)
 				store->mbReflectivity[i] = (char)(amp[i] / store->mbReflectivity_scale_factor);
 			else
@@ -1849,32 +1798,24 @@ int mbsys_netcdf_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, 
 		strcpy(store->comment, comment);
 	}
 
-	/* print output debug statements */
+	int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_netcdf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, double *ttimes, double *angles,
                         double *angles_forward, double *angles_null, double *heave, double *alongtrack_offset, double *draft,
                         double *ssv, int *error) {
-	char *function_name = "mbsys_netcdf_ttimes";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1888,13 +1829,15 @@ int mbsys_netcdf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -1920,9 +1863,8 @@ int mbsys_netcdf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -1930,7 +1872,7 @@ int mbsys_netcdf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		fprintf(stderr, "dbg2       draft:      %f\n", *draft);
 		fprintf(stderr, "dbg2       ssv:        %f\n", *ssv);
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: tt:%f  angle_xtrk:%f angle_ltrk:%f  angle_null:%f  depth_off:%f  ltrk_off:%f\n",
 			        i, ttimes[i], angles[i], angles_forward[i], angles_null[i], heave[i], alongtrack_offset[i]);
 	}
@@ -1940,21 +1882,12 @@ int mbsys_netcdf_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_netcdf_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, int *detects, int *error) {
-	char *function_name = "mbsys_netcdf_detects";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1963,13 +1896,15 @@ int mbsys_netcdf_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -1977,7 +1912,7 @@ int mbsys_netcdf_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		*nbeams = store->mbBeamNbr;
 
 		/* get detects */
-		for (i = 0; i < *nbeams; i++) {
+		for (int i = 0; i < *nbeams; i++) {
 			detects[i] = MB_DETECT_UNKNOWN;
 		}
 
@@ -2002,15 +1937,14 @@ int mbsys_netcdf_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
 	if (verbose >= 2 && *error == MB_ERROR_NO_ERROR) {
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: detects:%d\n", i, detects[i]);
 	}
 	if (verbose >= 2) {
@@ -2019,28 +1953,13 @@ int mbsys_netcdf_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_netcdf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *transducer_depth,
                                   double *altitude, int *error) {
-	char *function_name = "mbsys_netcdf_extract_altitude";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-	double depthscale;
-	double distancescale;
-	double xtrackminbest;
-	double vdepthbest;
-	double xtrackmin;
-	double vdepth;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -2048,10 +1967,10 @@ int mbsys_netcdf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, 
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
@@ -2059,6 +1978,8 @@ int mbsys_netcdf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, 
 	/* set starting values */
 	*transducer_depth = 0.0;
 	*altitude = 0.0;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -2076,13 +1997,13 @@ int mbsys_netcdf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, 
 		}
 		else {
 			/* loop over soundings */
-			depthscale = store->mbDepthScale[0] * store->mbDepthScale_scale_factor;
-			distancescale = store->mbDistanceScale[0] * store->mbDistanceScale_scale_factor;
-			xtrackminbest = 10000000.0;
-			vdepthbest = 0.0;
-			xtrackmin = 10000000.0;
-			vdepth = 0.0;
-			for (i = 0; i < store->mbBeamNbr; i++) {
+			const double depthscale = store->mbDepthScale[0] * store->mbDepthScale_scale_factor;
+			const double distancescale = store->mbDistanceScale[0] * store->mbDistanceScale_scale_factor;
+			double xtrackminbest = 10000000.0;
+			double vdepthbest = 0.0;
+			double xtrackmin = 10000000.0;
+			double vdepth = 0.0;
+			for (int i = 0; i < store->mbBeamNbr; i++) {
 				if (store->mbSFlag[i] == 2) {
 					if (fabs((double)store->mbAcrossDistance[i]) < xtrackminbest) {
 						xtrackminbest = (double)store->mbAcrossDistance[i];
@@ -2123,9 +2044,8 @@ int mbsys_netcdf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, 
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       transducer_depth:  %f\n", *transducer_depth);
@@ -2135,22 +2055,13 @@ int mbsys_netcdf_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, 
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_netcdf_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, double transducer_depth, double altitude,
                                  int *error) {
-	char *function_name = "mbsys_netcdf_insert_altitude";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:           %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:            %p\n", (void *)mbio_ptr);
@@ -2160,15 +2071,17 @@ int mbsys_netcdf_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, d
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)store_ptr;
+
+	int status = MB_SUCCESS;
 
 	/* insert data into structure */
 	if (store->kind == MB_DATA_DATA) {
 		/* get stuff */
-		for (i = 0; i < store->mbAntennaNbr; i++) {
+		for (int i = 0; i < store->mbAntennaNbr; i++) {
 			/* set draft */
 			store->mbDynamicDraught[i] = (int)(transducer_depth / store->mbDynamicDraught_scale_factor);
 
@@ -2195,31 +2108,22 @@ int mbsys_netcdf_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, d
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_netcdf_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time_i[7], double *time_d,
                              double *navlon, double *navlat, double *speed, double *heading, double *draft, double *roll,
                              double *pitch, double *heave, int *error) {
-	char *function_name = "mbsys_netcdf_extract_nav";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -2227,13 +2131,15 @@ int mbsys_netcdf_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -2259,9 +2165,8 @@ int mbsys_netcdf_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *
 		*pitch = store->mbPitch[0] * store->mbPitch_scale_factor;
 		*heave = store->mbTransmissionHeave[0] * store->mbTransmissionHeave_scale_factor;
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -2303,9 +2208,8 @@ int mbsys_netcdf_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -2333,23 +2237,14 @@ int mbsys_netcdf_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_netcdf_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_i[7], double time_d, double navlon,
                             double navlat, double speed, double heading, double draft, double roll, double pitch, double heave,
                             int *error) {
-	char *function_name = "mbsys_netcdf_insert_nav";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -2373,10 +2268,10 @@ int mbsys_netcdf_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int ti
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_netcdf_struct *)store_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)store_ptr;
 
 	/* insert data in structure */
 	if (store->kind == MB_DATA_DATA) {
@@ -2415,7 +2310,7 @@ int mbsys_netcdf_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int ti
 		}
 
 		/* get stuff */
-		for (i = 0; i < store->mbAntennaNbr; i++) {
+		for (int i = 0; i < store->mbAntennaNbr; i++) {
 			/* get time */
 			store->mbDate[i] = (int)(time_d / SECINDAY);
 			store->mbTime[i] = (int)(1000 * (time_d - store->mbDate[0] * SECINDAY));
@@ -2439,31 +2334,22 @@ int mbsys_netcdf_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int ti
 		}
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error) {
-	char *function_name = "mbsys_netcdf_copy";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_netcdf_struct *store;
-	struct mbsys_netcdf_struct *copy;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -2472,11 +2358,13 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointers */
-	store = (struct mbsys_netcdf_struct *)store_ptr;
-	copy = (struct mbsys_netcdf_struct *)copy_ptr;
+	struct mbsys_netcdf_struct *store = (struct mbsys_netcdf_struct *)store_ptr;
+	struct mbsys_netcdf_struct *copy = (struct mbsys_netcdf_struct *)copy_ptr;
+
+	int status = MB_SUCCESS;
 
 	/* deallocate memory if required */
 	if (store->mbHistoryRecNbr > copy->mbHistoryRecNbr) {
@@ -2645,7 +2533,7 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 		status = MB_FAILURE;
 		*error = MB_ERROR_MEMORY_FAIL;
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  MBIO function <%s> terminated with error\n", function_name);
+			fprintf(stderr, "\ndbg2  MBIO function <%s> terminated with error\n", __func__);
 			fprintf(stderr, "dbg2  Return values:\n");
 			fprintf(stderr, "dbg2       error:      %d\n", *error);
 			fprintf(stderr, "dbg2  Return status:\n");
@@ -2660,7 +2548,7 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 
 		/* global attributes */
 		copy->mbVersion = store->mbVersion;
-		for (i = 0; i < 64; i++) {
+		for (int i = 0; i < 64; i++) {
 			copy->mbName[i] = store->mbName[i];
 			copy->mbClasse[i] = store->mbClasse[i];
 			copy->mbTimeReference[i] = store->mbTimeReference[i];
@@ -2669,7 +2557,7 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 			copy->mbGeoRepresentation[i] = store->mbGeoRepresentation[i];
 			copy->mbGeodesicSystem[i] = store->mbGeodesicSystem[i];
 		}
-		for (i = 0; i < 256; i++) {
+		for (int i = 0; i < 256; i++) {
 			copy->mbEllipsoidName[i] = store->mbEllipsoidName[i];
 			copy->mbProjParameterCode[i] = store->mbProjParameterCode[i];
 			copy->mbShip[i] = store->mbShip[i];
@@ -2692,10 +2580,10 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 		copy->mbEllipsoidInvF = store->mbEllipsoidInvF;
 		copy->mbEllipsoidE2 = store->mbEllipsoidE2;
 		copy->mbProjType = store->mbProjType;
-		for (i = 0; i < 10; i++)
+		for (int i = 0; i < 10; i++)
 			copy->mbProjParameterValue[i] = store->mbProjParameterValue[i];
 		copy->mbSounder = store->mbSounder = store->mbSounder;
-		for (i = 0; i < 3; i++) {
+		for (int i = 0; i < 3; i++) {
 			copy->mbAntennaOffset[i] = store->mbAntennaOffset[i];
 			copy->mbSounderOffset[i] = store->mbSounderOffset[i];
 			copy->mbVRUOffset[i] = store->mbVRUOffset[i];
@@ -2759,7 +2647,7 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 		copy->mbVelProfilTime_id = store->mbVelProfilTime_id;
 
 		/* variable pointers */
-		for (i = 0; i < copy->mbHistoryRecNbr; i++) {
+		for (int i = 0; i < copy->mbHistoryRecNbr; i++) {
 			copy->mbHistDate[i] = store->mbHistDate[i];
 			copy->mbHistTime[i] = store->mbHistTime[i];
 			copy->mbHistCode[i] = store->mbHistCode[i];
@@ -2767,7 +2655,7 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 			copy->mbHistModule[i] = store->mbHistModule[i];
 			copy->mbHistComment[i] = store->mbHistComment[i];
 		}
-		for (i = 0; i < copy->mbAntennaNbr; i++) {
+		for (int i = 0; i < copy->mbAntennaNbr; i++) {
 			copy->mbCycle[i] = store->mbCycle[i];
 			copy->mbDate[i] = store->mbDate[i];
 			copy->mbTime[i] = store->mbTime[i];
@@ -2791,7 +2679,7 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 			copy->mbInterlacing[i] = store->mbInterlacing[i];
 			copy->mbSamplingRate[i] = store->mbSamplingRate[i];
 		}
-		for (i = 0; i < copy->mbBeamNbr; i++) {
+		for (int i = 0; i < copy->mbBeamNbr; i++) {
 			copy->mbAlongDistance[i] = store->mbAlongDistance[i];
 			copy->mbAcrossDistance[i] = store->mbAcrossDistance[i];
 			copy->mbDepth[i] = store->mbDepth[i];
@@ -2801,11 +2689,11 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 			copy->mbBeamBias[i] = store->mbBeamBias[i];
 			copy->mbBFlag[i] = store->mbBFlag[i];
 		}
-		for (i = 0; i < copy->mbAntennaNbr; i++) {
+		for (int i = 0; i < copy->mbAntennaNbr; i++) {
 			copy->mbBeam[i] = store->mbBeam[i];
 			copy->mbAFlag[i] = store->mbAFlag[i];
 		}
-		for (i = 0; i < copy->mbVelocityProfilNbr; i++) {
+		for (int i = 0; i < copy->mbVelocityProfilNbr; i++) {
 			copy->mbVelProfilRef[i] = store->mbVelProfilRef[i];
 			copy->mbVelProfilIdx[i] = store->mbVelProfilIdx[i];
 			copy->mbVelProfilDate[i] = store->mbVelProfilDate[i];
@@ -2813,7 +2701,7 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 		}
 
 		/* variable attributes */
-		for (i = 0; i < 64; i++) {
+		for (int i = 0; i < 64; i++) {
 			copy->mbHistDate_type[i] = store->mbHistDate_type[i];
 			copy->mbHistDate_long_name[i] = store->mbHistDate_long_name[i];
 			copy->mbHistDate_name_code[i] = store->mbHistDate_name_code[i];
@@ -3361,20 +3249,18 @@ int mbsys_netcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_p
 		copy->mbVelProfilTime_missing_value = store->mbVelProfilTime_missing_value;
 
 		/* storage comment string */
-		for (i = 0; i < MBSYS_NETCDF_COMMENTLEN; i++)
+		for (int i = 0; i < MBSYS_NETCDF_COMMENTLEN; i++)
 			copy->comment[i] = store->comment[i];
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/

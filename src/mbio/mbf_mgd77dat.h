@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_mgd77dat.h	5/19/99
- *	$Id$
  *
- *    Copyright (c) 1999-2017 by
+ *    Copyright (c) 1999-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -42,6 +41,9 @@
  *      and begin with the character '#'.
  *
  */
+
+#ifndef MBF_MGD77DAT_H_
+#define MBF_MGD77DAT_H_
 
 /* header and data record in bytes */
 #define MBF_MGD77DAT_HEADER_NUM 16
@@ -165,3 +167,5 @@ struct mbf_mgd77dat_struct {
 	/* comment */
 	char comment[MBF_MGD77DAT_DATA_LEN];
 };
+
+#endif  /* MBF_MGD77DAT_H_ */

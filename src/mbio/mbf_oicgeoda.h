@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_oicgeoda.h	1/8/99
- *	$Id$
  *
- *    Copyright (c) 1999-2017 by
+ *    Copyright (c) 1999-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -49,6 +48,9 @@
  *      sonar type value.
  *
  */
+
+#ifndef MBF_OICGEODA_H_
+#define MBF_OICGEODA_H_
 
 /* defines sizes of things */
 #define MBF_OICGEODA_HEADER_SIZE 248
@@ -181,3 +183,5 @@ struct mbf_oicgeoda_struct {
 	char client[MBF_OICGEODA_MAX_CLIENT];
 	struct mbf_oicgeoda_data_struct data;
 };
+
+#endif  /* MBF_OICGEODA_H_ */

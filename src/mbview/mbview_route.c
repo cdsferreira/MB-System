@@ -1,8 +1,7 @@
 /*------------------------------------------------------------------------------
  *    The MB-system:	mbview_route.c	9/25/2003
- *    $Id$
  *
- *    Copyright (c) 2003-2017 by
+ *    Copyright (c) 2003-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -31,6 +30,15 @@
 #include <ctype.h>
 #include <math.h>
 
+/* Need to include windows.h BEFORE the the Xm stuff otherwise VC14+ barf with conflicts */
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+#	ifndef WIN32
+#		define WIN32
+#	endif
+#	include <WinSock2.h>
+#include <windows.h>
+#endif
+
 /* Motif required Headers */
 #include <X11/StringDefs.h>
 #include <X11/cursorfont.h>
@@ -51,10 +59,6 @@
 #include "MB3DNavList.h"
 
 /* OpenGL include files */
-#ifdef WIN32
-#undef BOOL /* It was defined by a chain of inclusions in the (patched) X11/Xmd.h */
-#include <windows.h>
-#endif
 
 #include <GL/gl.h>
 #include <GL/glu.h>
@@ -76,20 +80,17 @@
 /* local variables */
 static char value_string[MB_PATH_MAXLINE];
 
-static char rcs_id[] = "$Id$";
 
 /*------------------------------------------------------------------------------*/
 int mbview_getroutecount(int verbose, size_t instance, int *nroute, int *error) {
 	/* local variables */
-	char *function_name = "mbview_getroutecount";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -105,7 +106,7 @@ int mbview_getroutecount(int verbose, size_t instance, int *nroute, int *error) 
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       nroute:                    %d\n", *nroute);
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
@@ -120,7 +121,6 @@ int mbview_getroutecount(int verbose, size_t instance, int *nroute, int *error) 
 /*------------------------------------------------------------------------------*/
 int mbview_getroutepointcount(int verbose, size_t instance, int route, int *npoint, int *nintpoint, int *error) {
 	/* local variables */
-	char *function_name = "mbview_getroutepointcount";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -128,8 +128,7 @@ int mbview_getroutepointcount(int verbose, size_t instance, int route, int *npoi
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -154,7 +153,7 @@ int mbview_getroutepointcount(int verbose, size_t instance, int route, int *npoi
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       npoint:                    %d\n", *npoint);
 		fprintf(stderr, "dbg2       nintpoint:                 %d\n", *nintpoint);
@@ -169,15 +168,13 @@ int mbview_getroutepointcount(int verbose, size_t instance, int route, int *npoi
 /*------------------------------------------------------------------------------*/
 int mbview_getrouteselected(int verbose, size_t instance, int route, int *selected, int *error) {
 	/* local variables */
-	char *function_name = "mbview_getrouteselected";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -191,13 +188,13 @@ int mbview_getrouteselected(int verbose, size_t instance, int route, int *select
 
 	/* check if the specified route is currently selected in totality */
 	if (route == shared.shareddata.route_selected && shared.shareddata.route_point_selected == MBV_SELECT_ALL)
-		*selected = MB_YES;
+		*selected = true;
 	else
-		*selected = MB_NO;
+		*selected = false;
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       selected:                  %d\n", *selected);
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
@@ -212,7 +209,6 @@ int mbview_getrouteselected(int verbose, size_t instance, int route, int *select
 int mbview_getrouteinfo(int verbose, size_t instance, int working_route, int *nroutewaypoint, int *nroutpoint, char *routename,
                         int *routecolor, int *routesize, double *routedistancelateral, double *routedistancetopo, int *error) {
 	/* local variables */
-	char *function_name = "mbview_getrouteinfo";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -220,8 +216,7 @@ int mbview_getrouteinfo(int verbose, size_t instance, int working_route, int *nr
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -261,7 +256,7 @@ int mbview_getrouteinfo(int verbose, size_t instance, int working_route, int *nr
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       nroutewaypoint:            %d\n", *nroutewaypoint);
 		fprintf(stderr, "dbg2       nroutpoint:                %d\n", *nroutpoint);
@@ -284,13 +279,11 @@ int mbview_allocroutearrays(int verbose, int npointtotal, double **routelon, dou
                             double **routetopo, double **routebearing, double **distlateral, double **distovertopo,
                             double **slope, int *error) {
 	/* local variables */
-	char *function_name = "mbview_allocroutearrays";
 	int status = MB_SUCCESS;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -330,7 +323,7 @@ int mbview_allocroutearrays(int verbose, int npointtotal, double **routelon, dou
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       routelon:                  %p\n", *routelon);
 		fprintf(stderr, "dbg2       routelat:                  %p\n", *routelat);
@@ -359,13 +352,11 @@ int mbview_allocroutearrays(int verbose, int npointtotal, double **routelon, dou
 int mbview_freeroutearrays(int verbose, double **routelon, double **routelat, int **waypoint, double **routetopo,
                            double **routebearing, double **distlateral, double **distovertopo, double **slope, int *error) {
 	/* local variables */
-	char *function_name = "mbview_freeroutearrays";
 	int status = MB_SUCCESS;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -403,7 +394,7 @@ int mbview_freeroutearrays(int verbose, double **routelon, double **routelat, in
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       routelon:                  %p\n", *routelon);
 		fprintf(stderr, "dbg2       routelat:                  %p\n", *routelat);
@@ -432,7 +423,6 @@ int mbview_freeroutearrays(int verbose, double **routelon, double **routelat, in
 int mbview_addroute(int verbose, size_t instance, int npoint, double *routelon, double *routelat, int *waypoint, int routecolor,
                     int routesize, int routeeditmode, mb_path routename, int *iroute, int *error) {
 	/* local variables */
-	char *function_name = "mbview_addroute";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -442,8 +432,7 @@ int mbview_addroute(int verbose, size_t instance, int npoint, double *routelon, 
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -519,7 +508,7 @@ int mbview_addroute(int verbose, size_t instance, int npoint, double *routelon, 
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       iroute:                    %d\n", *iroute);
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
@@ -534,7 +523,6 @@ int mbview_addroute(int verbose, size_t instance, int npoint, double *routelon, 
 /*------------------------------------------------------------------------------*/
 int mbview_deleteroute(int verbose, size_t instance, int iroute, int *error) {
 	/* local variables */
-	char *function_name = "mbview_deleteroute";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -542,8 +530,7 @@ int mbview_deleteroute(int verbose, size_t instance, int iroute, int *error) {
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -569,7 +556,7 @@ int mbview_deleteroute(int verbose, size_t instance, int iroute, int *error) {
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -583,7 +570,6 @@ int mbview_deleteroute(int verbose, size_t instance, int iroute, int *error) {
 /*------------------------------------------------------------------------------*/
 int mbview_deleteallroutes(int verbose, size_t instance, int *error) {
 	/* local variables */
-	char *function_name = "mbview_deleteallroutes";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -593,8 +579,7 @@ int mbview_deleteallroutes(int verbose, size_t instance, int *error) {
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -648,7 +633,7 @@ int mbview_deleteallroutes(int verbose, size_t instance, int *error) {
 
 	/* print route debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Route values:\n");
 		fprintf(stderr, "dbg2       route_view_mode:      %d\n", data->route_view_mode);
 		fprintf(stderr, "dbg2       route_mode:           %d\n", shared.shareddata.route_mode);
@@ -691,7 +676,7 @@ int mbview_deleteallroutes(int verbose, size_t instance, int *error) {
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -706,7 +691,6 @@ int mbview_getroute(int verbose, size_t instance, int route, int *npointtotal, d
                     double *routetopo, double *routebearing, double *distlateral, double *distovertopo, double *slope,
                     int *routecolor, int *routesize, mb_path routename, int *error) {
 	/* local variables */
-	char *function_name = "mbview_getroute";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -716,8 +700,7 @@ int mbview_getroute(int verbose, size_t instance, int route, int *npointtotal, d
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -877,7 +860,7 @@ int mbview_getroute(int verbose, size_t instance, int route, int *npointtotal, d
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       npointtotal:               %d\n", *npointtotal);
 		fprintf(stderr, "dbg2       routecolor:                %d\n", *routecolor);
@@ -904,15 +887,13 @@ int mbview_enableviewroutes(int verbose, size_t instance, int *error)
 
 {
 	/* local variables */
-	char *function_name = "mbview_enableviewroutes";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -929,13 +910,13 @@ int mbview_enableviewroutes(int verbose, size_t instance, int *error)
 		data = &(view->data);
 
 		/* if instance active reset action sensitivity */
-		if (data->active == MB_YES)
+		if (data->active == true)
 			mbview_update_sensitivity(verbose, instance, error);
 	}
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -951,15 +932,13 @@ int mbview_enableeditroutes(int verbose, size_t instance, int *error)
 
 {
 	/* local variables */
-	char *function_name = "mbview_enableeditroutes";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -974,12 +953,12 @@ int mbview_enableeditroutes(int verbose, size_t instance, int *error)
 	shared.shareddata.route_mode = MBV_ROUTE_EDIT;
 
 	/* set widget sensitivity */
-	if (data->active == MB_YES)
+	if (data->active == true)
 		mbview_update_sensitivity(verbose, instance, error);
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -994,15 +973,13 @@ int mbview_enableviewties(int verbose, size_t instance, int *error)
 
 {
 	/* local variables */
-	char *function_name = "mbview_enableviewties";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -1017,12 +994,12 @@ int mbview_enableviewties(int verbose, size_t instance, int *error)
 	shared.shareddata.route_mode = MBV_ROUTE_NAVADJUST;
 
 	/* set widget sensitivity */
-	if (data->active == MB_YES)
+	if (data->active == true)
 		mbview_update_sensitivity(verbose, instance, error);
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -1036,7 +1013,6 @@ int mbview_enableviewties(int verbose, size_t instance, int *error)
 int mbview_pick_routebyname(int verbose, size_t instance, char *name, int *error) {
 
 	/* local variables */
-	char *function_name = "mbview_pick_routebyname";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -1045,8 +1021,7 @@ int mbview_pick_routebyname(int verbose, size_t instance, char *name, int *error
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
@@ -1063,12 +1038,12 @@ int mbview_pick_routebyname(int verbose, size_t instance, char *name, int *error
 
 	/* only select route points if enabled and not in move mode */
 	if (shared.shareddata.route_mode != MBV_ROUTE_OFF && shared.shareddata.nroute > 0) {
-		found = MB_NO;
+		found = false;
 		shared.shareddata.route_selected = MBV_SELECT_NONE;
 		shared.shareddata.route_point_selected = MBV_SELECT_NONE;
 		for (i = 0; i < shared.shareddata.nroute; i++) {
 			if (strcmp(name, shared.shareddata.routes[i].name) == 0) {
-				found = MB_YES;
+				found = true;
 				shared.shareddata.route_selected = i;
 				shared.shareddata.route_point_selected = MBV_SELECT_ALL;
 			}
@@ -1085,7 +1060,7 @@ int mbview_pick_routebyname(int verbose, size_t instance, char *name, int *error
 
 	/* print route debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Route values:\n");
 		fprintf(stderr, "dbg2       route_view_mode:      %d\n", data->route_view_mode);
 		fprintf(stderr, "dbg2       route_mode:           %d\n", shared.shareddata.route_mode);
@@ -1097,7 +1072,7 @@ int mbview_pick_routebyname(int verbose, size_t instance, char *name, int *error
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:           %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -1112,7 +1087,6 @@ int mbview_pick_routebyname(int verbose, size_t instance, char *name, int *error
 int mbview_pick_route_select(int verbose, size_t instance, int which, int xpixel, int ypixel) {
 
 	/* local variables */
-	char *function_name = "mbview_pick_route_select";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -1127,8 +1101,7 @@ int mbview_pick_route_select(int verbose, size_t instance, int which, int xpixel
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
@@ -1182,7 +1155,7 @@ int mbview_pick_route_select(int verbose, size_t instance, int which, int xpixel
 
 		/* reset selected route position */
 		iroute = shared.shareddata.route_selected;
-		if (found && shared.shareddata.routes[iroute].editmode == MB_YES) {
+		if (found && shared.shareddata.routes[iroute].editmode == true) {
 			jpoint = shared.shareddata.route_point_selected;
 			shared.shareddata.routes[iroute].points[jpoint].xgrid[instance] = xgrid;
 			shared.shareddata.routes[iroute].points[jpoint].ygrid[instance] = ygrid;
@@ -1253,7 +1226,7 @@ int mbview_pick_route_select(int verbose, size_t instance, int which, int xpixel
 
 	/* print route debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Route values:\n");
 		fprintf(stderr, "dbg2       route_view_mode:      %d\n", data->route_view_mode);
 		fprintf(stderr, "dbg2       route_mode:           %d\n", shared.shareddata.route_mode);
@@ -1297,7 +1270,7 @@ int mbview_pick_route_select(int verbose, size_t instance, int which, int xpixel
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -1310,7 +1283,6 @@ int mbview_pick_route_select(int verbose, size_t instance, int which, int xpixel
 int mbview_extract_route_profile(size_t instance) {
 
 	/* local variables */
-	char *function_name = "mbview_extract_route_profile";
 	int status = MB_SUCCESS;
 	int error = MB_ERROR_NO_ERROR;
 	struct mbview_world_struct *view;
@@ -1322,8 +1294,7 @@ int mbview_extract_route_profile(size_t instance) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -1366,9 +1337,9 @@ int mbview_extract_route_profile(size_t instance) {
 					jstart = 1;
 				for (j = jstart; j < shared.shareddata.routes[iroute].segments[i].nls; j++) {
 					if (j == 0 || j == shared.shareddata.routes[iroute].segments[i].nls - 1)
-						data->profile.points[data->profile.npoints].boundary = MB_YES;
+						data->profile.points[data->profile.npoints].boundary = true;
 					else
-						data->profile.points[data->profile.npoints].boundary = MB_NO;
+						data->profile.points[data->profile.npoints].boundary = false;
 					data->profile.points[data->profile.npoints].xgrid =
 					    shared.shareddata.routes[iroute].segments[i].lspoints[j].xgrid[instance];
 					data->profile.points[data->profile.npoints].ygrid =
@@ -1450,7 +1421,7 @@ int mbview_extract_route_profile(size_t instance) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -1463,7 +1434,6 @@ int mbview_extract_route_profile(size_t instance) {
 int mbview_pick_route_add(int verbose, size_t instance, int which, int xpixel, int ypixel) {
 
 	/* local variables */
-	char *function_name = "mbview_pick_route_add";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -1475,8 +1445,7 @@ int mbview_pick_route_add(int verbose, size_t instance, int which, int xpixel, i
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
@@ -1513,7 +1482,7 @@ int mbview_pick_route_add(int verbose, size_t instance, int which, int xpixel, i
 
 		/* else just add point to currently selected route and point */
 		else if (found && shared.shareddata.route_selected != MBV_SELECT_NONE &&
-		         shared.shareddata.routes[shared.shareddata.route_selected].editmode == MB_YES) {
+		         shared.shareddata.routes[shared.shareddata.route_selected].editmode == true) {
 			/* add route point after currently selected route point if any */
 			inew = shared.shareddata.route_selected;
 			jnew = shared.shareddata.route_point_selected + 1;
@@ -1628,7 +1597,7 @@ int mbview_pick_route_add(int verbose, size_t instance, int which, int xpixel, i
 
 	/* print route debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Route values:\n");
 		fprintf(stderr, "dbg2       route_view_mode:      %d\n", data->route_view_mode);
 		fprintf(stderr, "dbg2       route_mode:           %d\n", shared.shareddata.route_mode);
@@ -1671,7 +1640,7 @@ int mbview_pick_route_add(int verbose, size_t instance, int which, int xpixel, i
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -1684,7 +1653,6 @@ int mbview_pick_route_add(int verbose, size_t instance, int which, int xpixel, i
 int mbview_pick_route_delete(int verbose, size_t instance, int xpixel, int ypixel) {
 
 	/* local variables */
-	char *function_name = "mbview_pick_route_delete";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -1697,8 +1665,7 @@ int mbview_pick_route_delete(int verbose, size_t instance, int xpixel, int ypixe
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
@@ -1759,7 +1726,7 @@ int mbview_pick_route_delete(int verbose, size_t instance, int xpixel, int ypixe
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -1772,7 +1739,6 @@ int mbview_route_add(int verbose, size_t instance, int inew, int jnew, int waypo
                      double ylat, double zdata, double xdisplay, double ydisplay, double zdisplay) {
 
 	/* local variables */
-	char *function_name = "mbview_route_add";
 	int status = MB_SUCCESS;
 	int error = MB_ERROR_NO_ERROR;
 	struct mbview_world_struct *view;
@@ -1783,8 +1749,7 @@ int mbview_route_add(int verbose, size_t instance, int inew, int jnew, int waypo
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
@@ -1823,7 +1788,7 @@ int mbview_route_add(int verbose, size_t instance, int inew, int jnew, int waypo
 				for (i = shared.shareddata.nroute; i < shared.shareddata.nroute_alloc; i++) {
 					shared.shareddata.routes[i].color = MBV_COLOR_RED;
 					shared.shareddata.routes[i].size = 1;
-					shared.shareddata.routes[i].editmode = MB_YES;
+					shared.shareddata.routes[i].editmode = true;
 					shared.shareddata.routes[i].name[0] = '\0';
 					shared.shareddata.routes[i].npoints = 0;
 					shared.shareddata.routes[i].npoints_alloc = MBV_ALLOC_NUM;
@@ -1866,7 +1831,7 @@ int mbview_route_add(int verbose, size_t instance, int inew, int jnew, int waypo
 		/* add the new route */
 		shared.shareddata.routes[inew].color = MBV_COLOR_BLACK;
 		shared.shareddata.routes[inew].size = 1;
-		shared.shareddata.routes[inew].editmode = MB_YES;
+		shared.shareddata.routes[inew].editmode = true;
 		sprintf(shared.shareddata.routes[inew].name, "Route:%d", shared.shareddata.nroute);
 	}
 
@@ -1979,7 +1944,7 @@ int mbview_route_add(int verbose, size_t instance, int inew, int jnew, int waypo
 
 	/* print route debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Route values:\n");
 		fprintf(stderr, "dbg2       route_view_mode:      %d\n", data->route_view_mode);
 		fprintf(stderr, "dbg2       route_mode:           %d\n", shared.shareddata.route_mode);
@@ -2041,7 +2006,7 @@ int mbview_route_add(int verbose, size_t instance, int inew, int jnew, int waypo
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -2054,7 +2019,6 @@ int mbview_route_add(int verbose, size_t instance, int inew, int jnew, int waypo
 int mbview_route_delete(size_t instance, int iroute, int ipoint) {
 
 	/* local variables */
-	char *function_name = "mbview_route_delete";
 	int status = MB_SUCCESS;
 	int error = MB_ERROR_NO_ERROR;
 	struct mbview_world_struct *view;
@@ -2064,8 +2028,7 @@ int mbview_route_delete(size_t instance, int iroute, int ipoint) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -2081,7 +2044,7 @@ int mbview_route_delete(size_t instance, int iroute, int ipoint) {
 	        shared.shareddata.routes[iroute].editmode);
 	/* delete route point if its valid */
 	if (iroute >= 0 && iroute < shared.shareddata.nroute && ipoint >= 0 && ipoint < shared.shareddata.routes[iroute].npoints &&
-	    shared.shareddata.routes[iroute].editmode == MB_YES) {
+	    shared.shareddata.routes[iroute].editmode == true) {
 		/* free segment immediately after deleted point if in the middle of the
 		    route or before if it is at the end */
 		if (shared.shareddata.routes[iroute].npoints > 1) {
@@ -2165,7 +2128,7 @@ int mbview_route_delete(size_t instance, int iroute, int ipoint) {
 
 	/* print route debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Route data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Route values:\n");
 		fprintf(stderr, "dbg2       route_view_mode:      %d\n", data->route_view_mode);
 		fprintf(stderr, "dbg2       route_mode:           %d\n", shared.shareddata.route_mode);
@@ -2208,7 +2171,7 @@ int mbview_route_delete(size_t instance, int iroute, int ipoint) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -2220,12 +2183,11 @@ int mbview_route_delete(size_t instance, int iroute, int ipoint) {
 /*------------------------------------------------------------------------------*/
 int mbview_route_setdistance(size_t instance, int working_route) {
 	/* local variables */
-	char *function_name = "mbview_route_setdistance";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view = NULL;
 	struct mbview_struct *data = NULL;
 	struct mbview_route_struct *route = NULL;
-	int valid_route = MB_NO;
+	int valid_route = false;
 	double distlateral, distovertopo;
 	double routelon0, routelon1;
 	double routelat0, routelat1;
@@ -2235,8 +2197,7 @@ int mbview_route_setdistance(size_t instance, int working_route) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", mbv_verbose);
@@ -2252,7 +2213,7 @@ int mbview_route_setdistance(size_t instance, int working_route) {
 	if (working_route >= 0 && working_route < shared.shareddata.nroute && shared.shareddata.routes[working_route].npoints > 0) {
 		/* get route pointer */
 		route = &(shared.shareddata.routes[working_route]);
-		valid_route = MB_YES;
+		valid_route = true;
 
 		/* loop over the route segments */
 		route->distancelateral = 0.0;
@@ -2331,9 +2292,9 @@ int mbview_route_setdistance(size_t instance, int working_route) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
-		if (valid_route == MB_YES) {
+		if (valid_route == true) {
 			route = &(shared.shareddata.routes[working_route]);
 			fprintf(stderr, "dbg2       routedistancelateral:      %f\n", route->distancelateral);
 			fprintf(stderr, "dbg2       routedistancetopo:         %f\n", route->distancetopo);
@@ -2353,7 +2314,6 @@ int mbview_route_setdistance(size_t instance, int working_route) {
 /*------------------------------------------------------------------------------*/
 int mbview_drawroute(size_t instance, int rez) {
 	/* local variables */
-	char *function_name = "mbview_drawroute";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -2366,8 +2326,7 @@ int mbview_drawroute(size_t instance, int rez) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -2487,12 +2446,12 @@ int mbview_drawroute(size_t instance, int rez) {
 		}
 	}
 #ifdef MBV_GETERRORS
-	mbview_glerrorcheck(instance, 1, function_name);
+	mbview_glerrorcheck(instance, 1, __func__);
 #endif
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
@@ -2504,7 +2463,6 @@ int mbview_drawroute(size_t instance, int rez) {
 /*------------------------------------------------------------------------------*/
 int mbview_updateroutelist() {
 	/* local variables */
-	char *function_name = "mbview_updateroutelist";
 	int status = MB_SUCCESS;
 	XmString *xstr;
 	int jpoint;
@@ -2517,8 +2475,7 @@ int mbview_updateroutelist() {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 	}
@@ -2541,7 +2498,7 @@ int mbview_updateroutelist() {
 			/* loop over the routes */
 			nitems = 0;
 			for (iroute = 0; iroute < shared.shareddata.nroute; iroute++) {
-				if (shared.shareddata.routes[iroute].editmode == MB_YES)
+				if (shared.shareddata.routes[iroute].editmode == true)
 					sprintf(value_string, "Editable Route %3d | Waypoints:%3d | Length:%.2f %.2f m | %s | Name: %s", iroute,
 					        shared.shareddata.routes[iroute].npoints, shared.shareddata.routes[iroute].distancelateral,
 					        shared.shareddata.routes[iroute].distancetopo,
@@ -2635,7 +2592,7 @@ int mbview_updateroutelist() {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}

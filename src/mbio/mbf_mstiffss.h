@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_mstiffss.h	10/14/94
- *	$Id$
  *
- *    Copyright (c) 1998-2017 by
+ *    Copyright (c) 1998-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -106,6 +105,9 @@
  *          285        Y2KTimeCorrelation#
  */
 
+#ifndef MBF_MSTIFFSS_H_
+#define MBF_MSTIFFSS_H_
+
 /* size of MSTIFFSS reading buffer */
 #define MBF_MSTIFFSS_BUFFERSIZE 1024
 
@@ -203,3 +205,5 @@ struct mbf_mstiffss_struct {
 	unsigned char ss[MBF_MSTIFFSS_PIXELS];
 	double ssacrosstrack[MBF_MSTIFFSS_PIXELS];
 };
+
+#endif /* MBF_MSTIFFSS_H_ */

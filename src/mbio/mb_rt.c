@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mb_rt.c	11/14/94
- *    $Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -20,40 +19,35 @@
  *
  * Author:	D. W. Caress
  * Date:	November 14, 1994
- *
- *
- *
  */
 
-/* standard global include files */
-#include <stdio.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
 #include "mb_define.h"
+#include "mb_status.h"
 
 /* raytracing defines */
-#define MB_RT_GRADIENT_TOLERANCE 0.00001
-#define MB_RT_LAYER_HOMOGENEOUS 0
-#define MB_RT_LAYER_GRADIENT 1
-#define MB_RT_ERROR 0
-#define MB_RT_DOWN 1
-#define MB_RT_UP 2
-#define MB_RT_DOWN_TURN 3
-#define MB_RT_UP_TURN 4
-#define MB_RT_OUT_BOTTOM 5
-#define MB_RT_OUT_TOP 6
-#define MB_RT_NUMBER_SEGMENTS 5
-#define MB_RT_PLOT_MODE_OFF 0
-#define MB_RT_PLOT_MODE_ON 1
-#define MB_RT_PLOT_MODE_TABLE 2
-#define MB_SSV_NO_USE 0
-#define MB_SSV_CORRECT 1
-#define MB_SSV_INCORRECT 2
+static const double MB_RT_GRADIENT_TOLERANCE = 0.00001;
+static const int MB_RT_LAYER_HOMOGENEOUS = 0;;
+static const int MB_RT_LAYER_GRADIENT = 1;
+// static const int MB_RT_ERROR = 0;
+static const int MB_RT_DOWN = 1;
+static const int MB_RT_UP = 2;
+static const int MB_RT_DOWN_TURN = 3;
+static const int MB_RT_UP_TURN = 4;
+static const int MB_RT_OUT_BOTTOM = 5;
+static const int MB_RT_OUT_TOP = 6;
+static const int MB_RT_NUMBER_SEGMENTS = 5;
+static const int MB_RT_PLOT_MODE_OFF = 0;
+static const int MB_RT_PLOT_MODE_ON = 1;
+static const int MB_RT_PLOT_MODE_TABLE = 2;
+/* static const int MB_SSV_NO_USE = 0; */
+static const int MB_SSV_CORRECT = 1;
+static const int MB_SSV_INCORRECT = 2;
 
-/* velocity model structure */
 struct velocity_model {
 	/* velocity model */
 	int number_node;
@@ -70,7 +64,7 @@ struct velocity_model {
 
 	/* raytracing bookkeeping variables */
 	int ray_status;
-	int done;
+	bool done;
 	int outofbounds;
 	int layer;
 	int turned;
@@ -95,46 +89,23 @@ struct velocity_model {
 };
 
 /* global raytrace values */
-static struct velocity_model *model;
-
-int mb_rt_init(int verbose, int number_node, double *depth, double *velocity, void **modelptr, int *error);
-int mb_rt_deall(int verbose, void **modelptr, int *error);
-int mb_rt(int verbose, void *modelptr, double source_depth, double source_angle, double end_time, int ssv_mode,
-          double surface_vel, double null_angle, int nplot_max, int *nplot, double *xplot, double *zplot, double *x, double *z,
-          double *travel_time, int *ray_stat, int *error);
-int mb_rt_circular(int verbose, int *error);
-int mb_rt_quad1(int verbose, int *error);
-int mb_rt_quad2(int verbose, int *error);
-int mb_rt_quad3(int verbose, int *error);
-int mb_rt_quad4(int verbose, int *error);
-int mb_rt_get_depth(int verbose, double beta, int dir_sign, int turn_sign, double *depth, int *error);
-int mb_rt_plot_circular(int verbose, int *error);
-int mb_rt_line(int verbose, int *error);
-int mb_rt_vertical(int verbose, int *error);
-
-static char rcs_id[] = "$Id$";
+static struct velocity_model *model = NULL;
 
 /*--------------------------------------------------------------------------*/
 int mb_rt_init(int verbose, int number_node, double *depth, double *velocity, void **modelptr, int *error) {
-	char *function_name = "mb_rt_init";
-	int status = MB_SUCCESS;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2       number_node:      %d\n", number_node);
-		for (i = 0; i < number_node; i++) {
+		for (int i = 0; i < number_node; i++) {
 			fprintf(stderr, "dbg2       depth: %f  velocity:%f\n", depth[i], velocity[i]);
 		}
 		fprintf(stderr, "dbg2       modelptr:         %p\n", (void *)modelptr);
 	}
 
 	/* allocate memory for model structure */
-	status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct velocity_model), (void **)modelptr, error);
+	int status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct velocity_model), (void **)modelptr, error);
 
 	/* set variables and allocate memory for velocity model */
 	model = (struct velocity_model *)*modelptr;
@@ -155,11 +126,11 @@ int mb_rt_init(int verbose, int number_node, double *depth, double *velocity, vo
 	}
 
 	/* put model into structure */
-	for (i = 0; i < number_node; i++) {
+	for (int i = 0; i < number_node; i++) {
 		model->depth[i] = depth[i];
 		model->velocity[i] = velocity[i];
 	}
-	for (i = 0; i < model->number_layer; i++) {
+	for (int i = 0; i < model->number_layer; i++) {
 		model->layer_gradient[i] =
 		    (model->layer_vel_bottom[i] - model->layer_vel_top[i]) / (model->layer_depth_bottom[i] - model->layer_depth_top[i]);
 		if (fabs(model->layer_gradient[i]) > MB_RT_GRADIENT_TOLERANCE) {
@@ -174,7 +145,7 @@ int mb_rt_init(int verbose, int number_node, double *depth, double *velocity, vo
 
 	/* initialize raytracing bookkeeping variables */
 	model->ray_status = 0;
-	model->done = 0;
+	model->done = false;
 	model->outofbounds = 0;
 	model->layer = 0;
 	model->turned = 0;
@@ -197,9 +168,8 @@ int mb_rt_init(int verbose, int number_node, double *depth, double *velocity, vo
 	model->xx_plot = NULL;
 	model->zz_plot = NULL;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       modelptr:   %p\n", (void *)*modelptr);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -211,13 +181,8 @@ int mb_rt_init(int verbose, int number_node, double *depth, double *velocity, vo
 }
 /*--------------------------------------------------------------------------*/
 int mb_rt_deall(int verbose, void **modelptr, int *error) {
-	char *function_name = "mb_rt";
-	int status = MB_SUCCESS;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2       modelptr:         %p\n", (void *)modelptr);
@@ -225,16 +190,574 @@ int mb_rt_deall(int verbose, void **modelptr, int *error) {
 
 	/* deallocate memory for velocity model */
 	model = (struct velocity_model *)*modelptr;
-	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&(model->depth), error);
+	int status = mb_freed(verbose, __FILE__, __LINE__, (void **)&(model->depth), error);
 	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&(model->velocity), error);
 	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&(model->layer_mode), error);
 	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&(model->layer_gradient), error);
 	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&(model->layer_depth_center), error);
 	status = mb_freed(verbose, __FILE__, __LINE__, (void **)modelptr, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:     %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------------*/
+int mb_rt_get_depth(int verbose, double beta, int dir_sign, int turn_sign, double *depth, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
+		fprintf(stderr, "dbg2       beta:             %f\n", beta);
+		fprintf(stderr, "dbg2       dir_sign:         %d\n", dir_sign);
+		fprintf(stderr, "dbg2       turn_sign:        %d\n", turn_sign);
+	}
+
+	/* find depth */
+	const double alpha = model->pp * exp(dir_sign * model->tt_left * fabs(model->layer_gradient[model->layer]) + turn_sign * beta);
+	const double velf = 2 * alpha / (alpha * alpha + model->pp * model->pp);
+	*depth =
+	    model->layer_depth_top[model->layer] + (velf - model->layer_vel_top[model->layer]) / model->layer_gradient[model->layer];
+
+	const int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       depth:      %f\n", *depth);
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:     %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------------*/
+int mb_rt_quad1(int verbose, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
+	}
+
+	/* find circular path */
+	model->radius = fabs(1.0 / (model->pp * model->layer_gradient[model->layer]));
+	model->zc = model->layer_depth_center[model->layer];
+	model->xc = model->xx + SAFESQRT(model->radius * model->radius - (model->zz - model->zc) * (model->zz - model->zc));
+	const double vi = model->layer_vel_top[model->layer] +
+	     (model->zz - model->layer_depth_top[model->layer]) * model->layer_gradient[model->layer];
+	const double ip = 1.0 / model->pp;
+	const double ipvi = ip / vi;
+	const double beta = log(ipvi + SAFESQRT(ipvi * ipvi - 1.0));
+
+	int status = MB_SUCCESS;
+
+	/* Check if ray turns in layer */
+	if (model->zc + model->radius < model->layer_depth_bottom[model->layer]) {
+		/* ray can turn in this layer */
+		model->dt = fabs(beta / model->layer_gradient[model->layer]);
+
+		/* raypath ends before turning */
+		if (model->dt >= model->tt_left) {
+			mb_rt_get_depth(verbose, beta, -1, 1, &model->zf, error);
+			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+			model->dt = model->tt_left;
+			model->tt_left = 0.0;
+		}
+
+		/* raypath turns */
+		else {
+			const double ivf = 1.0 / model->layer_vel_top[model->layer];
+			model->dt = fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) + beta) /
+			                 model->layer_gradient[model->layer]);
+
+			/* ray turns and exits layer before
+			    exhausting tt_left */
+			if (model->dt <= model->tt_left) {
+				model->turned = true;
+				model->ray_status = MB_RT_UP_TURN;
+				model->zf = model->layer_depth_top[model->layer];
+				model->xf =
+				    model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+				model->tt_left = model->tt_left - model->dt;
+				model->layer--;
+			}
+			/* ray turns and exhausts tt_left
+			    before exiting layer */
+			else if (model->dt > model->tt_left) {
+				model->turned = true;
+				model->ray_status = MB_RT_UP_TURN;
+				mb_rt_get_depth(verbose, beta, 1, -1, &model->zf, error);
+				model->xf =
+				    model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+				model->dt = model->tt_left;
+				model->tt_left = 0.0;
+			}
+		}
+	}
+	else {
+		/* ray cannot turn in this layer */
+		const double ivf = 1.0 / model->layer_vel_bottom[model->layer];
+		model->dt =
+		    fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) - beta) / model->layer_gradient[model->layer]);
+
+		/* ray exits layer before exhausting tt_left */
+		if (model->dt <= model->tt_left) {
+			model->zf = model->layer_depth_bottom[model->layer];
+			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+			model->tt_left = model->tt_left - model->dt;
+			model->layer++;
+		}
+		/* ray exhausts tt_left before exiting layer */
+		else if (model->dt > model->tt_left) {
+			model->turned = true;
+			model->ray_status = MB_RT_UP_TURN;
+			mb_rt_get_depth(verbose, beta, -1, 1, &model->zf, error);
+			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+			model->dt = model->tt_left;
+			model->tt_left = 0.0;
+		}
+	}
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:     %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------------*/
+int mb_rt_quad2(int verbose, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
+	}
+
+	/* find circular path */
+	model->radius = fabs(1.0 / (model->pp * model->layer_gradient[model->layer]));
+	model->zc = model->layer_depth_center[model->layer];
+	model->xc = model->xx - SAFESQRT(MAX(0.0, model->radius * model->radius - (model->zz - model->zc) * (model->zz - model->zc)));
+
+	const double vi = model->layer_vel_top[model->layer] +
+	     (model->zz - model->layer_depth_top[model->layer]) * model->layer_gradient[model->layer];
+	const double ip = 1.0 / model->pp;
+	const double ipvi = ip / vi;
+	const double beta = log(ipvi + SAFESQRT(ipvi * ipvi - 1.0));
+
+	/* Check if ray ends in layer */
+	const double ivf = 1.0 / model->layer_vel_top[model->layer];
+	model->dt =
+	    fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) - beta) / model->layer_gradient[model->layer]);
+
+	/* ray exits layer before exhausting tt_left */
+	if (model->dt <= model->tt_left) {
+		model->zf = model->layer_depth_top[model->layer];
+		model->xf = model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+		model->tt_left = model->tt_left - model->dt;
+		model->layer--;
+	}
+	/* ray exhausts tt_left before exiting layer */
+	else if (model->dt > model->tt_left) {
+		mb_rt_get_depth(verbose, beta, 1, 1, &model->zf, error);
+		model->xf = model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+		model->dt = model->tt_left;
+		model->tt_left = 0.0;
+	}
+
+	const int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:     %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------------*/
+int mb_rt_quad3(int verbose, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
+	}
+
+	/* find circular path */
+	model->radius = fabs(1.0 / (model->pp * model->layer_gradient[model->layer]));
+	model->zc = model->layer_depth_center[model->layer];
+	model->xc = model->xx - SAFESQRT(model->radius * model->radius - (model->zz - model->zc) * (model->zz - model->zc));
+	const double vi = model->layer_vel_top[model->layer] +
+	     (model->zz - model->layer_depth_top[model->layer]) * model->layer_gradient[model->layer];
+	const double ip = 1.0 / model->pp;
+	const double ipvi = ip / vi;
+	const double beta = log(ipvi + SAFESQRT(ipvi * ipvi - 1.0));
+
+	/* Check if ray ends in layer */
+	const double ivf = 1.0 / model->layer_vel_bottom[model->layer];
+	model->dt =
+	    fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) - beta) / model->layer_gradient[model->layer]);
+
+	/* ray exits layer before exhausting tt_left */
+	if (model->dt <= model->tt_left) {
+		model->zf = model->layer_depth_bottom[model->layer];
+		model->xf = model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+		model->tt_left = model->tt_left - model->dt;
+		model->layer++;
+	}
+	/* ray exhausts tt_left before exiting layer */
+	else if (model->dt > model->tt_left) {
+		mb_rt_get_depth(verbose, beta, 1, 1, &model->zf, error);
+		model->xf = model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+		model->dt = model->tt_left;
+		model->tt_left = 0.0;
+	}
+
+	const int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:     %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------------*/
+int mb_rt_quad4(int verbose, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
+	}
+
+	/* find circular path */
+	model->radius = fabs(1.0 / (model->pp * model->layer_gradient[model->layer]));
+	model->zc = model->layer_depth_center[model->layer];
+	model->xc = model->xx + SAFESQRT(model->radius * model->radius - (model->zz - model->zc) * (model->zz - model->zc));
+	const double vi = model->layer_vel_top[model->layer] +
+	     (model->zz - model->layer_depth_top[model->layer]) * model->layer_gradient[model->layer];
+	const double ip = 1.0 / model->pp;
+	const double ipvi = ip / vi;
+	const double beta = log(ipvi + SAFESQRT(ipvi * ipvi - 1.0));
+
+	int status = MB_SUCCESS;
+
+	/* Check if ray turns in layer */
+	if (model->zc - model->radius > model->layer_depth_top[model->layer]) {
+		/* ray can turn in this layer */
+		model->dt = fabs(beta / model->layer_gradient[model->layer]);
+
+		/* raypath ends before turning */
+		if (model->dt >= model->tt_left) {
+			mb_rt_get_depth(verbose, beta, -1, 1, &model->zf, error);
+			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+			model->dt = model->tt_left;
+			model->tt_left = 0.0;
+		}
+
+		/* raypath turns */
+		else {
+			const double ivf = 1.0 / model->layer_vel_bottom[model->layer];
+			model->dt = fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) + beta) /
+			                 model->layer_gradient[model->layer]);
+
+			/* ray turns and exits layer before
+			    exhausting tt_left */
+			if (model->dt <= model->tt_left) {
+				model->turned = false;
+				model->ray_status = MB_RT_DOWN_TURN;
+				model->zf = model->layer_depth_bottom[model->layer];
+				model->xf =
+				    model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+				model->tt_left = model->tt_left - model->dt;
+				model->layer++;
+			}
+			/* ray turns and exhausts tt_left
+			    before exiting layer */
+			else if (model->dt > model->tt_left) {
+				model->turned = false;
+				model->ray_status = MB_RT_DOWN_TURN;
+				mb_rt_get_depth(verbose, beta, 1, -1, &model->zf, error);
+				model->xf =
+				    model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+				model->dt = model->tt_left;
+				model->tt_left = 0.0;
+			}
+		}
+	}
+	else {
+		/* ray cannot turn in this layer */
+		const double ivf = 1.0 / model->layer_vel_top[model->layer];
+		model->dt =
+		    fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) - beta) / model->layer_gradient[model->layer]);
+
+		/* ray exits layer before exhausting tt_left */
+		if (model->dt <= model->tt_left) {
+			model->zf = model->layer_depth_top[model->layer];
+			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+			model->tt_left = model->tt_left - model->dt;
+			model->layer--;
+		}
+		/* ray exhausts tt_left before exiting layer */
+		else if (model->dt > model->tt_left) {
+			model->turned = true;
+			model->ray_status = MB_RT_UP_TURN;
+			mb_rt_get_depth(verbose, beta, -1, 1, &model->zf, error);
+			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
+			model->dt = model->tt_left;
+			model->tt_left = 0.0;
+		}
+	}
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:     %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------------*/
+int mb_rt_plot_circular(int verbose, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
+	}
+
+	/* if full plot do circle segments */
+	if (model->plot_mode == MB_RT_PLOT_MODE_ON) {
+		/* get angle range */
+		const double ai = atan2((model->xx - model->xc), (model->zz - model->zc));
+		const double af = atan2((model->xf - model->xc), (model->zf - model->zc));
+		const double dang = (af - ai) / MB_RT_NUMBER_SEGMENTS;
+
+		/* add points to plotting arrays */
+		for (int i = 0; i < MB_RT_NUMBER_SEGMENTS; i++) {
+			const double angle = ai + (i + 1) * dang;
+			if (model->number_plot < model->number_plot_max) {
+				model->xx_plot[model->number_plot] = model->sign_x * (model->xc + model->radius * sin(angle));
+				model->zz_plot[model->number_plot] = model->zc + model->radius * cos(angle);
+				model->number_plot++;
+			}
+		}
+	}
+
+	/* otherwise just add the layer end */
+	else if (model->plot_mode == MB_RT_PLOT_MODE_TABLE) {
+		model->xx_plot[model->number_plot] = model->xf;
+		model->number_plot++;
+	}
+
+	const int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:     %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------------*/
+int mb_rt_circular(int verbose, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
+	}
+
+	int status = MB_SUCCESS;
+
+	/* decide which case to use */
+	if (model->turned == false && model->layer_gradient[model->layer] > 0.0)
+		status = mb_rt_quad1(verbose, error);
+	else if (model->turned == false)
+		status = mb_rt_quad3(verbose, error);
+	else if (model->turned == true && model->layer_gradient[model->layer] > 0.0)
+		status = mb_rt_quad2(verbose, error);
+	else if (model->turned == true)
+		status = mb_rt_quad4(verbose, error);
+
+	/* put points in plotting arrays */
+	if (model->number_plot_max > 0)
+		status = mb_rt_plot_circular(verbose, error);
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:     %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------------*/
+int mb_rt_line(int verbose, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
+	}
+
+	/* find linear path */
+	const double asin_arg = MIN(model->pp * model->layer_vel_top[model->layer], 1.000);
+	double theta = asin(asin_arg);
+	if (model->turned == false) {
+		model->zf = model->layer_depth_bottom[model->layer];
+	}
+	else {
+		theta = theta + M_PI;
+		model->zf = model->layer_depth_top[model->layer];
+	}
+	const double xvel = model->layer_vel_top[model->layer] * sin(theta);
+	const double zvel = model->layer_vel_top[model->layer] * cos(theta);
+	if (zvel != 0.0)
+		model->dt = (model->zf - model->zz) / zvel;
+	else
+		model->dt = 100 * model->tt_left;
+
+	/* if (verbose >= 5)
+	    {
+	    fprintf(stderr,"\ndbg5  Ray calculation in MBIO function <%s>\n", __func__);
+	    fprintf(stderr,"dbg5        model->layer:               %d\n", model->layer);
+	    fprintf(stderr,"dbg5        model->layer_vel_top:       %f\n", model->layer_vel_top[model->layer]);
+	    fprintf(stderr,"dbg5        layer_vel_top * pp:         %f\n", model->pp * model->layer_vel_top[model->layer]);
+	    fprintf(stderr,"dbg5        asin(layer_vel_top * pp):   %f\n", asin(model->pp * model->layer_vel_top[model->layer]));
+	    fprintf(stderr,"dbg5        model->pp:                  %f\n", model->pp);
+	    fprintf(stderr,"dbg5        theta:                      %f\n", theta);
+	    fprintf(stderr,"dbg5        model->zf:                  %f\n", model->zf);
+	    fprintf(stderr,"dbg5        xvel:                       %f\n", xvel);
+	    fprintf(stderr,"dbg5        zvel:                       %f\n", zvel);
+	    }*/
+
+	/* ray exhausts tt_left before exiting layer */
+	if (model->dt >= model->tt_left) {
+		model->xf = model->xx + xvel * model->tt_left;
+		model->zf = model->zz + zvel * model->tt_left;
+		model->dt = model->tt_left;
+		model->tt_left = 0.0;
+	}
+
+	/* ray exits layer before exhausting tt_left */
+	else {
+		model->xf = model->xx + xvel * model->dt;
+		model->zf = model->zz + zvel * model->dt;
+		model->tt_left = model->tt_left - model->dt;
+		if (model->turned == true)
+			model->layer--;
+		else
+			model->layer++;
+	}
+
+	/* if (verbose >= 5)
+	    {
+	    fprintf(stderr,"\ndbg5  Ray calculation in MBIO function <%s>\n", __func__);
+	    fprintf(stderr,"dbg5        model->xf:                 %f\n", model->xf);
+	    fprintf(stderr,"dbg5        model->zf:                 %f\n", model->zf);
+	    fprintf(stderr,"dbg5        model->dt:                 %f\n", model->dt);
+	    fprintf(stderr,"dbg5        model->tt_left:            %f\n", model->tt_left);
+	    fprintf(stderr,"dbg5        model->turned:             %d\n", model->turned);
+	    fprintf(stderr,"dbg5        model->layer:              %d\n", model->layer);
+	    } */
+
+	/* put points in plotting arrays */
+	if (model->plot_mode != MB_RT_PLOT_MODE_OFF && model->number_plot < model->number_plot_max) {
+		model->xx_plot[model->number_plot] = model->sign_x * model->xf;
+		if (model->plot_mode == MB_RT_PLOT_MODE_ON)
+			model->zz_plot[model->number_plot] = model->zf;
+		model->number_plot++;
+	}
+
+	const int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:     %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------------*/
+int mb_rt_vertical(int verbose, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
+	}
+
+	/* find linear path */
+	const double vi = model->layer_vel_top[model->layer] +
+	     (model->zz - model->layer_depth_top[model->layer]) * model->layer_gradient[model->layer];
+
+	double vf;
+	if (model->turned == false) {
+		model->zf = model->layer_depth_bottom[model->layer];
+		vf = model->layer_vel_bottom[model->layer];
+	}
+	else {
+		model->zf = model->layer_depth_top[model->layer];
+		vf = model->layer_vel_top[model->layer];
+	}
+	model->dt = fabs(log(vf / vi) / model->layer_gradient[model->layer]);
+
+	/* ray exhausts tt_left before exiting layer */
+	if (model->dt >= model->tt_left) {
+		model->xf = model->xx;
+		const double vfvi = exp(model->tt_left * model->layer_gradient[model->layer]);
+		if (model->turned == false)
+			vf = vi * vfvi;
+		else if (model->turned == true)
+			vf = vi / vfvi;
+		model->zf = (vf - model->layer_vel_top[model->layer]) / model->layer_gradient[model->layer] +
+		            model->layer_depth_top[model->layer];
+		model->dt = model->tt_left;
+		model->tt_left = 0.0;
+	}
+
+	/* ray exits layer before exhausting tt_left */
+	else {
+		model->xf = model->xx;
+		model->tt_left = model->tt_left - model->dt;
+		if (model->turned == true)
+			model->layer--;
+		else
+			model->layer++;
+	}
+
+	/* put points in plotting arrays */
+	if (model->plot_mode != MB_RT_PLOT_MODE_OFF && model->number_plot < model->number_plot_max) {
+		model->xx_plot[model->number_plot] = model->sign_x * model->xf;
+		if (model->plot_mode == MB_RT_PLOT_MODE_ON)
+			model->zz_plot[model->number_plot] = model->zf;
+		model->number_plot++;
+	}
+
+	int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -247,30 +770,22 @@ int mb_rt_deall(int verbose, void **modelptr, int *error) {
 int mb_rt(int verbose, void *modelptr, double source_depth, double source_angle, double end_time, int ssv_mode,
           double surface_vel, double null_angle, int nplot_max, int *nplot, double *xplot, double *zplot, double *x, double *z,
           double *travel_time, int *ray_stat, int *error) {
-	char *function_name = "mb_rt";
-	int status = MB_SUCCESS;
-	double diff_angle;
-	double vel_ratio;
-	int i;
-
 	/* get pointer to velocity model */
 	model = (struct velocity_model *)modelptr;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2       modelptr:         %p\n", (void *)modelptr);
 		fprintf(stderr, "dbg2       number_node:      %d\n", model->number_node);
 		fprintf(stderr, "dbg2       layer depth velocity:\n");
-		for (i = 0; i < model->number_node; i++) {
+		for (int i = 0; i < model->number_node; i++) {
 			fprintf(stderr, "dbg2       %d %f %f\n", i, model->depth[i], model->velocity[i]);
 		}
 		fprintf(stderr, "dbg2       number_layer:     %d\n", model->number_layer);
 		fprintf(stderr, "dbg2       layer top bottom veltop velbot  mode grad zc\n");
-		for (i = 0; i < model->number_layer; i++) {
+		for (int i = 0; i < model->number_layer; i++) {
 			fprintf(stderr, "dbg2       %d  %f %f  %f %f  %d %f %f\n", i, model->layer_depth_top[i], model->layer_depth_bottom[i],
 			        model->layer_vel_top[i], model->layer_vel_bottom[i], model->layer_mode[i], model->layer_gradient[i],
 			        model->layer_depth_center[i]);
@@ -286,15 +801,18 @@ int mb_rt(int verbose, void *modelptr, double source_depth, double source_angle,
 
 	/* prepare the ray */
 	model->layer = -1;
-	for (i = 0; i < model->number_layer; i++) {
+	for (int i = 0; i < model->number_layer; i++) {
 		if (source_depth >= model->layer_depth_top[i] && source_depth <= model->layer_depth_bottom[i])
 			model->layer = i;
 	}
 	if (verbose > 0 && model->layer == -1) {
-		fprintf(stderr, "\nError in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\nError in MBIO function <%s>\n", __func__);
 		fprintf(stderr, "Ray source depth not within model!!\n");
 		fprintf(stderr, "Raytracing terminated with error!!\n");
 	}
+
+	int status = MB_SUCCESS;
+
 	if (model->layer == -1) {
 		status = MB_FAILURE;
 		*error = MB_ERROR_BAD_PARAMETER;
@@ -320,13 +838,14 @@ int mb_rt(int verbose, void *modelptr, double source_depth, double source_angle,
 	      SVP at the initial depth. This insures that the geometry
 	      of the receiving transducer array is properly handled.
 	 */
+	double vel_ratio;
 	if (ssv_mode == MB_SSV_CORRECT && surface_vel > 0.0) {
 		model->pp = sin(DTR * source_angle) / surface_vel;
 		vel_ratio = MIN(1.0, model->pp * model->vv_source);
 		source_angle = asin(vel_ratio) * RTD;
 	}
 	else if (ssv_mode == MB_SSV_INCORRECT && surface_vel > 0.0) {
-		diff_angle = source_angle - null_angle;
+		double diff_angle = source_angle - null_angle;
 		model->pp = sin(DTR * diff_angle) / surface_vel;
 		vel_ratio = MIN(1.0, model->pp * model->vv_source);
 		diff_angle = asin(vel_ratio) * RTD;
@@ -341,19 +860,19 @@ int mb_rt(int verbose, void *modelptr, double source_depth, double source_angle,
 	source_angle = fabs(source_angle);
 	model->pp = sin(DTR * source_angle) / model->vv_source;
 	if (source_angle < 90.0) {
-		model->turned = MB_NO;
+		model->turned = false;
 		model->ray_status = MB_RT_DOWN;
 	}
 	else {
-		model->turned = MB_YES;
+		model->turned = true;
 		model->ray_status = MB_RT_UP;
 	}
 	model->xx = 0.0;
 	model->zz = source_depth;
 	model->tt = 0.0;
 	model->tt_left = end_time;
-	model->outofbounds = MB_NO;
-	model->done = MB_NO;
+	model->outofbounds = false;
+	model->done = false;
 
 	/* set up raypath plotting */
 	if (nplot_max > 0) {
@@ -379,9 +898,8 @@ int mb_rt(int verbose, void *modelptr, double source_depth, double source_angle,
 		model->number_plot++;
 	}
 
-	/* print debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  About to trace ray in MB_RT function <%s> called\n", function_name);
+		fprintf(stderr, "\ndbg2  About to trace ray in MB_RT function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2       xx:               %f\n", model->xx);
 		fprintf(stderr, "dbg2       zz:               %f\n", model->zz);
 		fprintf(stderr, "dbg2       layer:            %d\n", model->layer);
@@ -404,19 +922,18 @@ int mb_rt(int verbose, void *modelptr, double source_depth, double source_angle,
 		/* update ray */
 		model->tt = model->tt + model->dt;
 		if (model->layer < 0) {
-			model->outofbounds = MB_YES;
+			model->outofbounds = true;
 			model->ray_status = MB_RT_OUT_TOP;
 		}
 		if (model->layer >= model->number_layer) {
-			model->outofbounds = MB_YES;
+			model->outofbounds = true;
 			model->ray_status = MB_RT_OUT_BOTTOM;
 		}
 		if (model->tt_left <= 0.0)
-			model->done = MB_YES;
+			model->done = true;
 
-		/* print debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  model->done with ray iteration in MB_RT function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  model->done with ray iteration in MB_RT function <%s>\n", __func__);
 			fprintf(stderr, "dbg2       xx:               %f\n", model->xx);
 			fprintf(stderr, "dbg2       zz:               %f\n", model->zz);
 			fprintf(stderr, "dbg2       xf:               %f\n", model->xf);
@@ -441,9 +958,8 @@ int mb_rt(int verbose, void *modelptr, double source_depth, double source_angle,
 	if (model->number_plot_max > 0)
 		*nplot = model->number_plot;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		if (nplot_max > 0)
 			fprintf(stderr, "dbg2       nplot:      %d\n", *nplot);
@@ -451,633 +967,6 @@ int mb_rt(int verbose, void *modelptr, double source_depth, double source_angle,
 		fprintf(stderr, "dbg2       z:          %f\n", *z);
 		fprintf(stderr, "dbg2       travel_time:%f\n", *travel_time);
 		fprintf(stderr, "dbg2       raystat:    %d\n", *ray_stat);
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:     %d\n", status);
-	}
-
-	return (status);
-}
-/*--------------------------------------------------------------------------*/
-int mb_rt_circular(int verbose, int *error) {
-	char *function_name = "mb_rt_circular";
-	int status = MB_SUCCESS;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
-	}
-
-	/* decide which case to use */
-	if (model->turned == MB_NO && model->layer_gradient[model->layer] > 0.0)
-		status = mb_rt_quad1(verbose, error);
-	else if (model->turned == MB_NO)
-		status = mb_rt_quad3(verbose, error);
-	else if (model->turned == MB_YES && model->layer_gradient[model->layer] > 0.0)
-		status = mb_rt_quad2(verbose, error);
-	else if (model->turned == MB_YES)
-		status = mb_rt_quad4(verbose, error);
-
-	/* put points in plotting arrays */
-	if (model->number_plot_max > 0)
-		status = mb_rt_plot_circular(verbose, error);
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:     %d\n", status);
-	}
-
-	return (status);
-}
-/*--------------------------------------------------------------------------*/
-int mb_rt_quad1(int verbose, int *error) {
-	char *function_name = "mb_rt_quad1";
-	int status = MB_SUCCESS;
-	double vi;
-	double ip;
-	double ipvi;
-	double beta;
-	double ivf;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
-	}
-
-	/* find circular path */
-	model->radius = fabs(1.0 / (model->pp * model->layer_gradient[model->layer]));
-	model->zc = model->layer_depth_center[model->layer];
-	model->xc = model->xx + SAFESQRT(model->radius * model->radius - (model->zz - model->zc) * (model->zz - model->zc));
-	vi = model->layer_vel_top[model->layer] +
-	     (model->zz - model->layer_depth_top[model->layer]) * model->layer_gradient[model->layer];
-	ip = 1.0 / model->pp;
-	ipvi = ip / vi;
-	beta = log(ipvi + SAFESQRT(ipvi * ipvi - 1.0));
-
-	/* Check if ray turns in layer */
-	if (model->zc + model->radius < model->layer_depth_bottom[model->layer]) {
-		/* ray can turn in this layer */
-		model->dt = fabs(beta / model->layer_gradient[model->layer]);
-
-		/* raypath ends before turning */
-		if (model->dt >= model->tt_left) {
-			mb_rt_get_depth(verbose, beta, -1, 1, &model->zf, error);
-			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-			model->dt = model->tt_left;
-			model->tt_left = 0.0;
-		}
-
-		/* raypath turns */
-		else {
-			ivf = 1.0 / model->layer_vel_top[model->layer];
-			model->dt = fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) + beta) /
-			                 model->layer_gradient[model->layer]);
-
-			/* ray turns and exits layer before
-			    exhausting tt_left */
-			if (model->dt <= model->tt_left) {
-				model->turned = MB_YES;
-				model->ray_status = MB_RT_UP_TURN;
-				model->zf = model->layer_depth_top[model->layer];
-				model->xf =
-				    model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-				model->tt_left = model->tt_left - model->dt;
-				model->layer--;
-			}
-			/* ray turns and exhausts tt_left
-			    before exiting layer */
-			else if (model->dt > model->tt_left) {
-				model->turned = MB_YES;
-				model->ray_status = MB_RT_UP_TURN;
-				mb_rt_get_depth(verbose, beta, 1, -1, &model->zf, error);
-				model->xf =
-				    model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-				model->dt = model->tt_left;
-				model->tt_left = 0.0;
-			}
-		}
-	}
-	else {
-		/* ray cannot turn in this layer */
-		ivf = 1.0 / model->layer_vel_bottom[model->layer];
-		model->dt =
-		    fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) - beta) / model->layer_gradient[model->layer]);
-
-		/* ray exits layer before exhausting tt_left */
-		if (model->dt <= model->tt_left) {
-			model->zf = model->layer_depth_bottom[model->layer];
-			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-			model->tt_left = model->tt_left - model->dt;
-			model->layer++;
-		}
-		/* ray exhausts tt_left before exiting layer */
-		else if (model->dt > model->tt_left) {
-			model->turned = MB_YES;
-			model->ray_status = MB_RT_UP_TURN;
-			mb_rt_get_depth(verbose, beta, -1, 1, &model->zf, error);
-			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-			model->dt = model->tt_left;
-			model->tt_left = 0.0;
-		}
-	}
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:     %d\n", status);
-	}
-
-	return (status);
-}
-/*--------------------------------------------------------------------------*/
-int mb_rt_quad2(int verbose, int *error) {
-	char *function_name = "mb_rt_quad2";
-	int status = MB_SUCCESS;
-	double vi;
-	double ip;
-	double ipvi;
-	double beta;
-	double ivf;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
-	}
-
-	/* find circular path */
-	model->radius = fabs(1.0 / (model->pp * model->layer_gradient[model->layer]));
-	model->zc = model->layer_depth_center[model->layer];
-	model->xc = model->xx - SAFESQRT(MAX(0.0, model->radius * model->radius - (model->zz - model->zc) * (model->zz - model->zc)));
-
-	vi = model->layer_vel_top[model->layer] +
-	     (model->zz - model->layer_depth_top[model->layer]) * model->layer_gradient[model->layer];
-	ip = 1.0 / model->pp;
-	ipvi = ip / vi;
-	beta = log(ipvi + SAFESQRT(ipvi * ipvi - 1.0));
-
-	/* Check if ray ends in layer */
-	ivf = 1.0 / model->layer_vel_top[model->layer];
-	model->dt =
-	    fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) - beta) / model->layer_gradient[model->layer]);
-
-	/* ray exits layer before exhausting tt_left */
-	if (model->dt <= model->tt_left) {
-		model->zf = model->layer_depth_top[model->layer];
-		model->xf = model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-		model->tt_left = model->tt_left - model->dt;
-		model->layer--;
-	}
-	/* ray exhausts tt_left before exiting layer */
-	else if (model->dt > model->tt_left) {
-		mb_rt_get_depth(verbose, beta, 1, 1, &model->zf, error);
-		model->xf = model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-		model->dt = model->tt_left;
-		model->tt_left = 0.0;
-	}
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:     %d\n", status);
-	}
-
-	return (status);
-}
-/*--------------------------------------------------------------------------*/
-int mb_rt_quad3(int verbose, int *error) {
-	char *function_name = "mb_rt_quad3";
-	int status = MB_SUCCESS;
-	double vi;
-	double ip;
-	double ipvi;
-	double beta;
-	double ivf;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
-	}
-
-	/* find circular path */
-	model->radius = fabs(1.0 / (model->pp * model->layer_gradient[model->layer]));
-	model->zc = model->layer_depth_center[model->layer];
-	model->xc = model->xx - SAFESQRT(model->radius * model->radius - (model->zz - model->zc) * (model->zz - model->zc));
-	vi = model->layer_vel_top[model->layer] +
-	     (model->zz - model->layer_depth_top[model->layer]) * model->layer_gradient[model->layer];
-	ip = 1.0 / model->pp;
-	ipvi = ip / vi;
-	beta = log(ipvi + SAFESQRT(ipvi * ipvi - 1.0));
-
-	/* Check if ray ends in layer */
-	ivf = 1.0 / model->layer_vel_bottom[model->layer];
-	model->dt =
-	    fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) - beta) / model->layer_gradient[model->layer]);
-
-	/* ray exits layer before exhausting tt_left */
-	if (model->dt <= model->tt_left) {
-		model->zf = model->layer_depth_bottom[model->layer];
-		model->xf = model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-		model->tt_left = model->tt_left - model->dt;
-		model->layer++;
-	}
-	/* ray exhausts tt_left before exiting layer */
-	else if (model->dt > model->tt_left) {
-		mb_rt_get_depth(verbose, beta, 1, 1, &model->zf, error);
-		model->xf = model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-		model->dt = model->tt_left;
-		model->tt_left = 0.0;
-	}
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:     %d\n", status);
-	}
-
-	return (status);
-}
-/*--------------------------------------------------------------------------*/
-int mb_rt_quad4(int verbose, int *error) {
-	char *function_name = "mb_rt_quad4";
-	int status = MB_SUCCESS;
-	double vi;
-	double ip;
-	double ipvi;
-	double beta;
-	double ivf;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
-	}
-
-	/* find circular path */
-	model->radius = fabs(1.0 / (model->pp * model->layer_gradient[model->layer]));
-	model->zc = model->layer_depth_center[model->layer];
-	model->xc = model->xx + SAFESQRT(model->radius * model->radius - (model->zz - model->zc) * (model->zz - model->zc));
-	vi = model->layer_vel_top[model->layer] +
-	     (model->zz - model->layer_depth_top[model->layer]) * model->layer_gradient[model->layer];
-	ip = 1.0 / model->pp;
-	ipvi = ip / vi;
-	beta = log(ipvi + SAFESQRT(ipvi * ipvi - 1.0));
-
-	/* Check if ray turns in layer */
-	if (model->zc - model->radius > model->layer_depth_top[model->layer]) {
-		/* ray can turn in this layer */
-		model->dt = fabs(beta / model->layer_gradient[model->layer]);
-
-		/* raypath ends before turning */
-		if (model->dt >= model->tt_left) {
-			mb_rt_get_depth(verbose, beta, -1, 1, &model->zf, error);
-			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-			model->dt = model->tt_left;
-			model->tt_left = 0.0;
-		}
-
-		/* raypath turns */
-		else {
-			ivf = 1.0 / model->layer_vel_bottom[model->layer];
-			model->dt = fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) + beta) /
-			                 model->layer_gradient[model->layer]);
-
-			/* ray turns and exits layer before
-			    exhausting tt_left */
-			if (model->dt <= model->tt_left) {
-				model->turned = MB_NO;
-				model->ray_status = MB_RT_DOWN_TURN;
-				model->zf = model->layer_depth_bottom[model->layer];
-				model->xf =
-				    model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-				model->tt_left = model->tt_left - model->dt;
-				model->layer++;
-			}
-			/* ray turns and exhausts tt_left
-			    before exiting layer */
-			else if (model->dt > model->tt_left) {
-				model->turned = MB_NO;
-				model->ray_status = MB_RT_DOWN_TURN;
-				mb_rt_get_depth(verbose, beta, 1, -1, &model->zf, error);
-				model->xf =
-				    model->xc + SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-				model->dt = model->tt_left;
-				model->tt_left = 0.0;
-			}
-		}
-	}
-	else {
-		/* ray cannot turn in this layer */
-		ivf = 1.0 / model->layer_vel_top[model->layer];
-		model->dt =
-		    fabs((log(ip * ivf + ip * SAFESQRT(ivf * ivf - model->pp * model->pp)) - beta) / model->layer_gradient[model->layer]);
-
-		/* ray exits layer before exhausting tt_left */
-		if (model->dt <= model->tt_left) {
-			model->zf = model->layer_depth_top[model->layer];
-			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-			model->tt_left = model->tt_left - model->dt;
-			model->layer--;
-		}
-		/* ray exhausts tt_left before exiting layer */
-		else if (model->dt > model->tt_left) {
-			model->turned = MB_YES;
-			model->ray_status = MB_RT_UP_TURN;
-			mb_rt_get_depth(verbose, beta, -1, 1, &model->zf, error);
-			model->xf = model->xc - SAFESQRT(model->radius * model->radius - (model->zf - model->zc) * (model->zf - model->zc));
-			model->dt = model->tt_left;
-			model->tt_left = 0.0;
-		}
-	}
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:     %d\n", status);
-	}
-
-	return (status);
-}
-/*--------------------------------------------------------------------------*/
-int mb_rt_get_depth(int verbose, double beta, int dir_sign, int turn_sign, double *depth, int *error) {
-	char *function_name = "mb_rt_get_depth";
-	int status = MB_SUCCESS;
-	double alpha;
-	double velf;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
-		fprintf(stderr, "dbg2       beta:             %f\n", beta);
-		fprintf(stderr, "dbg2       dir_sign:         %d\n", dir_sign);
-		fprintf(stderr, "dbg2       turn_sign:        %d\n", turn_sign);
-	}
-
-	/* find depth */
-	alpha = model->pp * exp(dir_sign * model->tt_left * fabs(model->layer_gradient[model->layer]) + turn_sign * beta);
-	velf = 2 * alpha / (alpha * alpha + model->pp * model->pp);
-	*depth =
-	    model->layer_depth_top[model->layer] + (velf - model->layer_vel_top[model->layer]) / model->layer_gradient[model->layer];
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       depth:      %f\n", *depth);
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:     %d\n", status);
-	}
-
-	return (status);
-}
-/*--------------------------------------------------------------------------*/
-int mb_rt_plot_circular(int verbose, int *error) {
-	char *function_name = "mb_rt_plot_circular";
-	int status = MB_SUCCESS;
-	double ai;
-	double af;
-	double dang;
-	double angle;
-	int i;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
-	}
-
-	/* if full plot do circle segments */
-	if (model->plot_mode == MB_RT_PLOT_MODE_ON) {
-		/* get angle range */
-		ai = atan2((model->xx - model->xc), (model->zz - model->zc));
-		af = atan2((model->xf - model->xc), (model->zf - model->zc));
-		dang = (af - ai) / MB_RT_NUMBER_SEGMENTS;
-
-		/* add points to plotting arrays */
-		for (i = 0; i < MB_RT_NUMBER_SEGMENTS; i++) {
-			angle = ai + (i + 1) * dang;
-			if (model->number_plot < model->number_plot_max) {
-				model->xx_plot[model->number_plot] = model->sign_x * (model->xc + model->radius * sin(angle));
-				model->zz_plot[model->number_plot] = model->zc + model->radius * cos(angle);
-				model->number_plot++;
-			}
-		}
-	}
-
-	/* otherwise just add the layer end */
-	else if (model->plot_mode == MB_RT_PLOT_MODE_TABLE) {
-		model->xx_plot[model->number_plot] = model->xf;
-		model->number_plot++;
-	}
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:     %d\n", status);
-	}
-
-	return (status);
-}
-/*--------------------------------------------------------------------------*/
-int mb_rt_line(int verbose, int *error) {
-	char *function_name = "mb_rt_line";
-	int status = MB_SUCCESS;
-	double theta;
-	double xvel;
-	double zvel;
-	double asin_arg;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
-	}
-
-	/* find linear path */
-	asin_arg = MIN(model->pp * model->layer_vel_top[model->layer], 1.000);
-	theta = asin(asin_arg);
-	if (model->turned == MB_NO) {
-		model->zf = model->layer_depth_bottom[model->layer];
-	}
-	else {
-		theta = theta + M_PI;
-		model->zf = model->layer_depth_top[model->layer];
-	}
-	xvel = model->layer_vel_top[model->layer] * sin(theta);
-	zvel = model->layer_vel_top[model->layer] * cos(theta);
-	if (zvel != 0.0)
-		model->dt = (model->zf - model->zz) / zvel;
-	else
-		model->dt = 100 * model->tt_left;
-
-	/* if (verbose >= 5)
-	    {
-	    fprintf(stderr,"\ndbg5  Ray calculation in MBIO function <%s>\n",function_name);
-	    fprintf(stderr,"dbg5        model->layer:               %d\n", model->layer);
-	    fprintf(stderr,"dbg5        model->layer_vel_top:       %f\n", model->layer_vel_top[model->layer]);
-	    fprintf(stderr,"dbg5        layer_vel_top * pp:         %f\n", model->pp * model->layer_vel_top[model->layer]);
-	    fprintf(stderr,"dbg5        asin(layer_vel_top * pp):   %f\n", asin(model->pp * model->layer_vel_top[model->layer]));
-	    fprintf(stderr,"dbg5        model->pp:                  %f\n", model->pp);
-	    fprintf(stderr,"dbg5        theta:                      %f\n", theta);
-	    fprintf(stderr,"dbg5        model->zf:                  %f\n", model->zf);
-	    fprintf(stderr,"dbg5        xvel:                       %f\n", xvel);
-	    fprintf(stderr,"dbg5        zvel:                       %f\n", zvel);
-	    }*/
-
-	/* ray exhausts tt_left before exiting layer */
-	if (model->dt >= model->tt_left) {
-		model->xf = model->xx + xvel * model->tt_left;
-		model->zf = model->zz + zvel * model->tt_left;
-		model->dt = model->tt_left;
-		model->tt_left = 0.0;
-	}
-
-	/* ray exits layer before exhausting tt_left */
-	else {
-		model->xf = model->xx + xvel * model->dt;
-		model->zf = model->zz + zvel * model->dt;
-		model->tt_left = model->tt_left - model->dt;
-		if (model->turned == MB_YES)
-			model->layer--;
-		else
-			model->layer++;
-	}
-
-	/* if (verbose >= 5)
-	    {
-	    fprintf(stderr,"\ndbg5  Ray calculation in MBIO function <%s>\n",function_name);
-	    fprintf(stderr,"dbg5        model->xf:                 %f\n", model->xf);
-	    fprintf(stderr,"dbg5        model->zf:                 %f\n", model->zf);
-	    fprintf(stderr,"dbg5        model->dt:                 %f\n", model->dt);
-	    fprintf(stderr,"dbg5        model->tt_left:            %f\n", model->tt_left);
-	    fprintf(stderr,"dbg5        model->turned:             %d\n", model->turned);
-	    fprintf(stderr,"dbg5        model->layer:              %d\n", model->layer);
-	    } */
-
-	/* put points in plotting arrays */
-	if (model->plot_mode != MB_RT_PLOT_MODE_OFF && model->number_plot < model->number_plot_max) {
-		model->xx_plot[model->number_plot] = model->sign_x * model->xf;
-		if (model->plot_mode == MB_RT_PLOT_MODE_ON)
-			model->zz_plot[model->number_plot] = model->zf;
-		model->number_plot++;
-	}
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:     %d\n", status);
-	}
-
-	return (status);
-}
-/*--------------------------------------------------------------------------*/
-int mb_rt_vertical(int verbose, int *error) {
-	char *function_name = "mb_rt_vertical";
-	int status = MB_SUCCESS;
-	double vi;
-	double vf;
-	double vfvi;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
-	}
-
-	/* find linear path */
-	vi = model->layer_vel_top[model->layer] +
-	     (model->zz - model->layer_depth_top[model->layer]) * model->layer_gradient[model->layer];
-	if (model->turned == MB_NO) {
-		model->zf = model->layer_depth_bottom[model->layer];
-		vf = model->layer_vel_bottom[model->layer];
-	}
-	else {
-		model->zf = model->layer_depth_top[model->layer];
-		vf = model->layer_vel_top[model->layer];
-	}
-	model->dt = fabs(log(vf / vi) / model->layer_gradient[model->layer]);
-
-	/* ray exhausts tt_left before exiting layer */
-	if (model->dt >= model->tt_left) {
-		model->xf = model->xx;
-		vfvi = exp(model->tt_left * model->layer_gradient[model->layer]);
-		if (model->turned == MB_NO)
-			vf = vi * vfvi;
-		else if (model->turned == MB_YES)
-			vf = vi / vfvi;
-		model->zf = (vf - model->layer_vel_top[model->layer]) / model->layer_gradient[model->layer] +
-		            model->layer_depth_top[model->layer];
-		model->dt = model->tt_left;
-		model->tt_left = 0.0;
-	}
-
-	/* ray exits layer before exhausting tt_left */
-	else {
-		model->xf = model->xx;
-		model->tt_left = model->tt_left - model->dt;
-		if (model->turned == MB_YES)
-			model->layer--;
-		else
-			model->layer++;
-	}
-
-	/* put points in plotting arrays */
-	if (model->plot_mode != MB_RT_PLOT_MODE_OFF && model->number_plot < model->number_plot_max) {
-		model->xx_plot[model->number_plot] = model->sign_x * model->xf;
-		if (model->plot_mode == MB_RT_PLOT_MODE_ON)
-			model->zz_plot[model->number_plot] = model->zf;
-		model->number_plot++;
-	}
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);

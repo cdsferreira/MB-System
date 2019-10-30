@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_reson8k.c	3.00	8/20/94
- *	$Id$
  *
- *    Copyright (c) 2001-2017 by
+ *    Copyright (c) 2001-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -27,46 +26,31 @@
  *
  */
 
-/* standard include files */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
+#include "mb_status.h"
 #include "mbsys_reson8k.h"
-
-static char rcs_id[] = "$Id$";
 
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mbsys_reson8k_alloc";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
 	/* allocate memory for data structure */
-	status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_reson8k_struct), store_ptr, error);
+	const int status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_reson8k_struct), store_ptr, error);
 
 	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)*store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)*store_ptr;
 
 	/* initialize everything */
 
@@ -110,7 +94,7 @@ int mbsys_reson8k_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *erro
 	/* sound velocity profile */
 	store->svp_time_d = 0.0;
 	store->svp_num = 0;
-	for (i = 0; i < store->svp_num; i++) {
+	for (int i = 0; i < store->svp_num; i++) {
 		store->svp_depth[0] = 0.0; /* meters */
 		store->svp_vel[0] = 0.0;   /* meters/sec */
 	}
@@ -171,10 +155,10 @@ int mbsys_reson8k_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *erro
 	                           /* bit 1 - depth filter (0 = off, 1 = active) */
 	store->temperature = 0;    /* temperature at sonar head (deg C * 10) */
 	store->beam_count = 0;     /* number of sets of beam data in packet */
-	for (i = 0; i < MBSYS_RESON8K_MAXBEAMS; i++)
+	for (int i = 0; i < MBSYS_RESON8K_MAXBEAMS; i++)
 		store->range[i] = 0; /* range for beam where n = Beam Count */
 	                         /* range units = sample cells * 4 */
-	for (i = 0; i < MBSYS_RESON8K_MAXBEAMS / 2 + 1; i++)
+	for (int i = 0; i < MBSYS_RESON8K_MAXBEAMS / 2 + 1; i++)
 		store->quality[i] = 0; /* packed quality array (two 4 bit values/char) */
 	                           /* cnt = n/2 if beam count even, n/2+1 if odd */
 	                           /* cnt then rounded up to next even number */
@@ -185,14 +169,14 @@ int mbsys_reson8k_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *erro
 	                           /* bit 2 - amplitude bottom detect used */
 	                           /* bit 3 - phase bottom detect used */
 	                           /* bottom detect can be amplitude, phase or both */
-	for (i = 0; i < MBSYS_RESON8K_MAXBEAMS; i++)
+	for (int i = 0; i < MBSYS_RESON8K_MAXBEAMS; i++)
 		store->intensity[i] = 0;    /* intensities at bottom detect  */
 	store->ssrawtimedelay = 0.0;    /* raw sidescan delay (sec) */
 	store->ssrawtimeduration = 0.0; /* raw sidescan duration (sec) */
 	store->ssrawbottompick = 0.0;   /* bottom pick time (sec) */
 	store->ssrawportsamples = 0;    /* number of port raw sidescan samples */
 	store->ssrawstbdsamples = 0;    /* number of stbd raw sidescan samples */
-	for (i = 0; i < MBSYS_RESON8K_MAXRAWPIXELS; i++) {
+	for (int i = 0; i < MBSYS_RESON8K_MAXRAWPIXELS; i++) {
 		store->ssrawport[i] = 0; /* raw port sidescan */
 		store->ssrawstbd[i] = 0; /* raw starboard sidescan */
 	}
@@ -201,21 +185,20 @@ int mbsys_reson8k_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *erro
 	store->beams_amp = 0;
 	store->pixels_ss = 0;
 	store->pixel_size = 0.0;
-	for (i = 0; i < MBSYS_RESON8K_MAXBEAMS; i++) {
+	for (int i = 0; i < MBSYS_RESON8K_MAXBEAMS; i++) {
 		store->beamflag[i] = MB_FLAG_NULL; /* beamflags */
 		store->bath[i] = 0.0;              /* bathymetry (m) */
 		store->amp[i] = 0.0;               /* amplitude */
 		store->bath_acrosstrack[i] = 0.0;  /* acrosstrack distance (m) */
 		store->bath_alongtrack[i] = 0.0;   /* alongtrack distance (m) */
 	}
-	for (i = 0; i < MBSYS_RESON8K_MAXPIXELS; i++) {
+	for (int i = 0; i < MBSYS_RESON8K_MAXPIXELS; i++) {
 		store->ss[i] = 0.0;            /* sidescan */
 		store->ss_alongtrack[i] = 0.0; /* alongtrack distance (m) */
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)*store_ptr);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -223,18 +206,12 @@ int mbsys_reson8k_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *erro
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mbsys_reson8k_deall";
-	int status = MB_SUCCESS;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -242,43 +219,30 @@ int mbsys_reson8k_deall(int verbose, void *mbio_ptr, void **store_ptr, int *erro
 	}
 
 	/* deallocate memory for data structure */
-	status = mb_freed(verbose, __FILE__, __LINE__, (void **)store_ptr, error);
+	const int status = mb_freed(verbose, __FILE__, __LINE__, (void **)store_ptr, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss,
                              int *error) {
-	char *function_name = "mbsys_reson8k_dimensions";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
@@ -298,9 +262,10 @@ int mbsys_reson8k_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *
 		*nss = 0;
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
@@ -311,7 +276,6 @@ int mbsys_reson8k_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -319,16 +283,8 @@ int mbsys_reson8k_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kin
                           double *navlat, double *speed, double *heading, int *nbath, int *namp, int *nss, char *beamflag,
                           double *bath, double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss,
                           double *ssacrosstrack, double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mbsys_reson8k_extract";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -336,10 +292,10 @@ int mbsys_reson8k_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
@@ -369,24 +325,23 @@ int mbsys_reson8k_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		*namp = store->beams_amp;
 		*nss = store->pixels_ss;
 		;
-		for (i = 0; i < *nbath; i++) {
+		for (int i = 0; i < *nbath; i++) {
 			beamflag[i] = store->beamflag[i];
 			bath[i] = store->bath[i];
 			bathacrosstrack[i] = store->bath_acrosstrack[i];
 			bathalongtrack[i] = store->bath_alongtrack[i];
 		}
-		for (i = 0; i < *namp; i++) {
+		for (int i = 0; i < *namp; i++) {
 			amp[i] = store->intensity[i];
 		}
-		for (i = 0; i < *nss; i++) {
+		for (int i = 0; i < *nss; i++) {
 			ss[i] = store->ss[i];
 			ssacrosstrack[i] = store->pixel_size * (i - store->pixels_ss / 2);
 			ssalongtrack[i] = store->ss_alongtrack[i];
 		}
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -403,11 +358,11 @@ int mbsys_reson8k_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 			fprintf(stderr, "dbg4       speed:      %f\n", *speed);
 			fprintf(stderr, "dbg4       heading:    %f\n", *heading);
 			fprintf(stderr, "dbg4       nbath:      %d\n", *nbath);
-			for (i = 0; i < *nbath; i++)
+			for (int i = 0; i < *nbath; i++)
 				fprintf(stderr, "dbg4       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i], bathalongtrack[i]);
 			fprintf(stderr, "dbg4        namp:     %d\n", *namp);
-			for (i = 0; i < *namp; i++)
+			for (int i = 0; i < *namp; i++)
 				fprintf(stderr, "dbg4        beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 				        bathalongtrack[i]);
 		}
@@ -436,9 +391,8 @@ int mbsys_reson8k_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		*namp = 0;
 		*nss = 0;
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -464,18 +418,16 @@ int mbsys_reson8k_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		/* copy comment */
 		strcpy(comment, store->comment);
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg4  New ping read by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  New ping read by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  New ping values:\n");
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
 			fprintf(stderr, "dbg4       comment:    %s\n", comment);
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -498,21 +450,23 @@ int mbsys_reson8k_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 	}
 	if (verbose >= 2 && *error <= MB_ERROR_NO_ERROR && *kind == MB_DATA_DATA) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
-		for (i = 0; i < *nbath; i++)
+		for (int i = 0; i < *nbath; i++)
 			fprintf(stderr, "dbg2       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 			        bathacrosstrack[i], bathalongtrack[i]);
 		fprintf(stderr, "dbg2        namp:     %d\n", *namp);
-		for (i = 0; i < *namp; i++)
+		for (int i = 0; i < *namp; i++)
 			fprintf(stderr, "dbg2       beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 			        bathalongtrack[i]);
 	}
+
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -520,16 +474,8 @@ int mbsys_reson8k_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind,
                          double navlat, double speed, double heading, int nbath, int namp, int nss, char *beamflag, double *bath,
                          double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss, double *ssacrosstrack,
                          double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mbsys_reson8k_insert";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -553,12 +499,12 @@ int mbsys_reson8k_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind,
 	if (verbose >= 2 && kind == MB_DATA_DATA) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", nbath);
 		if (verbose >= 3)
-			for (i = 0; i < nbath; i++)
+			for (int i = 0; i < nbath; i++)
 				fprintf(stderr, "dbg3       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i], bathalongtrack[i]);
 		fprintf(stderr, "dbg2       namp:       %d\n", namp);
 		if (verbose >= 3)
-			for (i = 0; i < namp; i++)
+			for (int i = 0; i < namp; i++)
 				fprintf(stderr, "dbg3        beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 				        bathalongtrack[i]);
 	}
@@ -566,11 +512,7 @@ int mbsys_reson8k_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind,
 		fprintf(stderr, "dbg2       comment:     \ndbg2       %s\n", comment);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* set data kind */
 	store->kind = kind;
@@ -596,16 +538,16 @@ int mbsys_reson8k_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind,
 		store->pixels_ss = nss;
 		if (store->pixels_ss > 0)
 			store->pixel_size = (ssacrosstrack[store->pixels_ss - 1] - ssacrosstrack[0]) / store->pixels_ss;
-		for (i = 0; i < nbath; i++) {
+		for (int i = 0; i < nbath; i++) {
 			store->beamflag[i] = beamflag[i];
 			store->bath[i] = bath[i];
 			store->bath_acrosstrack[i] = bathacrosstrack[i];
 			store->bath_alongtrack[i] = bathalongtrack[i];
 		}
-		for (i = 0; i < namp; i++) {
+		for (int i = 0; i < namp; i++) {
 			store->intensity[i] = (unsigned short)amp[i];
 		}
-		for (i = 0; i < nss; i++) {
+		for (int i = 0; i < nss; i++) {
 			store->ss[i] = ss[i];
 			store->ss_alongtrack[i] = ssalongtrack[i];
 		}
@@ -631,36 +573,24 @@ int mbsys_reson8k_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind,
 		strncpy(store->comment, comment, 199);
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, double *ttimes, double *angles,
                          double *angles_forward, double *angles_null, double *heave, double *alongtrack_offset, double *draft,
                          double *ssv, int *error) {
-	char *function_name = "mbsys_reson8k_ttimes";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-	double ttscale, angscale;
-	double heave_use;
-	double angle, pitch;
-	int icenter;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -673,14 +603,12 @@ int mbsys_reson8k_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		fprintf(stderr, "dbg2       ltrk_off:   %p\n", (void *)alongtrack_offset);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -688,18 +616,18 @@ int mbsys_reson8k_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		*nbeams = store->beams_bath;
 
 		/* get depth offset (heave + transducer_depth) */
-		heave_use = store->png_heave;
+		/* const double heave_use = store->png_heave; */
 		*draft = store->MBOffsetZ;
 		*ssv = (double)store->velocity;
 
 		/* get travel times, angles */
-		ttscale = 0.25 / store->sample_rate;
-		icenter = store->beams_bath / 2;
-		angscale = ((double)store->beam_width_num) / ((double)store->beam_width_denom);
-		for (i = 0; i < *nbeams; i++) {
+		const double ttscale = 0.25 / store->sample_rate;
+		const int icenter = store->beams_bath / 2;
+		const double angscale = ((double)store->beam_width_num) / ((double)store->beam_width_denom);
+		for (int i = 0; i < *nbeams; i++) {
 			ttimes[i] = ttscale * store->range[i];
-			angle = 90.0 + (icenter - i) * angscale + store->png_roll;
-			pitch = store->png_pitch;
+			const double angle = 90.0 + (icenter - i) * angscale + store->png_roll;
+			const double pitch = store->png_pitch;
 			mb_rollpitch_to_takeoff(verbose, pitch, angle, &angles[i], &angles_forward[i], error);
 			angles_null[i] = angles[i];
 			heave[i] = store->png_heave;
@@ -727,9 +655,8 @@ int mbsys_reson8k_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -737,7 +664,7 @@ int mbsys_reson8k_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		fprintf(stderr, "dbg2       draft:      %f\n", *draft);
 		fprintf(stderr, "dbg2       ssv:        %f\n", *ssv);
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: tt:%f  angle_xtrk:%f  angle_ltrk:%f  angle_null:%f  heave:%f  ltrk_off:%f\n", i,
 			        ttimes[i], angles[i], angles_forward[i], angles_null[i], heave[i], alongtrack_offset[i]);
 	}
@@ -747,22 +674,12 @@ int mbsys_reson8k_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, int *detects, int *error) {
-	char *function_name = "mbsys_reson8k_detects";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-	int detect;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -770,14 +687,12 @@ int mbsys_reson8k_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		fprintf(stderr, "dbg2       detects:    %p\n", (void *)detects);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -785,15 +700,17 @@ int mbsys_reson8k_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		*nbeams = store->beams_bath;
 
 		/* get detects */
-		for (i = 0; i < *nbeams; i++) {
+		for (int i = 0; i < *nbeams; i++) {
 			detects[i] = MB_DETECT_AMPLITUDE;
 		}
-		for (i = 0; i < *nbeams; i++) {
+		for (int i = 0; i < *nbeams; i++) {
 			/* get beamflag */
+			int detect;
 			if (i % 2 == 0)
 				detect = ((store->quality[i / 2]) & 15) & 12;
 			else
 				detect = ((store->quality[i / 2] >> 4) & 15) & 12;
+
 			if (detect & 4)
 				detects[i] = MB_DETECT_AMPLITUDE;
 			else if (detect & 8)
@@ -823,15 +740,14 @@ int mbsys_reson8k_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
 	if (verbose >= 2 && *error == MB_ERROR_NO_ERROR) {
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: detects:%d\n", i, detects[i]);
 	}
 	if (verbose >= 2) {
@@ -840,47 +756,34 @@ int mbsys_reson8k_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *transducer_depth,
                                    double *altitude, int *error) {
-	char *function_name = "mbsys_reson8k_extract_altitude";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-	double bath_best;
-	double xtrack_min;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
 
+	int status = MB_SUCCESS;
+
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
-		bath_best = 0.0;
+		double bath_best = 0.0;
 		if (mb_beam_ok(store->beamflag[store->beams_bath / 2]))
 			bath_best = store->bath[store->beams_bath / 2];
 		else {
-			xtrack_min = 99999999.9;
-			for (i = 0; i < store->beams_bath; i++) {
+			double xtrack_min = 99999999.9;
+			for (int i = 0; i < store->beams_bath; i++) {
 				if (mb_beam_ok(store->beamflag[i]) && fabs(store->bath_acrosstrack[i]) < xtrack_min) {
 					xtrack_min = fabs(store->bath_acrosstrack[i]);
 					bath_best = store->bath[i];
@@ -888,8 +791,8 @@ int mbsys_reson8k_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr,
 			}
 		}
 		if (bath_best == 0.0) {
-			xtrack_min = 99999999.9;
-			for (i = 0; i < store->beams_bath; i++) {
+			double xtrack_min = 99999999.9;
+			for (int i = 0; i < store->beams_bath; i++) {
 				if (store->beamflag[i] != MB_FLAG_NULL && fabs(store->bath_acrosstrack[i]) < xtrack_min) {
 					xtrack_min = fabs(store->bath_acrosstrack[i]);
 					bath_best = store->bath[i];
@@ -920,9 +823,8 @@ int mbsys_reson8k_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr,
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       transducer_depth:  %f\n", *transducer_depth);
@@ -932,36 +834,26 @@ int mbsys_reson8k_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr,
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time_i[7], double *time_d,
                               double *navlon, double *navlat, double *speed, double *heading, double *draft, double *roll,
                               double *pitch, double *heave, int *error) {
-	char *function_name = "mbsys_reson8k_extract_nav";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -987,9 +879,8 @@ int mbsys_reson8k_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int 
 		*pitch = store->png_pitch;
 		*heave = store->png_heave;
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -1039,9 +930,8 @@ int mbsys_reson8k_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int 
 		*pitch = store->png_pitch;
 		*heave = store->png_heave;
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -1077,9 +967,8 @@ int mbsys_reson8k_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int 
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -1107,22 +996,14 @@ int mbsys_reson8k_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int 
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_i[7], double time_d, double navlon,
                              double navlat, double speed, double heading, double draft, double roll, double pitch, double heave,
                              int *error) {
-	char *function_name = "mbsys_reson8k_insert_nav";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1145,11 +1026,7 @@ int mbsys_reson8k_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int t
 		fprintf(stderr, "dbg2       heave:      %f\n", heave);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* insert data in structure */
 	if (store->kind == MB_DATA_DATA) {
@@ -1193,45 +1070,35 @@ int mbsys_reson8k_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int t
 		store->MBOffsetZ = draft;
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nsvp, double *depth, double *velocity,
                               int *error) {
-	char *function_name = "mbsys_reson8k_extract_svp";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_VELOCITY_PROFILE) {
@@ -1239,7 +1106,7 @@ int mbsys_reson8k_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int 
 		*nsvp = store->svp_num;
 
 		/* get profile */
-		for (i = 0; i < *nsvp; i++) {
+		for (int i = 0; i < *nsvp; i++) {
 			depth[i] = 0.1 * store->svp_depth[i];
 			velocity[i] = 0.1 * store->svp_vel[i];
 		}
@@ -1261,49 +1128,35 @@ int mbsys_reson8k_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int 
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       nsvp:              %d\n", *nsvp);
-		for (i = 0; i < *nsvp; i++)
+		for (int i = 0; i < *nsvp; i++)
 			fprintf(stderr, "dbg2       depth[%d]: %f   velocity[%d]: %f\n", i, depth[i], i, velocity[i]);
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp, double *depth, double *velocity,
                              int *error) {
-	char *function_name = "mbsys_reson8k_insert_svp";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 		fprintf(stderr, "dbg2       nsvp:       %d\n", nsvp);
-		for (i = 0; i < nsvp; i++)
+		for (int i = 0; i < nsvp; i++)
 			fprintf(stderr, "dbg2       depth[%d]: %f   velocity[%d]: %f\n", i, depth[i], i, velocity[i]);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* insert data in structure */
 	if (store->kind == MB_DATA_VELOCITY_PROFILE) {
@@ -1311,36 +1164,28 @@ int mbsys_reson8k_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int n
 		store->svp_num = MIN(nsvp, MBSYS_RESON8K_MAXSVP);
 
 		/* get profile */
-		for (i = 0; i < store->svp_num; i++) {
+		for (int i = 0; i < store->svp_num; i++) {
 			store->svp_depth[i] = (int)(10 * depth[i]);
 			store->svp_vel[i] = (int)(10 * velocity[i]);
 		}
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error) {
-	char *function_name = "mbsys_reson8k_copy";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-	struct mbsys_reson8k_struct *copy;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1348,55 +1193,29 @@ int mbsys_reson8k_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_
 		fprintf(stderr, "dbg2       copy_ptr:   %p\n", (void *)copy_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get data structure pointers */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
-	copy = (struct mbsys_reson8k_struct *)copy_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *copy = (struct mbsys_reson8k_struct *)copy_ptr;
 
 	/* copy the data */
 	*copy = *store;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_reson8k_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel_size_set, double *pixel_size,
                          int swath_width_set, double *swath_width, int *error) {
-	char *function_name = "mbsys_reson8k_makess";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_reson8k_struct *store;
-	double ss[MBSYS_RESON8K_MAXPIXELS];
-	int ss_cnt[MBSYS_RESON8K_MAXPIXELS];
-	double ssacrosstrack[MBSYS_RESON8K_MAXPIXELS];
-	double ssalongtrack[MBSYS_RESON8K_MAXPIXELS];
-	int nbathsort;
-	double bathsort[MBSYS_RESON8K_MAXBEAMS];
-	double pixel_size_calc;
-	double ss_spacing;
-	double ltrackss, xtrackss;
-	int first, last, k1, k2;
-	int istart, iend, icenter;
-	double angscale, ttscale;
-	double anglestart, angleend;
-	int goodbeam1, goodbeam2, pixel1, pixel2, ipixel;
-	int i, k, kk;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:         %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:        %p\n", (void *)mbio_ptr);
@@ -1407,16 +1226,18 @@ int mbsys_reson8k_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 		fprintf(stderr, "dbg2       swath_width:     %f\n", *swath_width);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
 	/* get data structure pointer */
-	store = (struct mbsys_reson8k_struct *)store_ptr;
+	struct mbsys_reson8k_struct *store = (struct mbsys_reson8k_struct *)store_ptr;
 
 	/* insert data in structure */
 	if (store->kind == MB_DATA_DATA && store->ssrawstbdsamples > 0 && store->ssrawportsamples > 0) {
+		double ss[MBSYS_RESON8K_MAXPIXELS];
+		int ss_cnt[MBSYS_RESON8K_MAXPIXELS];
+		double ssacrosstrack[MBSYS_RESON8K_MAXPIXELS];
+		double ssalongtrack[MBSYS_RESON8K_MAXPIXELS];
+
 		/* zero the sidescan */
-		for (i = 0; i < MBSYS_RESON8K_MAXPIXELS; i++) {
+		for (int i = 0; i < MBSYS_RESON8K_MAXPIXELS; i++) {
 			ss[i] = 0.0;
 			ssacrosstrack[i] = 0.0;
 			ssalongtrack[i] = 0.0;
@@ -1424,13 +1245,14 @@ int mbsys_reson8k_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 		}
 
 		/* get raw pixel size */
-		ss_spacing = store->ssrawtimeduration / (store->ssrawportsamples - 1);
+		const double ss_spacing = store->ssrawtimeduration / (store->ssrawportsamples - 1);
 
 		/* get median depth */
-		nbathsort = 0;
-		istart = store->beams_bath;
-		iend = -1;
-		for (i = 0; i < store->beams_bath; i++) {
+		int nbathsort = 0;
+		int istart = store->beams_bath;
+		int iend = -1;
+		double bathsort[MBSYS_RESON8K_MAXBEAMS];
+		for (int i = 0; i < store->beams_bath; i++) {
 			if (mb_beam_ok(store->beamflag[i])) {
 				bathsort[nbathsort] = store->bath[i];
 				nbathsort++;
@@ -1442,18 +1264,19 @@ int mbsys_reson8k_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 		}
 
 		/* get sidescan pixel size */
-		angscale = ((double)store->beam_width_num) / ((double)store->beam_width_denom);
-		ttscale = 0.25 / store->sample_rate;
-		icenter = store->beams_bath / 2;
-		if (swath_width_set == MB_NO && nbathsort > 0) {
-			(*swath_width) = anglestart = fabs((icenter - istart) * angscale + store->png_roll);
-			angleend = fabs((icenter - iend) * angscale + store->png_roll);
+		const double angscale = ((double)store->beam_width_num) / ((double)store->beam_width_denom);
+		const double ttscale = 0.25 / store->sample_rate;
+		const int icenter = store->beams_bath / 2;
+		if (swath_width_set == false && nbathsort > 0) {
+			double anglestart = fabs((icenter - istart) * angscale + store->png_roll);
+			(*swath_width) = anglestart;
+			const double angleend = fabs((icenter - iend) * angscale + store->png_roll);
 			(*swath_width) = MAX(anglestart, angleend);
 			(*swath_width) = MAX((*swath_width), 60.0);
 		}
-		if (pixel_size_set == MB_NO && nbathsort > 0) {
+		if (pixel_size_set == false && nbathsort > 0) {
 			qsort((char *)bathsort, nbathsort, sizeof(double), (void *)mb_double_compare);
-			pixel_size_calc = 2 * tan(DTR * (*swath_width)) * bathsort[nbathsort / 2] / MBSYS_RESON8K_MAXPIXELS;
+			double pixel_size_calc = 2 * tan(DTR * (*swath_width)) * bathsort[nbathsort / 2] / MBSYS_RESON8K_MAXPIXELS;
 			pixel_size_calc = MAX(pixel_size_calc, bathsort[nbathsort / 2] * sin(DTR * 0.1));
 			pixel_size_calc = MIN(pixel_size_calc, ((double)(2.0 * store->range_set) / MBSYS_RESON8K_MAXPIXELS));
 			if ((*pixel_size) <= 0.0)
@@ -1468,24 +1291,23 @@ int mbsys_reson8k_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 
 		/* loop over the port beams, figuring out
 		    acrosstrack distance for each raw sidescan sample */
-		goodbeam1 = -1;
-		goodbeam2 = -1;
-		for (i = store->beams_bath / 2; i >= 0; i--) {
+		int goodbeam1 = -1;
+		int goodbeam2 = -1;
+		for (int i = store->beams_bath / 2; i >= 0; i--) {
 			if (mb_beam_ok(store->beamflag[i])) {
 				goodbeam1 = goodbeam2;
 				goodbeam2 = i;
 				if (goodbeam2 >= 0 && goodbeam1 >= 0) {
-					pixel1 = (ttscale * store->range[goodbeam1] - store->ssrawtimedelay) / ss_spacing;
-					pixel2 = (ttscale * store->range[goodbeam2] - store->ssrawtimedelay) / ss_spacing;
-					/*fprintf(stderr, "port beams:%d %d  pixels: %d %d\n", goodbeam1, goodbeam2, pixel1, pixel2);*/
-					for (ipixel = pixel1; ipixel < pixel2; ipixel++) {
-						xtrackss = store->bath_acrosstrack[goodbeam1] +
+					const int pixel1 = (ttscale * store->range[goodbeam1] - store->ssrawtimedelay) / ss_spacing;
+					const int pixel2 = (ttscale * store->range[goodbeam2] - store->ssrawtimedelay) / ss_spacing;
+					for (int ipixel = pixel1; ipixel < pixel2; ipixel++) {
+						const double xtrackss = store->bath_acrosstrack[goodbeam1] +
 						           ((double)(ipixel - pixel1)) / ((double)(pixel2 - pixel1)) *
 						               (store->bath_acrosstrack[goodbeam2] - store->bath_acrosstrack[goodbeam1]);
-						ltrackss = store->bath_alongtrack[goodbeam1] +
+						const double ltrackss = store->bath_alongtrack[goodbeam1] +
 						           ((double)(ipixel - pixel1)) / ((double)(pixel2 - pixel1)) *
 						               (store->bath_alongtrack[goodbeam2] - store->bath_alongtrack[goodbeam1]);
-						kk = MBSYS_RESON8K_MAXPIXELS / 2 + (int)(xtrackss / (*pixel_size));
+						const int kk = MBSYS_RESON8K_MAXPIXELS / 2 + (int)(xtrackss / (*pixel_size));
 						if (kk > 0 && kk < MBSYS_RESON8K_MAXPIXELS) {
 							ss[kk] += store->ssrawport[ipixel];
 							ssalongtrack[kk] += ltrackss;
@@ -1500,21 +1322,21 @@ int mbsys_reson8k_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 		    acrosstrack distance for each raw sidescan sample */
 		goodbeam1 = -1;
 		goodbeam2 = -1;
-		for (i = store->beams_bath / 2; i < store->beams_bath; i++) {
+		for (int i = store->beams_bath / 2; i < store->beams_bath; i++) {
 			if (mb_beam_ok(store->beamflag[i])) {
 				goodbeam1 = goodbeam2;
 				goodbeam2 = i;
 				if (goodbeam2 >= 0 && goodbeam1 >= 0) {
-					pixel1 = (ttscale * store->range[goodbeam1] - store->ssrawtimedelay) / ss_spacing;
-					pixel2 = (ttscale * store->range[goodbeam2] - store->ssrawtimedelay) / ss_spacing;
-					for (ipixel = pixel1; ipixel < pixel2; ipixel++) {
-						xtrackss = store->bath_acrosstrack[goodbeam1] +
+					const int pixel1 = (ttscale * store->range[goodbeam1] - store->ssrawtimedelay) / ss_spacing;
+					const int pixel2 = (ttscale * store->range[goodbeam2] - store->ssrawtimedelay) / ss_spacing;
+					for (int ipixel = pixel1; ipixel < pixel2; ipixel++) {
+						const double xtrackss = store->bath_acrosstrack[goodbeam1] +
 						           ((double)(ipixel - pixel1)) / ((double)(pixel2 - pixel1)) *
 						               (store->bath_acrosstrack[goodbeam2] - store->bath_acrosstrack[goodbeam1]);
-						ltrackss = store->bath_alongtrack[goodbeam1] +
+						const double ltrackss = store->bath_alongtrack[goodbeam1] +
 						           ((double)(ipixel - pixel1)) / ((double)(pixel2 - pixel1)) *
 						               (store->bath_alongtrack[goodbeam2] - store->bath_alongtrack[goodbeam1]);
-						kk = MBSYS_RESON8K_MAXPIXELS / 2 + (int)(xtrackss / (*pixel_size));
+						const int kk = MBSYS_RESON8K_MAXPIXELS / 2 + (int)(xtrackss / (*pixel_size));
 						if (kk > 0 && kk < MBSYS_RESON8K_MAXPIXELS) {
 							ss[kk] += store->ssrawstbd[ipixel];
 							ssalongtrack[kk] += ltrackss;
@@ -1526,9 +1348,9 @@ int mbsys_reson8k_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 		}
 
 		/* average the sidescan */
-		first = MBSYS_RESON8K_MAXPIXELS;
-		last = -1;
-		for (k = 0; k < MBSYS_RESON8K_MAXPIXELS; k++) {
+		int first = MBSYS_RESON8K_MAXPIXELS;
+		int last = -1;
+		for (int k = 0; k < MBSYS_RESON8K_MAXPIXELS; k++) {
 			if (ss_cnt[k] > 0) {
 				ss[k] /= ss_cnt[k];
 				ssalongtrack[k] /= ss_cnt[k];
@@ -1541,9 +1363,9 @@ int mbsys_reson8k_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 		}
 
 		/* interpolate the sidescan */
-		k1 = first;
-		k2 = first;
-		for (k = first + 1; k < last; k++) {
+		int k1 = first;
+		int k2 = first;
+		for (int k = first + 1; k < last; k++) {
 			if (ss_cnt[k] <= 0) {
 				if (k2 <= k) {
 					k2 = k + 1;
@@ -1566,32 +1388,32 @@ int mbsys_reson8k_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 			store->pixels_ss = MBSYS_RESON8K_MAXPIXELS;
 		else
 			store->pixels_ss = 0;
-		for (i = 0; i < MBSYS_RESON8K_MAXPIXELS; i++) {
+		for (int i = 0; i < MBSYS_RESON8K_MAXPIXELS; i++) {
 			store->ss[i] = ss[i];
 			store->ss_alongtrack[i] = ssalongtrack[i];
 		}
 
-		/* print debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  Sidescan regenerated in <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  Sidescan regenerated in <%s>\n", __func__);
 			fprintf(stderr, "dbg2       beams_bath:    %d\n", store->beams_bath);
-			for (i = 0; i < store->beams_bath; i++)
+			for (int i = 0; i < store->beams_bath; i++)
 				fprintf(stderr, "dbg2       beam:%d  flag:%3d  bath:%10f  amp:%10f  acrosstrack:%10f  alongtrack:%10f\n", i,
 				        store->beamflag[i], store->bath[i], store->amp[i], store->bath_acrosstrack[i], store->bath_alongtrack[i]);
 			fprintf(stderr, "dbg2       pixels_ss:  %d\n", MBSYS_RESON8K_MAXPIXELS);
-			for (i = 0; i < MBSYS_RESON8K_MAXPIXELS; i++)
+			for (int i = 0; i < MBSYS_RESON8K_MAXPIXELS; i++)
 				fprintf(stderr, "dbg2       pixel:%4d  cnt:%3d  ss:%10f  xtrack:%10f  ltrack:%10f\n", i, ss_cnt[i], ss[i],
 				        ssacrosstrack[i], ssalongtrack[i]);
 			fprintf(stderr, "dbg2       pixels_ss:  %d\n", store->pixels_ss);
-			for (i = 0; i < MBSYS_RESON8K_MAXPIXELS; i++)
+			for (int i = 0; i < MBSYS_RESON8K_MAXPIXELS; i++)
 				fprintf(stderr, "dbg2       pixel:%4d  ss:%10f  xtrack:%10f  ltrack:%10f\n", i, store->ss[i],
 				        store->ss_acrosstrack[i], store->ss_alongtrack[i]);
 		}
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       pixel_size:      %f\n", *pixel_size);
 		fprintf(stderr, "dbg2       swath_width:     %f\n", *swath_width);
@@ -1600,7 +1422,6 @@ int mbsys_reson8k_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/

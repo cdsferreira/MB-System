@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_navnetcdf.h	5/4/2002
- *	$Id$
  *
- *    Copyright (c) 2002-2017 by
+ *    Copyright (c) 2002-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -31,6 +30,9 @@
  *   2.
  *
  */
+
+#ifndef MBSYS_NAVNETCDF_H_
+#define MBSYS_NAVNETCDF_H_
 
 /* dimension lengths */
 #define MBSYS_NAVNETCDF_COMMENTLEN 256
@@ -362,3 +364,5 @@ int mbsys_navnetcdf_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, in
 int mbsys_navnetcdf_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp, double *depth, double *velocity,
                                int *error);
 int mbsys_navnetcdf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
+
+#endif  /* MBSYS_NAVNETCDF_H_ */

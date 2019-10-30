@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_bchrxunb.h	8/29/97
- *	$Id$
  *
- *    Copyright (c) 1997-2017 by
+ *    Copyright (c) 1997-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -53,6 +52,9 @@
  *      the ping telegrams using the program mbmerge.
  *
  */
+
+#ifndef MBF_BCHRXUNB_H_
+#define MBF_BCHRXUNB_H_
 
 /* maximum number of beams and pixels */
 #define MBF_BCHRXUNB_MAXBEAMS 56
@@ -177,3 +179,5 @@ struct mbf_bchrxunb_struct {
 	int beams_bath;  /* number of beams stored */
 	struct mbf_bchrxunb_profile_struct profile[7];
 };
+
+#endif  /* MBF_BCHRXUNB_H_ */

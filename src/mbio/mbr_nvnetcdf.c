@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbr_nvnetcdf.c	5/4/02
- *	$Id$
  *
- *    Copyright (c) 2002-2017 by
+ *    Copyright (c) 2002-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -28,133 +27,18 @@
  */
 /* #define MBNETCDF_DEBUG 1 */
 
-/* standard include files */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 #include <time.h>
-#include <netcdf.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include <netcdf.h>
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
+#include "mb_status.h"
 #include "mbsys_navnetcdf.h"
-
-/* essential function prototypes */
-int mbr_register_nvnetcdf(int verbose, void *mbio_ptr, int *error);
-int mbr_info_nvnetcdf(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
-                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
-                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
-                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
-                      double *beamwidth_ltrack, int *error);
-int mbr_alm_nvnetcdf(int verbose, void *mbio_ptr, int *error);
-int mbr_dem_nvnetcdf(int verbose, void *mbio_ptr, int *error);
-int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-
-static char rcs_id[] = "$Id$";
-
-/*--------------------------------------------------------------------*/
-int mbr_register_nvnetcdf(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_register_nvnetcdf";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-	}
-
-	/* get mb_io_ptr */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set format info parameters */
-	status = mbr_info_nvnetcdf(
-	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
-	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
-	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
-	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
-	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
-
-	/* set format and system specific function pointers */
-	mb_io_ptr->mb_io_format_alloc = &mbr_alm_nvnetcdf;
-	mb_io_ptr->mb_io_format_free = &mbr_dem_nvnetcdf;
-	mb_io_ptr->mb_io_store_alloc = &mbsys_navnetcdf_alloc;
-	mb_io_ptr->mb_io_store_free = &mbsys_navnetcdf_deall;
-	mb_io_ptr->mb_io_read_ping = &mbr_rt_nvnetcdf;
-	mb_io_ptr->mb_io_write_ping = &mbr_wt_nvnetcdf;
-	mb_io_ptr->mb_io_dimensions = &mbsys_navnetcdf_dimensions;
-	mb_io_ptr->mb_io_extract = &mbsys_navnetcdf_extract;
-	mb_io_ptr->mb_io_insert = &mbsys_navnetcdf_insert;
-	mb_io_ptr->mb_io_extract_nav = &mbsys_navnetcdf_extract_nav;
-	mb_io_ptr->mb_io_insert_nav = &mbsys_navnetcdf_insert_nav;
-	mb_io_ptr->mb_io_extract_altitude = &mbsys_navnetcdf_extract_altitude;
-	mb_io_ptr->mb_io_insert_altitude = &mbsys_navnetcdf_insert_altitude;
-	mb_io_ptr->mb_io_extract_svp = NULL;
-	mb_io_ptr->mb_io_insert_svp = NULL;
-	mb_io_ptr->mb_io_ttimes = &mbsys_navnetcdf_ttimes;
-	mb_io_ptr->mb_io_detects = &mbsys_navnetcdf_detects;
-	mb_io_ptr->mb_io_copyrecord = &mbsys_navnetcdf_copy;
-	mb_io_ptr->mb_io_extract_rawss = NULL;
-	mb_io_ptr->mb_io_insert_rawss = NULL;
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
-		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
-		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
-		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
-		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
-		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
-		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
-		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
-		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
-		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
-		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
-		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
-		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
-		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
-		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
-		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
-		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
-		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
-		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
-		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
-		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
-		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
-		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
-		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
-		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
-		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
-		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
-		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
-		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
-		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
-		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
-		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
-		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
-		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
-		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
-		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
-		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
-		fprintf(stderr, "dbg2       error:              %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:         %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
 
 /*--------------------------------------------------------------------*/
 int mbr_info_nvnetcdf(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
@@ -162,13 +46,10 @@ int mbr_info_nvnetcdf(int verbose, int *system, int *beams_bath_max, int *beams_
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error) {
-	char *function_name = "mbr_info_nvnetcdf";
 	int status = MB_SUCCESS;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 	}
@@ -188,9 +69,9 @@ int mbr_info_nvnetcdf(int verbose, int *system, int *beams_bath_max, int *beams_
 	        MB_DESCRIPTION_LENGTH);
 	*numfile = 1;
 	*filetype = MB_FILETYPE_NETCDF;
-	*variable_beams = MB_NO;
-	*traveltime = MB_NO;
-	*beam_flagging = MB_NO;
+	*variable_beams = false;
+	*traveltime = false;
+	*beam_flagging = false;
 	*platform_source = MB_DATA_NONE;
 	*nav_source = MB_DATA_DATA;
 	*sensordepth_source = MB_DATA_DATA;
@@ -200,9 +81,8 @@ int mbr_info_nvnetcdf(int verbose, int *system, int *beams_bath_max, int *beams_
 	*beamwidth_xtrack = 0.0;
 	*beamwidth_ltrack = 0.0;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       system:             %d\n", *system);
 		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", *beams_bath_max);
@@ -229,116 +109,80 @@ int mbr_info_nvnetcdf(int verbose, int *system, int *beams_bath_max, int *beams_
 		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_alm_nvnetcdf(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_alm_nvnetcdf";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_navnetcdf_struct *store;
-	int *dataread;
-	int *commentread;
-	int *recread;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set initial status */
-	status = MB_SUCCESS;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* allocate memory for data structure */
-	status = mbsys_navnetcdf_alloc(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
-
-	/* get pointer to raw data structure */
-	store = (struct mbsys_navnetcdf_struct *)mb_io_ptr->store_data;
+	const int status = mbsys_navnetcdf_alloc(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
 
 	/* initialize values in structure */
-	dataread = (int *)&mb_io_ptr->save1;
-	commentread = (int *)&mb_io_ptr->save2;
-	recread = (int *)&mb_io_ptr->save4;
-	*dataread = MB_NO;
+	int *dataread = (int *)&mb_io_ptr->save1;
+	int *commentread = (int *)&mb_io_ptr->save2;
+	int *recread = (int *)&mb_io_ptr->save4;
+	*dataread = false;
 	*commentread = 0;
 	*recread = 0;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_dem_nvnetcdf(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_dem_nvnetcdf";
 	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* deallocate memory for data descriptor */
 	status = mbsys_navnetcdf_deall(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_rt_nvnetcdf";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_navnetcdf_struct *store;
-	int *dataread;
-	int *commentread;
-	int *recread;
 	int dim_id;
 	size_t index[2], count[2];
 	int nc_status;
-	int i;
 #ifdef MBNETCDF_DEBUG
 	int nc_verbose = 1;
 #else
 	int nc_verbose = 0;
 #endif
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -346,18 +190,20 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor and data structure */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	store = (struct mbsys_navnetcdf_struct *)store_ptr;
-	dataread = (int *)&mb_io_ptr->save1;
-	commentread = (int *)&mb_io_ptr->save2;
-	recread = (int *)&mb_io_ptr->save4;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbsys_navnetcdf_struct *store = (struct mbsys_navnetcdf_struct *)store_ptr;
+	int *dataread = (int *)&mb_io_ptr->save1;
+	int *commentread = (int *)&mb_io_ptr->save2;
+	int *recread = (int *)&mb_io_ptr->save4;
 
 	/* set file position */
 	mb_io_ptr->file_pos = mb_io_ptr->file_bytes;
 
+	int status = MB_SUCCESS;
+
 	/* if first read then set everything up */
-	if (*dataread == MB_NO) {
-		*dataread = MB_YES;
+	if (*dataread == false) {
+		*dataread = true;
 
 		/* get dimensions */
 		nc_status = nc_inq_dimid(mb_io_ptr->ncid, "mbHistoryRecNbr", &dim_id);
@@ -389,9 +235,8 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			*error = MB_ERROR_EOF;
 		}
 
-		/* print input debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  NetCDF array dimensions read in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  NetCDF array dimensions read in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2  Array and variable dimensions:\n");
 			fprintf(stderr, "dbg2       status:                  %d\n", status);
 			fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -496,9 +341,8 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				*error = MB_ERROR_EOF;
 			}
 
-			/* print input debug statements */
 			if (verbose >= 2) {
-				fprintf(stderr, "\ndbg2  NetCDF global attributes read in function <%s>\n", function_name);
+				fprintf(stderr, "\ndbg2  NetCDF global attributes read in function <%s>\n", __func__);
 				fprintf(stderr, "dbg2  Global attributes:\n");
 				fprintf(stderr, "dbg2       status:                  %d\n", status);
 				fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -526,7 +370,7 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				fprintf(stderr, "dbg2       mbEllipsoidInvF:       %f\n", store->mbEllipsoidInvF);
 				fprintf(stderr, "dbg2       mbEllipsoidE2:         %f\n", store->mbEllipsoidE2);
 				fprintf(stderr, "dbg2       mbProjType:            %d\n", store->mbProjType);
-				for (i = 0; i < 10; i++)
+				for (int i = 0; i < 10; i++)
 					fprintf(stderr, "dbg2       mbProjParameterValue[%d]:%f\n", i, store->mbProjParameterValue[i]);
 				fprintf(stderr, "dbg2       mbProjParameterCode:   %s\n", store->mbProjParameterCode);
 				fprintf(stderr, "dbg2       mbShip:                %s\n", store->mbShip);
@@ -594,9 +438,8 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				*error = MB_ERROR_EOF;
 			}
 
-			/* print input debug statements */
 			if (verbose >= 2) {
-				fprintf(stderr, "\ndbg2  NetCDF variable ids read in function <%s>\n", function_name);
+				fprintf(stderr, "\ndbg2  NetCDF variable ids read in function <%s>\n", __func__);
 				fprintf(stderr, "dbg2  Variable ids:\n");
 				fprintf(stderr, "dbg2       status:                  %d\n", status);
 				fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -647,7 +490,7 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				status = MB_FAILURE;
 				*error = MB_ERROR_MEMORY_FAIL;
 				if (verbose >= 2) {
-					fprintf(stderr, "\ndbg2  MBIO function <%s> terminated with error\n", function_name);
+					fprintf(stderr, "\ndbg2  MBIO function <%s> terminated with error\n", __func__);
 					fprintf(stderr, "dbg2  Return values:\n");
 					fprintf(stderr, "dbg2       error:      %d\n", *error);
 					fprintf(stderr, "dbg2  Return status:\n");
@@ -1353,9 +1196,8 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				*error = MB_ERROR_EOF;
 			}
 
-			/* print input debug statements */
 			if (verbose >= 2) {
-				fprintf(stderr, "\ndbg2  NetCDF variable attributes read in function <%s>\n", function_name);
+				fprintf(stderr, "\ndbg2  NetCDF variable attributes read in function <%s>\n", __func__);
 				fprintf(stderr, "dbg2  Variable attributes:\n");
 				fprintf(stderr, "dbg2       status:				%d\n", status);
 				fprintf(stderr, "dbg2       error:				%d\n", *error);
@@ -1594,15 +1436,14 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				*error = MB_ERROR_EOF;
 			}
 
-			/* print input debug statements */
 			if (verbose >= 2) {
-				fprintf(stderr, "\ndbg2  NetCDF Global Variables read in function <%s>\n", function_name);
+				fprintf(stderr, "\ndbg2  NetCDF Global Variables read in function <%s>\n", __func__);
 				fprintf(stderr, "dbg2  Global Variables:\n");
 				fprintf(stderr, "dbg2       status:                  %d\n", status);
 				fprintf(stderr, "dbg2       error:                   %d\n", *error);
 				fprintf(stderr, "dbg2       nc_status:               %d\n", nc_status);
 				fprintf(stderr, "dbg2       mbNbrHistoryRec:         %d\n", store->mbNbrHistoryRec);
-				for (i = 0; i < store->mbNbrHistoryRec; i++) {
+				for (int i = 0; i < store->mbNbrHistoryRec; i++) {
 					fprintf(stderr, "dbg2       mbHistDate[%2d]:          %d\n", i, store->mbHistDate[i]);
 					fprintf(stderr, "dbg2       mbHistTime[%2d]:          %d\n", i, store->mbHistTime[i]);
 					fprintf(stderr, "dbg2       mbHistCode[%2d]:          %d\n", i, store->mbHistCode[i]);
@@ -1629,9 +1470,8 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		(*commentread)++;
 		(*dataread)++;
 
-		/* print input debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  Comment read in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  Comment read in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2  Comment:\n");
 			fprintf(stderr, "dbg2       status:                  %d\n", status);
 			fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -1732,9 +1572,8 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		(*recread)++;
 		(*dataread)++;
 
-		/* print input debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  NetCDF Survey Record read in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  NetCDF Survey Record read in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2  Global Variables:\n");
 			fprintf(stderr, "dbg2       status:                  %d\n", status);
 			fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -1767,28 +1606,19 @@ int mbr_rt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	mb_io_ptr->new_error = *error;
 	mb_io_ptr->new_kind = store->kind;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_wt_nvnetcdf";
 	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_navnetcdf_struct *store;
-	struct mbsys_navnetcdf_struct *storelocal;
-	int *datawrite;
-	int *commentwrite;
-	int *recwrite;
 	int nc_status;
 	int mbHistoryRecNbr_id;
 	int mbNameLength_id;
@@ -1799,17 +1629,14 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	char *user_ptr;
 	double time_d;
 	int icomment;
-	int i;
 #ifdef MBNETCDF_DEBUG
 	int nc_verbose = 1;
 #else
 	int nc_verbose = 0;
 #endif
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1817,12 +1644,12 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor and data storage */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	store = (struct mbsys_navnetcdf_struct *)store_ptr;
-	storelocal = (struct mbsys_navnetcdf_struct *)mb_io_ptr->store_data;
-	datawrite = (int *)&mb_io_ptr->save1;
-	commentwrite = (int *)&mb_io_ptr->save2;
-	recwrite = (int *)&mb_io_ptr->save4;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbsys_navnetcdf_struct *store = (struct mbsys_navnetcdf_struct *)store_ptr;
+	struct mbsys_navnetcdf_struct *storelocal = (struct mbsys_navnetcdf_struct *)mb_io_ptr->store_data;
+	int *datawrite = (int *)&mb_io_ptr->save1;
+	int *commentwrite = (int *)&mb_io_ptr->save2;
+	int *recwrite = (int *)&mb_io_ptr->save4;
 
 	/* if comment and nothing written yet save it */
 	if (store->kind == MB_DATA_COMMENT && *recwrite == 0) {
@@ -1845,7 +1672,7 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			status =
 			    mb_reallocd(verbose, __FILE__, __LINE__, storelocal->mbHistoryRecNbr * storelocal->mbCommentLength * sizeof(char),
 			                (void **)&storelocal->mbHistComment, error);
-			for (i = storelocal->mbNbrHistoryRec; i < storelocal->mbHistoryRecNbr; i++) {
+			for (int i = storelocal->mbNbrHistoryRec; i < storelocal->mbHistoryRecNbr; i++) {
 				storelocal->mbHistDate[i] = 0;
 				storelocal->mbHistTime[i] = 0;
 				storelocal->mbHistCode[i] = 0;
@@ -1856,7 +1683,7 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		if (store != storelocal) {
 			/* figure out which comment is being passed */
 			icomment = -1;
-			for (i = 0; i < store->mbNbrHistoryRec; i++) {
+			for (int i = 0; i < store->mbNbrHistoryRec; i++) {
 				if (strncmp(store->comment, &store->mbHistComment[i * store->mbCommentLength], MBSYS_NAVNETCDF_COMMENTLEN) == 0) {
 					icomment = i;
 				}
@@ -1900,9 +1727,8 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		(*commentwrite)++;
 		(*datawrite)++;
 
-		/* print input debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  Comment saved in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  Comment saved in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2  Comment:\n");
 			fprintf(stderr, "dbg2       status:                  %d\n", status);
 			fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -1929,9 +1755,8 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		if ((verbose >= 2 || nc_verbose >= 1) && nc_status != NC_NOERR)
 			fprintf(stderr, "nc_def_dim mbPositionNbr error: %s\n", nc_strerror(nc_status));
 
-		/* print input debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  NetCDF array dimensions written in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  NetCDF array dimensions written in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2  Array and variable dimensions:\n");
 			fprintf(stderr, "dbg2       status:                  %d\n", status);
 			fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -2015,9 +1840,8 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		if ((verbose >= 2 || nc_verbose >= 1) && nc_status != NC_NOERR)
 			fprintf(stderr, "nc_def_var mbPFlag_id error: %s\n", nc_strerror(nc_status));
 
-		/* print input debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  NetCDF variable ids written in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  NetCDF variable ids written in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2  Variable ids:\n");
 			fprintf(stderr, "dbg2       status:                  %d\n", status);
 			fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -2138,9 +1962,8 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		if ((verbose >= 2 || nc_verbose >= 1) && nc_status != NC_NOERR)
 			fprintf(stderr, "nc_put_att mbVersion error: %s\n", nc_strerror(nc_status));
 
-		/* print input debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  NetCDF global attributes written in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  NetCDF global attributes written in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2  Global attributes:\n");
 			fprintf(stderr, "dbg2       status:                  %d\n", status);
 			fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -2168,7 +1991,7 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			fprintf(stderr, "dbg2       mbEllipsoidInvF:       %f\n", store->mbEllipsoidInvF);
 			fprintf(stderr, "dbg2       mbEllipsoidE2:         %f\n", store->mbEllipsoidE2);
 			fprintf(stderr, "dbg2       mbProjType:            %d\n", store->mbProjType);
-			for (i = 0; i < 10; i++)
+			for (int i = 0; i < 10; i++)
 				fprintf(stderr, "dbg2       mbProjParameterValue[%d]:%f\n", i, store->mbProjParameterValue[i]);
 			fprintf(stderr, "dbg2       mbProjParameterCode:   %s\n", store->mbProjParameterCode);
 			fprintf(stderr, "dbg2       mbShip:                %s\n", store->mbShip);
@@ -2989,9 +2812,8 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		if ((verbose >= 2 || nc_verbose >= 1) && nc_status != NC_NOERR)
 			fprintf(stderr, "nc_put_att JJJJ error: %s\n", nc_strerror(nc_status));
 
-		/* print input debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  NetCDF variable attributes written in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  NetCDF variable attributes written in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2  Variable attributes:\n");
 			fprintf(stderr, "dbg2       status:                  %d\n", status);
 			fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -3299,9 +3121,8 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			*error = MB_ERROR_EOF;
 		}
 
-		/* print input debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  NetCDF Survey Record written in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  NetCDF Survey Record written in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2  Global Variables:\n");
 			fprintf(stderr, "dbg2       status:                  %d\n", status);
 			fprintf(stderr, "dbg2       error:                   %d\n", *error);
@@ -3324,16 +3145,107 @@ int mbr_wt_nvnetcdf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		(*datawrite)++;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+
+/*--------------------------------------------------------------------*/
+int mbr_register_nvnetcdf(int verbose, void *mbio_ptr, int *error) {
+	int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+	}
+
+	/* get mb_io_ptr */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* set format info parameters */
+	status = mbr_info_nvnetcdf(
+	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
+	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
+	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
+	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
+	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
+
+	/* set format and system specific function pointers */
+	mb_io_ptr->mb_io_format_alloc = &mbr_alm_nvnetcdf;
+	mb_io_ptr->mb_io_format_free = &mbr_dem_nvnetcdf;
+	mb_io_ptr->mb_io_store_alloc = &mbsys_navnetcdf_alloc;
+	mb_io_ptr->mb_io_store_free = &mbsys_navnetcdf_deall;
+	mb_io_ptr->mb_io_read_ping = &mbr_rt_nvnetcdf;
+	mb_io_ptr->mb_io_write_ping = &mbr_wt_nvnetcdf;
+	mb_io_ptr->mb_io_dimensions = &mbsys_navnetcdf_dimensions;
+	mb_io_ptr->mb_io_extract = &mbsys_navnetcdf_extract;
+	mb_io_ptr->mb_io_insert = &mbsys_navnetcdf_insert;
+	mb_io_ptr->mb_io_extract_nav = &mbsys_navnetcdf_extract_nav;
+	mb_io_ptr->mb_io_insert_nav = &mbsys_navnetcdf_insert_nav;
+	mb_io_ptr->mb_io_extract_altitude = &mbsys_navnetcdf_extract_altitude;
+	mb_io_ptr->mb_io_insert_altitude = &mbsys_navnetcdf_insert_altitude;
+	mb_io_ptr->mb_io_extract_svp = NULL;
+	mb_io_ptr->mb_io_insert_svp = NULL;
+	mb_io_ptr->mb_io_ttimes = &mbsys_navnetcdf_ttimes;
+	mb_io_ptr->mb_io_detects = &mbsys_navnetcdf_detects;
+	mb_io_ptr->mb_io_copyrecord = &mbsys_navnetcdf_copy;
+	mb_io_ptr->mb_io_extract_rawss = NULL;
+	mb_io_ptr->mb_io_insert_rawss = NULL;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
+		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
+		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
+		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
+		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
+		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
+		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
+		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
+		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
+		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
+		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
+		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
+		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
+		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
+		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
+		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
+		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
+		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
+		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
+		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
+		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
+		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
+		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
+		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
+		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
+		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
+		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
+		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
+		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
+		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
+		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
+		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
+		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
+		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
+		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
+		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
+		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
+		fprintf(stderr, "dbg2       error:              %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:         %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/

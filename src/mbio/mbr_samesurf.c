@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbr_samesurf.c	6/13/2002
- *	$Id$
  *
- *    Copyright (c) 2002-2017 by
+ *    Copyright (c) 2002-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -27,130 +26,16 @@
  *
  */
 
-/* standard include files */
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
-#include "../surf/mb_sapi.h"
+#include "mb_status.h"
 #include "mbsys_surf.h"
-
-/* essential function prototypes */
-int mbr_register_samesurf(int verbose, void *mbio_ptr, int *error);
-int mbr_info_samesurf(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
-                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
-                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
-                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
-                      double *beamwidth_ltrack, int *error);
-int mbr_alm_samesurf(int verbose, void *mbio_ptr, int *error);
-int mbr_dem_samesurf(int verbose, void *mbio_ptr, int *error);
-int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_wt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-
-static char rcs_id[] = "$Id$";
-
-/*--------------------------------------------------------------------*/
-int mbr_register_samesurf(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_register_samesurf";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-	}
-
-	/* get mb_io_ptr */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set format info parameters */
-	status = mbr_info_samesurf(
-	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
-	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
-	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
-	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
-	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
-
-	/* set format and system specific function pointers */
-	mb_io_ptr->mb_io_format_alloc = &mbr_alm_samesurf;
-	mb_io_ptr->mb_io_format_free = &mbr_dem_samesurf;
-	mb_io_ptr->mb_io_store_alloc = &mbsys_surf_alloc;
-	mb_io_ptr->mb_io_store_free = &mbsys_surf_deall;
-	mb_io_ptr->mb_io_read_ping = &mbr_rt_samesurf;
-	mb_io_ptr->mb_io_write_ping = &mbr_wt_samesurf;
-	mb_io_ptr->mb_io_dimensions = &mbsys_surf_dimensions;
-	mb_io_ptr->mb_io_extract = &mbsys_surf_extract;
-	mb_io_ptr->mb_io_insert = &mbsys_surf_insert;
-	mb_io_ptr->mb_io_extract_nav = &mbsys_surf_extract_nav;
-	mb_io_ptr->mb_io_insert_nav = &mbsys_surf_insert_nav;
-	mb_io_ptr->mb_io_extract_altitude = &mbsys_surf_extract_altitude;
-	mb_io_ptr->mb_io_insert_altitude = NULL;
-	mb_io_ptr->mb_io_extract_svp = &mbsys_surf_extract_svp;
-	mb_io_ptr->mb_io_insert_svp = &mbsys_surf_insert_svp;
-	mb_io_ptr->mb_io_ttimes = &mbsys_surf_ttimes;
-	mb_io_ptr->mb_io_detects = &mbsys_surf_detects;
-	mb_io_ptr->mb_io_copyrecord = &mbsys_surf_copy;
-	mb_io_ptr->mb_io_extract_rawss = NULL;
-	mb_io_ptr->mb_io_insert_rawss = NULL;
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
-		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
-		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
-		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
-		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
-		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
-		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
-		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
-		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
-		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
-		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
-		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
-		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
-		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
-		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
-		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
-		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
-		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
-		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
-		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
-		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
-		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
-		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
-		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
-		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
-		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
-		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
-		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
-		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
-		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
-		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
-		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
-		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
-		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
-		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
-		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
-		fprintf(stderr, "dbg2       error:              %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:         %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
+#include "../surf/mb_sapi.h"
 
 /*--------------------------------------------------------------------*/
 int mbr_info_samesurf(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
@@ -158,19 +43,13 @@ int mbr_info_samesurf(int verbose, int *system, int *beams_bath_max, int *beams_
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error) {
-	char *function_name = "mbr_info_samesurf";
-	int status = MB_SUCCESS;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 	}
 
 	/* set format info parameters */
-	status = MB_SUCCESS;
 	*error = MB_ERROR_NO_ERROR;
 	*system = MB_SYS_SURF;
 	*beams_bath_max = MBSYS_SURF_MAXBEAMS;
@@ -185,9 +64,9 @@ int mbr_info_samesurf(int verbose, int *system, int *beams_bath_max, int *beams_
 	        MB_DESCRIPTION_LENGTH);
 	*numfile = 1;
 	*filetype = MB_FILETYPE_SURF;
-	*variable_beams = MB_YES;
-	*traveltime = MB_YES;
-	*beam_flagging = MB_YES;
+	*variable_beams = true;
+	*traveltime = true;
+	*beam_flagging = true;
 	*platform_source = MB_DATA_NONE;
 	*nav_source = MB_DATA_DATA;
 	*sensordepth_source = MB_DATA_DATA;
@@ -197,9 +76,10 @@ int mbr_info_samesurf(int verbose, int *system, int *beams_bath_max, int *beams_
 	*beamwidth_xtrack = 0.0;
 	*beamwidth_ltrack = 0.0;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       system:             %d\n", *system);
 		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", *beams_bath_max);
@@ -226,85 +106,60 @@ int mbr_info_samesurf(int verbose, int *system, int *beams_bath_max, int *beams_
 		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_alm_samesurf(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_alm_samesurf";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set initial status */
-	status = MB_SUCCESS;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* allocate memory for data structure */
-	status = mbsys_surf_alloc(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
+	const int status = mbsys_surf_alloc(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_dem_samesurf(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_dem_samesurf";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* deallocate memory for data descriptor */
-	status = mbsys_surf_deall(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
+	const int status = mbsys_surf_deall(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_rt_samesurf";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_surf_struct *store;
-	int sapi_verbose;
 	int sapi_status;
 	SurfSoundingData *SoundingDataPtr;
 	SurfTransducerParameterTable *ActualTransducerTablePtr;
@@ -323,13 +178,9 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	int utm_zone;
 	char projection[MB_NAME_LENGTH];
 	double easting, northing, lon, lat;
-	double *refeasting, *refnorthing;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -337,19 +188,22 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor and data structure */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	store = (struct mbsys_surf_struct *)store_ptr;
-	refeasting = &(mb_io_ptr->saved1);
-	refnorthing = &(mb_io_ptr->saved2);
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbsys_surf_struct *store = (struct mbsys_surf_struct *)store_ptr;
+	double *refeasting = &(mb_io_ptr->saved1);
+	double *refnorthing = &(mb_io_ptr->saved2);
 
 	/* set sapi verbosity */
+	int sapi_verbose;
 	if (verbose > 1)
 		sapi_verbose = verbose;
 	else
 		sapi_verbose = 0;
 
+	int status = MB_SUCCESS;
+
 	/* read global info if the structure is blank (usually first time through) */
-	if (store->initialized == MB_NO) {
+	if (store->initialized == false) {
 		strncpy(store->NameOfShip, SAPI_getNameOfShip(), LABEL_SIZE);
 		strncpy(store->NameOfSounder, SAPI_getNameOfSounder(), LABEL_SIZE);
 		strncpy(store->TypeOfSounder, SAPI_getTypeOfSounder(), LABEL_SIZE);
@@ -365,18 +219,18 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		store->GlobalData = *(SAPI_getGlobalData());
 		store->Statistics = *(SAPI_getStatistics());
 
-		for (i = 0; i < MIN(MBSYS_SURF_MAXCPOS, store->NrPositionsensors); i++) {
+		for (int i = 0; i < MIN(MBSYS_SURF_MAXCPOS, store->NrPositionsensors); i++) {
 			store->PositionSensor[i] = *(SAPI_getPositionSensor(i));
 		}
 
 		/* initialize UTM projection if required */
-		if (store->GlobalData.presentationOfPosition == 'X' && mb_io_ptr->projection_initialized == MB_NO) {
+		if (store->GlobalData.presentationOfPosition == 'X' && mb_io_ptr->projection_initialized == false) {
 			/* initialize UTM projection */
 			utm_zone = (int)(((RTD * store->GlobalData.referenceMeridian + 183.0) / 6.0) + 0.5);
 			sprintf(projection, "UTM%2.2dN", utm_zone);
 			mb_proj_init(verbose, projection, &(mb_io_ptr->pjptr), error);
 			store->GlobalData.presentationOfPosition = 'E';
-			mb_io_ptr->projection_initialized = MB_YES;
+			mb_io_ptr->projection_initialized = true;
 
 			/* Set reference longitude and latitude */
 			easting = store->GlobalData.referenceOfPositionX;
@@ -402,7 +256,7 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			store->Statistics.maxNorthing = DTR * lat;
 		}
 
-		store->initialized = MB_YES;
+		store->initialized = true;
 	}
 
 	/* else get access to next sounding */
@@ -431,7 +285,7 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		ActualAngleTablePtr = SAPI_getActualAngleTable();
 		if (ActualAngleTablePtr != NULL) {
 			store->ActualAngleTable = *ActualAngleTablePtr;
-			for (i = 1; i < MIN(MBSYS_SURF_MAXBEAMS, ActualAngleTablePtr->actualNumberOfBeams); i++) {
+			for (int i = 1; i < MIN(MBSYS_SURF_MAXBEAMS, ActualAngleTablePtr->actualNumberOfBeams); i++) {
 				store->ActualAngleTable.beamAngle[i] = ActualAngleTablePtr->beamAngle[i];
 			}
 		}
@@ -439,19 +293,19 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		ActualCProfileTablePtr = SAPI_getActualCProfileTable();
 		if (ActualCProfileTablePtr != NULL) {
 			store->ActualCProfileTable = *ActualCProfileTablePtr;
-			for (i = 1; i < MIN(MBSYS_SURF_MAXCVALUES, ActualCProfileTablePtr->numberOfActualValues); i++) {
+			for (int i = 1; i < MIN(MBSYS_SURF_MAXCVALUES, ActualCProfileTablePtr->numberOfActualValues); i++) {
 				store->ActualCProfileTable.values[i] = ActualCProfileTablePtr->values[i];
 			}
 		}
 
-		for (i = 0; i < MIN(MBSYS_SURF_MAXCPOS, store->NrPositionsensors); i++) {
+		for (int i = 0; i < MIN(MBSYS_SURF_MAXCPOS, store->NrPositionsensors); i++) {
 			CenterPositionPtr = SAPI_getCenterPosition(i);
 			if (CenterPositionPtr != NULL) {
 				store->CenterPosition[i] = *CenterPositionPtr;
 
 				/* convert position from UTM easting and northing
 				    to lon lat if necessary */
-				if (mb_io_ptr->projection_initialized == MB_YES) {
+				if (mb_io_ptr->projection_initialized == true) {
 					easting = store->CenterPosition[i].centerPositionX + *refeasting;
 					northing = store->CenterPosition[i].centerPositionY + *refnorthing;
 					mb_proj_inverse(verbose, mb_io_ptr->pjptr, easting, northing, &lon, &lat, error);
@@ -465,7 +319,7 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		if (SingleBeamDepthPtr != NULL)
 			store->SingleBeamDepth = *SingleBeamDepthPtr;
 
-		i = 0;
+		int i = 0;
 		while ((i < MIN(MBSYS_SURF_MAXBEAMS, store->NrBeams)) && ((MultiBeamDepthPtr = SAPI_getMultiBeamDepth(i)) != NULL)) {
 			store->MultiBeamDepth[i++] = *MultiBeamDepthPtr;
 		}
@@ -502,7 +356,7 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		MultibeamSignalParametersPtr = SAPI_getMultibeamSignalParameters();
 		if (MultibeamSignalParametersPtr != NULL) {
 			store->MultibeamSignalParameters = *MultibeamSignalParametersPtr;
-			for (i = 1; i < MIN(MBSYS_SURF_MAXRXSETS, MultibeamSignalParametersPtr->nrActualGainSets); i++) {
+			for (int i = 1; i < MIN(MBSYS_SURF_MAXRXSETS, MultibeamSignalParametersPtr->nrActualGainSets); i++) {
 				store->MultibeamSignalParameters.rxSets[i] = MultibeamSignalParametersPtr->rxSets[i];
 			}
 		}
@@ -512,7 +366,7 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		if (MultibeamTransmitterParametersPtr != NULL) {
 			store->NrTxSets = MIN(MBSYS_SURF_MAXTXSETS, store->NrTxSets);
 			store->MultibeamTransmitterParameters = *MultibeamTransmitterParametersPtr;
-			for (i = 1; i < store->NrTxSets; i++) {
+			for (int i = 1; i < store->NrTxSets; i++) {
 				store->MultibeamTransmitterParameters.txSets[i] = MultibeamTransmitterParametersPtr->txSets[i];
 			}
 		}
@@ -523,7 +377,7 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			store->SidescanData = *SidescanDataPtr;
 			store->NrSidescan =
 			    MIN(MBSYS_SURF_MAXPIXELS, SidescanDataPtr->actualNrOfSsDataPort + SidescanDataPtr->actualNrOfSsDataStb);
-			for (i = 1; i < store->NrSidescan; i++) {
+			for (int i = 1; i < store->NrSidescan; i++) {
 				store->SidescanData.ssData[i] = SidescanDataPtr->ssData[i];
 			}
 		}
@@ -535,13 +389,13 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 	/* output debug info */
 	if (verbose >= 4) {
-		fprintf(stderr, "\ndbg4  New record read by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg4  New record read by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg4  New record kind:\n");
 		fprintf(stderr, "dbg4       error:      %d\n", mb_io_ptr->new_error);
 		fprintf(stderr, "dbg4       kind:       %d\n", mb_io_ptr->new_kind);
 	}
 	if (verbose >= 4 && store->kind == MB_DATA_DATA) {
-		fprintf(stderr, "\ndbg4  New ping read by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg4  New ping read by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg4  New ping values:\n");
 		fprintf(stderr, "dbg4       kind:               %d\n", store->kind);
 		fprintf(stderr, "dbg4       initialized:        %d\n", store->initialized);
@@ -629,7 +483,7 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg4       Statistics.minDepth:                    %f\n", store->Statistics.minDepth);
 		fprintf(stderr, "dbg4       Statistics.maxDepth:                    %f\n", store->Statistics.maxDepth);
 
-		for (i = 0; i < MIN(MBSYS_SURF_MAXCPOS, store->NrPositionsensors); i++) {
+		for (int i = 0; i < MIN(MBSYS_SURF_MAXCPOS, store->NrPositionsensors); i++) {
 			fprintf(stderr, "dbg4       PositionSensor[%2d].label:                   %s\n", i, store->PositionSensor[i].label);
 			fprintf(stderr, "dbg4       PositionSensor[%2d].positionSensorName:      %s\n", i,
 			        store->PositionSensor[i].positionSensorName);
@@ -689,18 +543,18 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 		fprintf(stderr, "dbg4       ActualAngleTable.label:                 %s\n", store->ActualAngleTable.label);
 		fprintf(stderr, "dbg4       ActualAngleTable.actualNumberOfBeams:   %d\n", store->ActualAngleTable.actualNumberOfBeams);
-		for (i = 0; i < MIN(MBSYS_SURF_MAXBEAMS, store->ActualAngleTable.actualNumberOfBeams); i++)
+		for (int i = 0; i < MIN(MBSYS_SURF_MAXBEAMS, store->ActualAngleTable.actualNumberOfBeams); i++)
 			fprintf(stderr, "dbg4       ActualAngleTable.beamAngle[%3d]:        %f\n", i, store->ActualAngleTable.beamAngle[i]);
 
 		fprintf(stderr, "dbg4       ActualCProfileTable.label:                     %s\n", store->ActualCProfileTable.label);
 		fprintf(stderr, "dbg4       ActualCProfileTable.relTime:                   %f\n", store->ActualCProfileTable.relTime);
 		fprintf(stderr, "dbg4       ActualCProfileTable.numberOfActualValues:      %d\n",
 		        store->ActualCProfileTable.numberOfActualValues);
-		for (i = 0; i < MIN(MBSYS_SURF_MAXCVALUES, store->ActualCProfileTable.numberOfActualValues); i++)
+		for (int i = 0; i < MIN(MBSYS_SURF_MAXCVALUES, store->ActualCProfileTable.numberOfActualValues); i++)
 			fprintf(stderr, "dbg4       ActualCProfileTable.values[%3d]:               %f %f\n", i,
 			        store->ActualCProfileTable.values[i].depth, store->ActualCProfileTable.values[i].cValue);
 
-		for (i = 0; i < MIN(MBSYS_SURF_MAXCPOS, store->NrPositionsensors); i++) {
+		for (int i = 0; i < MIN(MBSYS_SURF_MAXCPOS, store->NrPositionsensors); i++) {
 			fprintf(stderr, "dbg4       CenterPosition[%2d].positionFlag:            %d\n", i,
 			        store->CenterPosition[i].positionFlag);
 			fprintf(stderr, "dbg4       CenterPosition[%2d].centerPositionX:         %f\n", i,
@@ -716,7 +570,7 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg4       SingleBeamDepth.depthMFreq:             %f\n", store->SingleBeamDepth.depthMFreq);
 		fprintf(stderr, "dbg4       SingleBeamDepth.depthLFreq:             %f\n", store->SingleBeamDepth.depthLFreq);
 
-		for (i = 0; i < MIN(MBSYS_SURF_MAXBEAMS, store->NrBeams); i++) {
+		for (int i = 0; i < MIN(MBSYS_SURF_MAXBEAMS, store->NrBeams); i++) {
 			fprintf(stderr, "\ndbg4       MultiBeamDepth[%3d].depthFlag:                      %d\n", i,
 			        store->MultiBeamDepth[i].depthFlag);
 			fprintf(stderr, "dbg4       MultiBeamDepth[%3d].depth:                          %f\n", i,
@@ -749,7 +603,7 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg4       MultibeamSignalParameters.rxGain:              %f\n",
 		        store->MultibeamSignalParameters.rxGain);
 		fprintf(stderr, "dbg4       MultibeamSignalParameters.ar:                  %f\n", store->MultibeamSignalParameters.ar);
-		for (i = 0; i < MIN(MBSYS_SURF_MAXRXSETS, store->MultibeamSignalParameters.nrActualGainSets); i++)
+		for (int i = 0; i < MIN(MBSYS_SURF_MAXRXSETS, store->MultibeamSignalParameters.nrActualGainSets); i++)
 			fprintf(stderr, "dbg4       MultibeamSignalParameters.rxSets[%3d]:               %f %f\n", i,
 			        store->MultibeamSignalParameters.rxSets[i].time, store->MultibeamSignalParameters.rxSets[i].gain);
 
@@ -769,35 +623,26 @@ int mbr_rt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg4       SidescanData.minSsTimeStb:              %f\n", store->SidescanData.minSsTimeStb);
 		fprintf(stderr, "dbg4       SidescanData.maxSsTimePort:             %f\n", store->SidescanData.maxSsTimePort);
 		fprintf(stderr, "dbg4       SidescanData.maxSsTimeStb:              %f\n", store->SidescanData.maxSsTimeStb);
-		for (i = 0;
+		for (int i = 0;
 		     i < MIN(MBSYS_SURF_MAXPIXELS, store->SidescanData.actualNrOfSsDataPort + store->SidescanData.actualNrOfSsDataPort);
 		     i++)
 			fprintf(stderr, "dbg4       SidescanData.ssData[%d]:        %d\n", i, store->SidescanData.ssData[i]);
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_wt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_wt_samesurf";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_surf_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -805,23 +650,111 @@ int mbr_wt_samesurf(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor and data structure */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	store = (struct mbsys_surf_struct *)store_ptr;
+	/* struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr; */
+	/* struct mbsys_surf_struct *store = (struct mbsys_surf_struct *)store_ptr; */
 
 	/* write failure always */
-	status = MB_FAILURE;
+	const int status = MB_FAILURE;
 	*error = MB_ERROR_WRITE_FAIL;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+
+/*--------------------------------------------------------------------*/
+int mbr_register_samesurf(int verbose, void *mbio_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+	}
+
+	/* get mb_io_ptr */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* set format info parameters */
+	const int status = mbr_info_samesurf(
+	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
+	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
+	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
+	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
+	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
+
+	/* set format and system specific function pointers */
+	mb_io_ptr->mb_io_format_alloc = &mbr_alm_samesurf;
+	mb_io_ptr->mb_io_format_free = &mbr_dem_samesurf;
+	mb_io_ptr->mb_io_store_alloc = &mbsys_surf_alloc;
+	mb_io_ptr->mb_io_store_free = &mbsys_surf_deall;
+	mb_io_ptr->mb_io_read_ping = &mbr_rt_samesurf;
+	mb_io_ptr->mb_io_write_ping = &mbr_wt_samesurf;
+	mb_io_ptr->mb_io_dimensions = &mbsys_surf_dimensions;
+	mb_io_ptr->mb_io_extract = &mbsys_surf_extract;
+	mb_io_ptr->mb_io_insert = &mbsys_surf_insert;
+	mb_io_ptr->mb_io_extract_nav = &mbsys_surf_extract_nav;
+	mb_io_ptr->mb_io_insert_nav = &mbsys_surf_insert_nav;
+	mb_io_ptr->mb_io_extract_altitude = &mbsys_surf_extract_altitude;
+	mb_io_ptr->mb_io_insert_altitude = NULL;
+	mb_io_ptr->mb_io_extract_svp = &mbsys_surf_extract_svp;
+	mb_io_ptr->mb_io_insert_svp = &mbsys_surf_insert_svp;
+	mb_io_ptr->mb_io_ttimes = &mbsys_surf_ttimes;
+	mb_io_ptr->mb_io_detects = &mbsys_surf_detects;
+	mb_io_ptr->mb_io_copyrecord = &mbsys_surf_copy;
+	mb_io_ptr->mb_io_extract_rawss = NULL;
+	mb_io_ptr->mb_io_insert_rawss = NULL;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
+		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
+		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
+		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
+		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
+		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
+		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
+		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
+		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
+		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
+		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
+		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
+		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
+		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
+		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
+		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
+		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
+		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
+		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
+		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
+		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
+		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
+		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
+		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
+		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
+		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
+		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
+		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
+		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
+		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
+		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
+		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
+		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
+		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
+		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
+		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
+		fprintf(stderr, "dbg2       error:              %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:         %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/

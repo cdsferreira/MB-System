@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_dsl120pf.h	8/5/96
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -82,6 +81,9 @@
  *
  */
 
+#ifndef MBF_DSL120PF_H_
+#define MBF_DSL120PF_H_
+
 /* maximum number of beams and pixels */
 #define MBF_DSL120PF_MAXBEAMS_SIDE 1024
 #define MBF_DSL120PF_MAXBEAMS 2 * MBF_DSL120PF_MAXBEAMS_SIDE
@@ -152,3 +154,5 @@ struct mbf_dsl120pf_struct {
 	/* comment */
 	char comment[MBF_DSL120PF_COMMENT_LENGTH];
 };
+
+#endif  /* MBF_DSL120PF_H_ */

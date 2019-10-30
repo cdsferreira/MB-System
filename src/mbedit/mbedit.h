@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbedit.h	10/14/2009
- *    $Id$
  *
- *    Copyright (c) 2009-2017 by
+ *    Copyright (c) 2009-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -21,10 +20,6 @@
  *
  * Author:	D. W. Caress
  * Date:	October 14, 2009
- *
- * $Log: $
- *
- *
  */
 
 /*--------------------------------------------------------------------*/

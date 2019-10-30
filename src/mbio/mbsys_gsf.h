@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_gsf.h	6/10/97
- *	$Id$
  *
- *    Copyright (c) 1998-2017 by
+ *    Copyright (c) 1998-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -40,6 +39,9 @@
  *      reading and writing.
  *
  */
+
+#ifndef MBSYS_GSF_H_
+#define MBSYS_GSF_H_
 
 #include "gsf.h"
 #include "gsf_ft.h"
@@ -83,3 +85,5 @@ int mbsys_gsf_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 int mbsys_gsf_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp, double *depth, double *velocity, int *error);
 int mbsys_gsf_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
 int mbsys_gsf_setscalefactors(int verbose, int reset_all, gsfSwathBathyPing *mb_ping, int *error);
+
+#endif  /* MBSYS_GSF_H_ */

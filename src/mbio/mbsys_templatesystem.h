@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_templatesystem.h	1/28/2014
- *	$Id$
  *
- *    Copyright (c) 2014-2017 by
+ *    Copyright (c) 2014-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -48,10 +47,10 @@
  *      profiler data supported by this data system */
 * /
 
-/* include mb_define.h */
-#ifndef MB_DEFINE_DEF
+#ifndef MBSYS_TEMPLATESYSTEM_H_
+#define MBSYS_TEMPLATESYSTEM_H_
+
 #include "mb_define.h"
-#endif
 
 /*---------------------------------------------------------------*/
 /* Record ID definitions (if needed for use in data reading and writing) */
@@ -201,4 +200,5 @@ int mbsys_templatesystem_ttimes(int verbose, void *mbio_ptr, void *store_ptr, in
 //			double *sensor4, double *sensor5, double *sensor6,
 //			double *sensor7, double *sensor8, int *error);
 int mbsys_templatesystem_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
-/*---------------------------------------------------------------*/
+
+#endif  /* MBSYS_TEMPLATESYSTEM_H_ */

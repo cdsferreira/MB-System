@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_stereopair.h	11/22/2014
- *	$Id$
  *
- *    Copyright (c) 2014-2017 by
+ *    Copyright (c) 2014-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -114,10 +113,10 @@
  *              end identifiers
  */
 
-/* include mb_define.h */
-#ifndef MB_DEFINE_DEF
+#ifndef MBSYS_STEREOPAIR_H_
+#define MBSYS_STEREOPAIR_H_
+
 #include "mb_define.h"
-#endif
 
 /*---------------------------------------------------------------*/
 /* Record ID definitions (if needed for use in data reading and writing) */
@@ -194,7 +193,7 @@ int mbsys_stereopair_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *e
 int mbsys_stereopair_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error);
 int mbsys_stereopair_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss,
                                 int *error);
-int mbsys_stereopair_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error);
+int mbsys_stereopair_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error);
 int mbsys_stereopair_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, int *error);
 int mbsys_stereopair_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, int *error);
 // int mbsys_stereopair_preprocess(int verbose, void *mbio_ptr, void *store_ptr,
@@ -275,4 +274,5 @@ int mbsys_stereopair_gains(int verbose, void *mbio_ptr, void *store_ptr, int *ki
 //			double *sensor4, double *sensor5, double *sensor6,
 //			double *sensor7, double *sensor8, int *error);
 int mbsys_stereopair_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
-/*---------------------------------------------------------------*/
+
+#endif  /* MBSYS_STEREOPAIR_H_ */

@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_cbat9001.h	8/21/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -78,6 +77,11 @@
  *            *** Defined only for MB-System
  *
  */
+
+#ifndef MBF_CBAT9001_H_
+#define MBF_CBAT9001_H_
+
+#include "mbsys_reson.h"
 
 /* maximum number of beams and pixels */
 #define MBF_CBAT9001_MAXBEAMS 60
@@ -194,3 +198,5 @@ struct mbf_cbat9001_struct {
 	short int amp[MBSYS_RESON_MAXBEAMS];
 	/* ??? */
 };
+
+#endif  /* MBF_CBAT9001_H_ */

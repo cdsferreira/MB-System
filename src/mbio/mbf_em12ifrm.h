@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_em12ifrm.h	12/5/00
- *	$Id$
  *
- *    Copyright (c) 2000-2017 by
+ *    Copyright (c) 2000-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -66,6 +65,9 @@
  *      datagrams are recorded for each ping.
  *
  */
+
+#ifndef MBF_EM12IFRM_H_
+#define MBF_EM12IFRM_H_
 
 /* maximum number of beams and pixels */
 #define MBF_EM12IFRM_MAXBEAMS 81
@@ -244,3 +246,5 @@ struct mbf_em12ifrm_struct {
 	/* the processed sidescan alongtrack distances
 	    in distance resolution units */
 };
+
+#endif  /* MBF_EM12IFRM_H_ */

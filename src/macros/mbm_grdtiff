@@ -3,7 +3,7 @@
 #    The MB-system:	mbm_grdtiff.perl	11/3/1999
 #    $Id$
 #
-#    Copyright (c) 1999-2017 by
+#    Copyright (c) 1999-2019 by
 #    D. W. Caress (caress@mbari.org)
 #      Monterey Bay Aquarium Research Institute
 #      Moss Landing, CA
@@ -32,7 +32,7 @@
 #
 # Basic Usage:
 #   mbm_grdtiff -Ifile [-Amagnitude[/azimuth/elevation]
-#            -Gcolor_mode -H -Kintensity_file -Oroot
+#            -Gcolor_mode -H -Kintensity_file -Nnudge_x/nudge_y -Oroot
 #            -S[color/shade] -V
 #            -Wcolor_style[/pallette[/ncolors]] ]
 #
@@ -127,7 +127,7 @@ while (@grdinfo)
 # Deal with command line arguments (accept but do not necessarily use any argument
 # accepted by mbm_grdplot)
 $command_line = "@ARGV";
-&MBGetopts('A:a:D%d%G%g%HhI:i:J:j:K:k:L:l:M+m+O:o:P:p:QqR:r:S%s%TtU:u:VvW:w:XxYyZ:z:');
+&MBGetopts('A:a:D%d%G%g%HhI:i:J:j:K:k:L:l:M+m+N:n:O:o:P:p:QqR:r:S%s%TtU:u:VvW:w:XxYyZ:z:');
 $shade_control = 	($opt_A || $opt_a);
 $color_flip_mode = 	($flg_D || $flg_d);
 $color_flip_control = 	($opt_D || $opt_d);
@@ -136,6 +136,7 @@ $help =    		($opt_H || $opt_h);
 $file_data =    	($opt_I || $opt_i);
 $file_intensity =    	($opt_K || $opt_k);
 $misc = 		($opt_M || $opt_m);
+$nudge = 		($opt_N || $opt_n);
 $root =    		($opt_O || $opt_o);
 $no_view_tiff = 	($opt_Q || $opt_q);
 $bounds = 		($opt_R || $opt_r);
@@ -224,6 +225,16 @@ if ($misc)
 			{
 			$make_worldfile = 1;
 			}
+		}
+	}
+
+# parse nudge values
+if ($nudge)
+	{
+	if ($nudge =~ /^(\S+)\/(\S+)/)
+		{
+		($nudge_x, $nudge_y) = $nudge =~ /^(\S+)\/(\S+)/;
+		$use_nudge = 1;
 		}
 	}
 
@@ -818,7 +829,6 @@ else
 	{
 	$cptfile = "$root.cpt";
 	}
-$gmtfile = "gmt.conf\$\$";
 
 # set macro gmt default settings
 if ($color_flip)
@@ -845,39 +855,39 @@ if (!open(FCMD,">$cmdfile"))
 	die "Cannot open output file $cmdfile\nMacro $program_name aborted.\n";
 	}
 
+# get user info
+$user = `whoami`;
+$date = `date`;
+$host = `hostname -s`;
+chop $user;
+chop $date;
+chop $host;
+
 # write the shellscript header
-print FCMD "#! /bin/csh -f\n";
+print FCMD "#!/usr/bin/env bash\n";
 print FCMD "#\n# Shellscript to create TIFF image of data in grd file\n";
-print FCMD "# Created by macro $program_name\n";
-print FCMD "#\n# This shellscript created by following command line:\n";
-print FCMD "# $program_name $command_line\n";
+print FCMD "#\n# Created by macro $program_name\n";
+print FCMD "#   User $user\n#   Computer $host\n#   Time: $date\n#\n";
+print FCMD "# Command line:\n";
+print FCMD "#   $program_name $command_line\n";
 
 # Define shell variables
 print FCMD "#\n# Define shell variables used in this script:\n";
-print FCMD "set TIFF_FILE       = $tiffile\n";
-print FCMD "set CPT_FILE        = $cptfile\n";
-print FCMD "set MAP_REGION      = $bounds_plot\n";
+print FCMD "TIFF_FILE=$tiffile\n";
+print FCMD "CPT_FILE=$cptfile\n";
+print FCMD "MAP_REGION=$bounds_plot\n";
 
-# Reset GMT defaults, saving old defaults
-print FCMD "#\n# Save existing GMT defaults\n";
-print FCMD "echo Saving GMT defaults...\n";
-print FCMD "gmt gmtdefaults > $gmtfile\n";
-print FCMD "#\n# Set new GMT defaults\n";
-print FCMD "echo Setting new GMT defaults...\n";
-foreach $gmt_def (@gmt_macro_defs) {
+# Set temporary GMT defaults
+print FCMD "#\n# Delete any existing gmt.conf file\n";
+print FCMD "if [[ -e gmt.conf ]]; then\n";
+print FCMD "  echo Deleting gmt.conf...\n";
+print FCMD "  /bin/rm gmt.conf\n";
+print FCMD "fi\n";
+print FCMD "#\n# Set temporary GMT defaults\n";
+print FCMD "echo Setting temporary GMT defaults...\n";
+foreach $gmt_def (@gmt_defs) {
 	($gmt_par, $gmt_var) = $gmt_def =~ /^([^\/]+)\/(.+)/;
-	print FCMD "gmtset $gmt_par $gmt_var\n";
-	}
-
-# Reset GMT defaults as per user commands
-if (@gmt_defs)
-	{
-	print FCMD "#\n# Set user defined GMT defaults\n";
-	print FCMD "echo Setting user defined GMT defaults...\n";
-	foreach $gmt_def (@gmt_defs) {
-		($gmt_par, $gmt_var) = $gmt_def =~ /^([^\/]+)\/(.+)/;
-		print FCMD "gmt gmtset $gmt_par $gmt_var\n";
-		}
+	print FCMD "gmt gmtset $gmt_par $gmt_var\n";
 	}
 
 # generate color pallette table file if needed
@@ -1134,8 +1144,11 @@ if (@files_intensity)
 
 # Define shell variables
 print FCMD "#\n# Define data files to be plotted:\n";
-print FCMD "set DATA_FILE        = $file_grd\n";
-print FCMD "set INTENSITY_FILE   = $file_int\n";
+print FCMD "DATA_FILE=$file_grd\n";
+if ($file_int)
+  {
+  print FCMD "INTENSITY_FILE=$file_int\n";
+  }
 
 # scale data if needed
 $file_use = "\$DATA_FILE";
@@ -1289,6 +1302,10 @@ if ($color_mode)
 		}
 	printf FCMD "-O\$TIFF_FILE \\\n\t";
 	printf FCMD "-R\$MAP_REGION -Jx1.0 \\\n\t";
+	if ($use_nudge)
+		{
+		printf FCMD "-N$nudge_x\/$nudge_y \\\n\t";
+		}
 	printf FCMD "-C\$CPT_FILE \\\n\t";
 	if ($color_mode == 2 || $color_mode == 3)
 		{
@@ -1323,30 +1340,49 @@ if ($file_slope)
 	printf FCMD "/bin/rm -f $file_slope\n";
 	}
 
-# display image on screen if desired
-print FCMD "#\n# Run $img_viewer\n";
-if ($img_viewer eq "feh")
-	{
-	$img_viewer_flag = "--scale-down";
-	}
-else
-	{
-	$img_viewer_flag = " ";
-	}
-if ($no_view_tiff)
-	{
-    print FCMD "#if (!(\$#argv > 0 && (\"\$1\" == \"-N\" || \"\$1\" == \"-n\"))) then\n";
-	print FCMD "#echo Running $img_viewer in background...\n";
-	print FCMD "#$img_viewer $img_viewer_flag $tiffile &\n";
-    print FCMD "#endif\n";
-	}
-else
-	{
-    print FCMD "if (!(\$#argv > 0 && (\"\$1\" == \"-N\" || \"\$1\" == \"-n\"))) then\n";
-	print FCMD "echo Running $img_viewer in background...\n";
-	print FCMD "$img_viewer $img_viewer_flag $tiffile &\n";
-    print FCMD "endif\n";
-	}
+# check mbdefaults and environment variables for a user defined image viewer
+# - otherwise attempt to use the system default image display program
+if ($no_view_tiff) {
+  $hash = "#";
+} else {
+  $hash = "";
+}
+print FCMD "$hash"; print FCMD "#\n";
+print FCMD "$hash"; print FCMD "# Display image file\n";
+print FCMD "$hash"; print FCMD "if [[ ! ( \$# > 0  && ( \$1 == \"-N\" || \$1 == \"-n\" ) ) ]]; then\n";
+print FCMD "$hash"; print FCMD "  echo Attempting to display the image...\n  #\n";
+print FCMD "$hash"; print FCMD "  # Get operating system name\n";
+print FCMD "$hash"; print FCMD "  os_name=\`uname -s\`\n  #\n";
+print FCMD "$hash"; print FCMD "  # Check for user defined image viewer\n";
+print FCMD "$hash"; print FCMD "  image_viewer=\`mbdefaults | grep \"img viewer:\" | cut -d \" \" -f 4\`\n";
+print FCMD "$hash"; print FCMD "  if [[ \$image_viewer == \"Default\" ]]; then\n";
+print FCMD "$hash"; print FCMD "    image_viewer=\"\"\n";
+print FCMD "$hash"; print FCMD "  fi\n";
+print FCMD "$hash"; print FCMD "  if [ -x \"\$(command -v \$image_viewer)\" ]; then\n";
+print FCMD "$hash"; print FCMD "    echo Displaying \$TIFF_FILE using user specified program \$image_viewer...\n";
+print FCMD "$hash"; print FCMD "    if [[ \$image_viewer == \"feh\" ]]; then\n";
+print FCMD "$hash"; print FCMD "      feh --scale-down \$TIFF_FILE &\n";
+print FCMD "$hash"; print FCMD "    else\n";
+print FCMD "$hash"; print FCMD "      \$image_viewer \$TIFF_FILE &\n";
+print FCMD "$hash"; print FCMD "    fi\n";
+print FCMD "$hash"; print FCMD "  elif [[ ( -x \"\$(command -v open)\" ) && ( \$os_name == \"Darwin\" ) ]]; then\n";
+print FCMD "$hash"; print FCMD "    echo Displaying $TIFF_FILE using system default program through open...\n";
+print FCMD "$hash"; print FCMD "    open \$TIFF_FILE\n";
+print FCMD "$hash"; print FCMD "  elif [[ -x \"\$(command -v gio)\" ]]; then\n";
+print FCMD "$hash"; print FCMD "    echo Displaying $TIFF_FILE using system default program through  gio open...\n";
+print FCMD "$hash"; print FCMD "    gio open \$TIFF_FILE\n";
+print FCMD "$hash"; print FCMD "  elif [[ -x \"\$(command -v xdg-open)\" ]]; then\n";
+print FCMD "$hash"; print FCMD "    echo Displaying $TIFF_FILE using system default program through xdg-open...\n";
+print FCMD "$hash"; print FCMD "    xdg-open \$TIFF_FILE\n";
+print FCMD "$hash"; print FCMD "  elif [[ -x \"\$(command -v cygstart)\" ]]; then\n";
+print FCMD "$hash"; print FCMD "    echo Displaying $TIFF_FILE using system default program through cygstart...\n";
+print FCMD "$hash"; print FCMD "    cygstart \$TIFF_FILE\n";
+print FCMD "$hash"; print FCMD "  elif [[ -x \"\$(command -v open)\" ]]; then\n";
+print FCMD "$hash"; print FCMD "    echo Displaying $TIFF_FILE using system default program through open...\n";
+print FCMD "$hash"; print FCMD "    open \$TIFF_FILE\n";
+print FCMD "$hash"; print FCMD "  fi\n";
+print FCMD "$hash"; print FCMD "fi\n";
+print FCMD "$hash"; print FCMD "#\n";
 
 # claim it's all over
 print FCMD "#\n# All done!\n";
@@ -1440,12 +1476,13 @@ if ($verbose)
 		{
 		print "    Data scale factor:        $data_scale\n";
 		}
-	printf "    Longitude min max:        %9.4f  %9.4f\n",
-		$xmin, $xmax;
-	printf "    Latitude min max:         %9.4f  %9.4f\n",
-		$ymin, $ymax;
-	printf "    Data min max:             %9.4g  %9.4g\n",
-		$zmin, $zmax;
+	printf "    Longitude min max:        %9.4f  %9.4f\n", $xmin, $xmax;
+	printf "    Latitude min max:         %9.4f  %9.4f\n", $ymin, $ymax;
+	printf "    Data min max:             %9.4g  %9.4g\n", $zmin, $zmax;
+	if ($use_nudge)
+		{
+    printf "    Nudge applied:        %.3f m east  %.3f m north\n", $nudge_x, $nudge_y;
+		}
 	print "\n  Primary Grid Plotting Controls:\n";
 	if ($color_mode && $stretch_color)
 		{

@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_xse.h	3/27/2000
- *	$Id$
  *
- *    Copyright (c) 2000-2017 by
+ *    Copyright (c) 2000-2019 by
  *    D. W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -168,6 +167,9 @@
  *          -------------------------------------------------------
  *
  */
+
+#ifndef MBSYS_XSE_H_
+#define MBSYS_XSE_H_
 
 /* maximum number of beams and pixels */
 #define MBSYS_XSE_MAXBEAMS 630
@@ -718,3 +720,5 @@ int mbsys_xse_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *kin
                           int *error);
 int mbsys_xse_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp, double *depth, double *velocity, int *error);
 int mbsys_xse_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
+
+#endif  /* MBSYS_XSE_H_ */

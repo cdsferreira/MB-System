@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_image83p.h	5/5/2008
- *	$Id$
  *
- *    Copyright (c) 2008-2017 by
+ *    Copyright (c) 2008-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -35,6 +34,9 @@
  *      which are passed in imagenex multibeam records
  *   4. Support for comment records is specific to MB-System.
  */
+
+#ifndef MBSYS_IMAGE83P_H_
+#define MBSYS_IMAGE83P_H_
 
 /* number of beams for imagex multibeam */
 #define MBSYS_IMAGE83P_BEAMS 480
@@ -114,3 +116,5 @@ int mbsys_image83p_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int 
                               double navlat, double speed, double heading, double draft, double roll, double pitch, double heave,
                               int *error);
 int mbsys_image83p_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
+
+#endif  /* MBSYS_IMAGE83P_H_ */

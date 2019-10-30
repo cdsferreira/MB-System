@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_hsldedmb.h	1/20/93
- *	$Id$
  *
- *    Copyright (c) 1993-2017 by
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -46,6 +45,9 @@
  * of the binary data structure used in the MBF_HSLDEDMB format.
  */
 
+#ifndef MBF_HSLDEDMB_H_
+#define MBF_HSLDEDMB_H_
+
 struct mbf_hsldedmb_data_struct {
 	unsigned int seconds;          /* seconds since 1/1/70 00:00:00 */
 	unsigned int microseconds;     /* microseconds */
@@ -72,3 +74,5 @@ struct mbf_hsldedmb_struct {
 	int kind;
 	struct mbf_hsldedmb_data_struct data;
 };
+
+#endif  /* MBF_HSLDEDMB_H_ */

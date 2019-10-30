@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbr_oicgeoda.c	2/16/99
- *	$Id$
  *
- *    Copyright (c) 1999-2017 by
+ *    Copyright (c) 1999-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -27,137 +26,18 @@
  *
  */
 
-/* standard include files */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
+#include "mb_status.h"
+#include "mb_swap.h"
 #include "mbf_oicmbari.h"
 #include "mbsys_oic.h"
-
-/* include for byte swapping on little-endian machines */
-#ifdef BYTESWAPPED
-#include "mb_swap.h"
-#endif
-
-/* essential function prototypes */
-int mbr_register_oicmbari(int verbose, void *mbio_ptr, int *error);
-int mbr_info_oicmbari(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
-                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
-                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
-                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
-                      double *beamwidth_ltrack, int *error);
-int mbr_alm_oicmbari(int verbose, void *mbio_ptr, int *error);
-int mbr_dem_oicmbari(int verbose, void *mbio_ptr, int *error);
-int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-
-static char rcs_id[] = "$Id$";
-
-/*--------------------------------------------------------------------*/
-int mbr_register_oicmbari(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_register_oicmbari";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-	}
-
-	/* get mb_io_ptr */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set format info parameters */
-	status = mbr_info_oicmbari(
-	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
-	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
-	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
-	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
-	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
-
-	/* set format and system specific function pointers */
-	mb_io_ptr->mb_io_format_alloc = &mbr_alm_oicmbari;
-	mb_io_ptr->mb_io_format_free = &mbr_dem_oicmbari;
-	mb_io_ptr->mb_io_store_alloc = &mbsys_oic_alloc;
-	mb_io_ptr->mb_io_store_free = &mbsys_oic_deall;
-	mb_io_ptr->mb_io_read_ping = &mbr_rt_oicmbari;
-	mb_io_ptr->mb_io_write_ping = &mbr_wt_oicmbari;
-	mb_io_ptr->mb_io_dimensions = &mbsys_oic_dimensions;
-	mb_io_ptr->mb_io_extract = &mbsys_oic_extract;
-	mb_io_ptr->mb_io_insert = &mbsys_oic_insert;
-	mb_io_ptr->mb_io_extract_nav = &mbsys_oic_extract_nav;
-	mb_io_ptr->mb_io_insert_nav = &mbsys_oic_insert_nav;
-	mb_io_ptr->mb_io_extract_altitude = &mbsys_oic_extract_altitude;
-	mb_io_ptr->mb_io_insert_altitude = &mbsys_oic_insert_altitude;
-	mb_io_ptr->mb_io_extract_svp = NULL;
-	mb_io_ptr->mb_io_insert_svp = NULL;
-	mb_io_ptr->mb_io_ttimes = &mbsys_oic_ttimes;
-	mb_io_ptr->mb_io_detects = &mbsys_oic_detects;
-	mb_io_ptr->mb_io_copyrecord = &mbsys_oic_copy;
-	mb_io_ptr->mb_io_extract_rawss = NULL;
-	mb_io_ptr->mb_io_insert_rawss = NULL;
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
-		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
-		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
-		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
-		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
-		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
-		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
-		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
-		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
-		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
-		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
-		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
-		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
-		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
-		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
-		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
-		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
-		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
-		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
-		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
-		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
-		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
-		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
-		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
-		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
-		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
-		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
-		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
-		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
-		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
-		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
-		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
-		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
-		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
-		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
-		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
-		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
-		fprintf(stderr, "dbg2       error:              %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:         %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
 
 /*--------------------------------------------------------------------*/
 int mbr_info_oicmbari(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
@@ -165,13 +45,10 @@ int mbr_info_oicmbari(int verbose, int *system, int *beams_bath_max, int *beams_
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error) {
-	char *function_name = "mbr_info_oicmbari";
 	int status = MB_SUCCESS;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 	}
@@ -192,9 +69,9 @@ int mbr_info_oicmbari(int verbose, int *system, int *beams_bath_max, int *beams_
 	        MB_DESCRIPTION_LENGTH);
 	*numfile = 1;
 	*filetype = MB_FILETYPE_NORMAL;
-	*variable_beams = MB_YES;
-	*traveltime = MB_YES;
-	*beam_flagging = MB_YES;
+	*variable_beams = true;
+	*traveltime = true;
+	*beam_flagging = true;
 	*platform_source = MB_DATA_NONE;
 	*nav_source = MB_DATA_DATA;
 	*sensordepth_source = MB_DATA_DATA;
@@ -204,9 +81,8 @@ int mbr_info_oicmbari(int verbose, int *system, int *beams_bath_max, int *beams_
 	*beamwidth_xtrack = 0.0;
 	*beamwidth_ltrack = 0.0;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       system:             %d\n", *system);
 		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", *beams_bath_max);
@@ -233,40 +109,26 @@ int mbr_info_oicmbari(int verbose, int *system, int *beams_bath_max, int *beams_
 		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_alm_oicmbari(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_alm_oicmbari";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_oicmbari_struct *dataplus;
-	struct mbf_oicmbari_header_struct *header;
-	struct mbf_oicmbari_data_struct *data;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set initial status */
-	status = MB_SUCCESS;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* allocate memory for data structure */
 	mb_io_ptr->structure_size = sizeof(struct mbf_oicmbari_struct);
-	status = mb_mallocd(verbose, __FILE__, __LINE__, mb_io_ptr->structure_size, (void **)&mb_io_ptr->raw_data, error);
-	dataplus = (struct mbf_oicmbari_struct *)mb_io_ptr->raw_data;
-	header = &(dataplus->header);
-	data = &(dataplus->data);
+	int status = mb_mallocd(verbose, __FILE__, __LINE__, mb_io_ptr->structure_size, (void **)&mb_io_ptr->raw_data, error);
+	struct mbf_oicmbari_struct *dataplus = (struct mbf_oicmbari_struct *)mb_io_ptr->raw_data;
+	struct mbf_oicmbari_header_struct *header = &(dataplus->header);
+	struct mbf_oicmbari_data_struct *data = &(dataplus->data);
 	header->num_chan = 0;
 	header->beams_bath = 0;
 	header->beams_amp = 0;
@@ -275,7 +137,7 @@ int mbr_alm_oicmbari(int verbose, void *mbio_ptr, int *error) {
 	header->pixels_ss = 0;
 	header->ss_chan_port = -1;
 	header->ss_chan_stbd = -1;
-	for (i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
+	for (int i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
 		header->channel[i].offset = 0;
 		header->channel[i].num_samples = 0;
 		data->rawsize[i] = 0;
@@ -296,45 +158,34 @@ int mbr_alm_oicmbari(int verbose, void *mbio_ptr, int *error) {
 	data->ssalongtrack = NULL;
 	status = mbsys_oic_alloc(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_dem_oicmbari(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_dem_oicmbari";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_oicmbari_struct *dataplus;
-	struct mbf_oicmbari_header_struct *header;
-	struct mbf_oicmbari_data_struct *data;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	dataplus = (struct mbf_oicmbari_struct *)mb_io_ptr->raw_data;
-	header = &(dataplus->header);
-	data = &(dataplus->data);
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbf_oicmbari_struct *dataplus = (struct mbf_oicmbari_struct *)mb_io_ptr->raw_data;
+	struct mbf_oicmbari_data_struct *data = &(dataplus->data);
+
+	int status = MB_SUCCESS;
 
 	/* deallocate memory for data descriptor */
-	for (i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
+	for (int i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
 		if (data->raw[i] != NULL)
 			status = mb_freed(verbose, __FILE__, __LINE__, (void **)&(data->raw[i]), error);
 	}
@@ -361,29 +212,19 @@ int mbr_dem_oicmbari(int verbose, void *mbio_ptr, int *error) {
 	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->raw_data, error);
 	status = mbsys_oic_deall(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_rt_oicmbari";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_oicmbari_struct *dataplus;
-	struct mbf_oicmbari_header_struct *header;
-	struct mbf_oicmbari_data_struct *data;
-	struct mbsys_oic_struct *store;
 	char buffer[MBF_OICMBARI_HEADER_SIZE];
-	char *comment;
 	int read_size;
 	int data_size;
 	char *char_ptr;
@@ -391,12 +232,9 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	int *int_ptr;
 	float *float_ptr;
 	int index;
-	int i, j;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -404,17 +242,18 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor and data structure */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	store = (struct mbsys_oic_struct *)store_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbsys_oic_struct *store = (struct mbsys_oic_struct *)store_ptr;
 
 	/* get pointer to raw data structure */
-	dataplus = (struct mbf_oicmbari_struct *)mb_io_ptr->raw_data;
-	header = &(dataplus->header);
-	data = &(dataplus->data);
-	comment = dataplus->client;
+	struct mbf_oicmbari_struct *dataplus = (struct mbf_oicmbari_struct *)mb_io_ptr->raw_data;
+	struct mbf_oicmbari_header_struct *header = &(dataplus->header);
+	struct mbf_oicmbari_data_struct *data = &(dataplus->data);
 
 	/* set file position */
 	mb_io_ptr->file_pos = mb_io_ptr->file_bytes;
+
+	int status = MB_SUCCESS;
 
 	/* read next four bytes to look for start of header */
 	if ((read_size = fread(buffer, 1, 4, mb_io_ptr->mbfp)) != 4) {
@@ -424,7 +263,7 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 	/* read another byted at a time until header found */
 	while (status == MB_SUCCESS && (buffer[0] != 'G' || buffer[1] != 'E' || buffer[2] != '2')) {
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 			buffer[i] = buffer[i + 1];
 		if ((read_size = fread(&buffer[3], 1, 1, mb_io_ptr->mbfp)) != 1) {
 			status = MB_FAILURE;
@@ -445,9 +284,9 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index = 3;
 		header->type = buffer[index];
 		index += 1;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->proc_status);
+		mb_get_binary_int(false, &buffer[index], &header->proc_status);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->data_size);
+		mb_get_binary_int(false, &buffer[index], &header->data_size);
 		index += 4;
 		header->client_size = buffer[index];
 		index += 1;
@@ -457,63 +296,63 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index += 1;
 		header->nav_type = buffer[index];
 		index += 1;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->utm_zone);
+		mb_get_binary_int(false, &buffer[index], &header->utm_zone);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->ship_x);
+		mb_get_binary_float(false, &buffer[index], &header->ship_x);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->ship_y);
+		mb_get_binary_float(false, &buffer[index], &header->ship_y);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->ship_course);
+		mb_get_binary_float(false, &buffer[index], &header->ship_course);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->ship_speed);
+		mb_get_binary_float(false, &buffer[index], &header->ship_speed);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->sec);
+		mb_get_binary_int(false, &buffer[index], &header->sec);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->usec);
+		mb_get_binary_int(false, &buffer[index], &header->usec);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->spare_gain);
+		mb_get_binary_float(false, &buffer[index], &header->spare_gain);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_heading);
+		mb_get_binary_float(false, &buffer[index], &header->fish_heading);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_depth);
+		mb_get_binary_float(false, &buffer[index], &header->fish_depth);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_range);
+		mb_get_binary_float(false, &buffer[index], &header->fish_range);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_pulse_width);
+		mb_get_binary_float(false, &buffer[index], &header->fish_pulse_width);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->gain_c0);
+		mb_get_binary_float(false, &buffer[index], &header->gain_c0);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->gain_c1);
+		mb_get_binary_float(false, &buffer[index], &header->gain_c1);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->gain_c2);
+		mb_get_binary_float(false, &buffer[index], &header->gain_c2);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_pitch);
+		mb_get_binary_float(false, &buffer[index], &header->fish_pitch);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_roll);
+		mb_get_binary_float(false, &buffer[index], &header->fish_roll);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_yaw);
+		mb_get_binary_float(false, &buffer[index], &header->fish_yaw);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_x);
+		mb_get_binary_float(false, &buffer[index], &header->fish_x);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_y);
+		mb_get_binary_float(false, &buffer[index], &header->fish_y);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_layback);
+		mb_get_binary_float(false, &buffer[index], &header->fish_layback);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_altitude);
+		mb_get_binary_float(false, &buffer[index], &header->fish_altitude);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->fish_altitude_samples);
+		mb_get_binary_int(false, &buffer[index], &header->fish_altitude_samples);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->fish_ping_period);
+		mb_get_binary_float(false, &buffer[index], &header->fish_ping_period);
 		index += 4;
-		mb_get_binary_float(MB_NO, &buffer[index], &header->sound_velocity);
+		mb_get_binary_float(false, &buffer[index], &header->sound_velocity);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->num_chan);
+		mb_get_binary_int(false, &buffer[index], &header->num_chan);
 		index += 4;
-		for (i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
-			mb_get_binary_int(MB_NO, &buffer[index], &header->channel[i].offset);
+		for (int i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
+			mb_get_binary_int(false, &buffer[index], &header->channel[i].offset);
 			index += 4;
 		}
-		for (i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
+		for (int i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
 			header->channel[i].type = buffer[index];
 			index += 1;
 			header->channel[i].side = buffer[index];
@@ -522,24 +361,24 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			index += 1;
 			header->channel[i].empty = buffer[index];
 			index += 1;
-			mb_get_binary_int(MB_NO, &buffer[index], &header->channel[i].frequency);
+			mb_get_binary_int(false, &buffer[index], &header->channel[i].frequency);
 			index += 4;
-			mb_get_binary_int(MB_NO, &buffer[index], &header->channel[i].num_samples);
+			mb_get_binary_int(false, &buffer[index], &header->channel[i].num_samples);
 			index += 4;
 		}
-		mb_get_binary_int(MB_NO, &buffer[index], &header->beams_bath);
+		mb_get_binary_int(false, &buffer[index], &header->beams_bath);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->beams_amp);
+		mb_get_binary_int(false, &buffer[index], &header->beams_amp);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->bath_chan_port);
+		mb_get_binary_int(false, &buffer[index], &header->bath_chan_port);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->bath_chan_stbd);
+		mb_get_binary_int(false, &buffer[index], &header->bath_chan_stbd);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->pixels_ss);
+		mb_get_binary_int(false, &buffer[index], &header->pixels_ss);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->ss_chan_port);
+		mb_get_binary_int(false, &buffer[index], &header->ss_chan_port);
 		index += 4;
-		mb_get_binary_int(MB_NO, &buffer[index], &header->ss_chan_stbd);
+		mb_get_binary_int(false, &buffer[index], &header->ss_chan_stbd);
 		index += 4;
 	}
 
@@ -576,7 +415,7 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 	/* loop over each data channel and read data */
 	if (status == MB_SUCCESS && header->num_chan > 0) {
-		for (i = 0; i < header->num_chan; i++) {
+		for (int i = 0; i < header->num_chan; i++) {
 			/* get size of data array */
 			if (header->channel[i].size == OIC_SIZE_CHAR)
 				data_size = sizeof(char) * header->channel[i].num_samples;
@@ -610,25 +449,25 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			if (status == MB_SUCCESS) {
 				if (header->channel[i].size == OIC_SIZE_SHORT) {
 					short_ptr = (short *)data->raw[i];
-					for (j = 0; j < header->channel[i].num_samples; j++) {
+					for (int j = 0; j < header->channel[i].num_samples; j++) {
 						short_ptr[j] = mb_swap_short(short_ptr[j]);
 					}
 				}
 				else if (header->channel[i].size == OIC_SIZE_INT) {
 					int_ptr = (int *)data->raw[i];
-					for (j = 0; j < header->channel[i].num_samples; j++) {
+					for (int j = 0; j < header->channel[i].num_samples; j++) {
 						int_ptr[j] = mb_swap_int(int_ptr[j]);
 					}
 				}
 				else if (header->channel[i].size == OIC_SIZE_FLOAT) {
 					float_ptr = (float *)data->raw[i];
-					for (j = 0; j < header->channel[i].num_samples; j++) {
+					for (int j = 0; j < header->channel[i].num_samples; j++) {
 						mb_swap_float(&float_ptr[j]);
 					}
 				}
 				else if (header->channel[i].size == OIC_SIZE_3FLOAT) {
 					float_ptr = (float *)data->raw[i];
-					for (j = 0; j < 3 * header->channel[i].num_samples; j++) {
+					for (int j = 0; j < 3 * header->channel[i].num_samples; j++) {
 						mb_swap_float(&float_ptr[j]);
 					}
 				}
@@ -637,9 +476,8 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		}
 	}
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  New header read in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New header read in function <%s>\n", __func__);
 		fprintf(stderr, "dbg5       type:             %d\n", header->type);
 		fprintf(stderr, "dbg5       proc_status:      %d\n", header->proc_status);
 		fprintf(stderr, "dbg5       data_size:        %d\n", header->data_size);
@@ -680,7 +518,7 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5       pixels_ss:        %d\n", header->pixels_ss);
 		fprintf(stderr, "dbg5       ss_chan_port:     %d\n", header->ss_chan_port);
 		fprintf(stderr, "dbg5       ss_chan_stbd:     %d\n", header->ss_chan_stbd);
-		for (i = 0; i < header->num_chan; i++) {
+		for (int i = 0; i < header->num_chan; i++) {
 			fprintf(stderr, "dbg5       offset[%1d]:      %d\n", i, header->channel[i].offset);
 			fprintf(stderr, "dbg5       type[%1d]:        %d\n", i, header->channel[i].type);
 			fprintf(stderr, "dbg5       side[%1d]:        %d\n", i, header->channel[i].side);
@@ -689,8 +527,8 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			fprintf(stderr, "dbg5       frequency[%1d]:   %d\n", i, header->channel[i].frequency);
 			fprintf(stderr, "dbg5       num_samples[%1d]: %d\n", i, header->channel[i].num_samples);
 		}
-		for (i = 0; i < header->num_chan; i++) {
-			fprintf(stderr, "\ndbg5  New data read in function <%s>\n", function_name);
+		for (int i = 0; i < header->num_chan; i++) {
+			fprintf(stderr, "\ndbg5  New data read in function <%s>\n", __func__);
 			fprintf(stderr, "dbg5       channel:   %d\n", i);
 			if (header->channel[i].type == OIC_TYPE_SIDESCAN)
 				fprintf(stderr, "dbg5       data type: sidescan\n");
@@ -711,35 +549,35 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			if (header->channel[i].size == OIC_SIZE_CHAR) {
 				fprintf(stderr, "dbg5       size:      char (1 byte)\n");
 				char_ptr = (char *)data->raw[i];
-				for (j = 0; j < header->channel[i].num_samples; j++) {
+				for (int j = 0; j < header->channel[i].num_samples; j++) {
 					fprintf(stderr, "dbg5      %5d  %5d\n", j, char_ptr[j]);
 				}
 			}
 			else if (header->channel[i].size == OIC_SIZE_SHORT) {
 				fprintf(stderr, "dbg5        size:      short (2 bytes)\n");
 				short_ptr = (short *)data->raw[i];
-				for (j = 0; j < header->channel[i].num_samples; j++) {
+				for (int j = 0; j < header->channel[i].num_samples; j++) {
 					fprintf(stderr, "dbg5      %5d  %5d\n", j, short_ptr[j]);
 				}
 			}
 			else if (header->channel[i].size == OIC_SIZE_INT) {
 				fprintf(stderr, "dbg5       size:       int (4 bytes)\n");
 				int_ptr = (int *)data->raw[i];
-				for (j = 0; j < header->channel[i].num_samples; j++) {
+				for (int j = 0; j < header->channel[i].num_samples; j++) {
 					fprintf(stderr, "dbg5      %5d  %5d\n", j, int_ptr[j]);
 				}
 			}
 			else if (header->channel[i].size == OIC_SIZE_FLOAT) {
 				fprintf(stderr, "dbg5       size:       float (4 bytes)\n");
 				float_ptr = (float *)data->raw[i];
-				for (j = 0; j < header->channel[i].num_samples; j++) {
+				for (int j = 0; j < header->channel[i].num_samples; j++) {
 					fprintf(stderr, "dbg5      %5d  %10f\n", j, float_ptr[j]);
 				}
 			}
 			else if (header->channel[i].size == OIC_SIZE_3FLOAT) {
 				fprintf(stderr, "dbg5       size:       3 floats (12 bytes)\n");
 				float_ptr = (float *)data->raw[i];
-				for (j = 0; j < header->channel[i].num_samples; j++) {
+				for (int j = 0; j < header->channel[i].num_samples; j++) {
 					fprintf(stderr, "dbg5      %5d  %10f %10f %10f\n", j, float_ptr[3 * j], float_ptr[3 * j + 1],
 					        float_ptr[3 * j + 2]);
 				}
@@ -882,17 +720,17 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 /* byte swap the processed data if necessary */
 #ifdef BYTESWAPPED
 	if (status == MB_SUCCESS) {
-		for (j = 0; j < header->beams_bath; j++) {
+		for (int j = 0; j < header->beams_bath; j++) {
 			mb_swap_float(&data->bath[j]);
 			mb_swap_float(&data->bathacrosstrack[j]);
 			mb_swap_float(&data->bathalongtrack[j]);
 			mb_swap_float(&data->tt[j]);
 			mb_swap_float(&data->angle[j]);
 		}
-		for (j = 0; j < header->beams_amp; j++) {
+		for (int j = 0; j < header->beams_amp; j++) {
 			mb_swap_float(&data->amp[j]);
 		}
-		for (j = 0; j < header->pixels_ss; j++) {
+		for (int j = 0; j < header->pixels_ss; j++) {
 			mb_swap_float(&data->ssacrosstrack[j]);
 			mb_swap_float(&data->ssalongtrack[j]);
 			mb_swap_float(&data->ss[j]);
@@ -900,24 +738,23 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 #endif
 
-	/* print debug statements */
 	if (verbose >= 5 && status == MB_SUCCESS) {
-		fprintf(stderr, "\ndbg5  New processed data read in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New processed data read in function <%s>\n", __func__);
 		fprintf(stderr, "dbg5       beams_bath:       %d\n", header->beams_bath);
 		fprintf(stderr, "dbg5       beam   bath  xtrack ltrack   tt   angle\n");
-		for (i = 0; i < header->beams_bath; i++) {
+		for (int i = 0; i < header->beams_bath; i++) {
 			fprintf(stderr, "dbg5       %4d %10f %10f %10f %10f %10f\n", i, data->bath[i], data->bathacrosstrack[i],
 			        data->bathalongtrack[i], data->tt[i], data->angle[i]);
 		}
 		fprintf(stderr, "dbg5       beams_amp:       %d\n", header->beams_amp);
 		fprintf(stderr, "dbg5       beam   amp  xtrack ltrack\n");
-		for (i = 0; i < header->beams_amp; i++) {
+		for (int i = 0; i < header->beams_amp; i++) {
 			fprintf(stderr, "dbg5       %4d %10f %10f %10f\n", i, data->amp[i], data->bathacrosstrack[i],
 			        data->bathalongtrack[i]);
 		}
 		fprintf(stderr, "dbg5       pixels_ss:       %d\n", header->pixels_ss);
 		fprintf(stderr, "dbg5       beam   ss  xtrack ltrack\n");
-		for (i = 0; i < header->beams_amp; i++) {
+		for (int i = 0; i < header->beams_amp; i++) {
 			fprintf(stderr, "dbg5       %4d %10f %10f %10f\n", i, data->ss[i], data->ssacrosstrack[i], data->ssalongtrack[i]);
 		}
 	}
@@ -978,7 +815,7 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		store->ss_chan_stbd = header->ss_chan_stbd;
 
 		/* raw data */
-		for (i = 0; i < store->num_chan; i++) {
+		for (int i = 0; i < store->num_chan; i++) {
 			/* copy channel info */
 			store->channel[i].offset = header->channel[i].offset;
 			store->channel[i].type = header->channel[i].type;
@@ -998,7 +835,7 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 			/* copy the data */
 			if (status == MB_SUCCESS) {
-				for (j = 0; j < store->rawsize[i]; j++) {
+				for (int j = 0; j < store->rawsize[i]; j++) {
 					store->raw[i][j] = data->raw[i][j];
 				}
 			}
@@ -1056,7 +893,7 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			status = mb_mallocd(verbose, __FILE__, __LINE__, store->pixels_ss_alloc * sizeof(float),
 			                    (void **)&(store->ssalongtrack), error);
 		}
-		for (i = 0; i < store->beams_bath; i++) {
+		for (int i = 0; i < store->beams_bath; i++) {
 			store->beamflag[i] = data->beamflag[i];
 			store->bath[i] = data->bath[i];
 			store->bathacrosstrack[i] = data->bathacrosstrack[i];
@@ -1064,43 +901,33 @@ int mbr_rt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			store->tt[i] = data->tt[i];
 			store->angle[i] = data->angle[i];
 		}
-		for (i = 0; i < store->beams_amp; i++) {
+		for (int i = 0; i < store->beams_amp; i++) {
 			store->amp[i] = data->amp[i];
 		}
-		for (i = 0; i < store->pixels_ss; i++) {
+		for (int i = 0; i < store->pixels_ss; i++) {
 			store->ss[i] = data->ss[i];
 			store->ssacrosstrack[i] = data->ssacrosstrack[i];
 			store->ssalongtrack[i] = data->ssalongtrack[i];
 		}
 
 		/* client */
-		for (i = 0; i < header->client_size; i++)
+		for (int i = 0; i < header->client_size; i++)
 			store->client[i] = dataplus->client[i];
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_wt_oicmbari";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_oicmbari_struct *dataplus;
-	struct mbf_oicmbari_header_struct *header;
-	struct mbf_oicmbari_data_struct *data;
-	struct mbsys_oic_struct *store;
 	char buffer[MBF_OICMBARI_HEADER_SIZE];
-	char *comment;
 	int write_size;
 	int data_size;
 	char *char_ptr;
@@ -1108,12 +935,9 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	int *int_ptr;
 	float *float_ptr;
 	int index;
-	int i, j;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1121,14 +945,15 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor and data storage */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	store = (struct mbsys_oic_struct *)store_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbsys_oic_struct *store = (struct mbsys_oic_struct *)store_ptr;
 
 	/* get pointer to raw data structure */
-	dataplus = (struct mbf_oicmbari_struct *)mb_io_ptr->raw_data;
-	header = &(dataplus->header);
-	data = &(dataplus->data);
-	comment = dataplus->client;
+	struct mbf_oicmbari_struct *dataplus = (struct mbf_oicmbari_struct *)mb_io_ptr->raw_data;
+	struct mbf_oicmbari_header_struct *header = &(dataplus->header);
+	struct mbf_oicmbari_data_struct *data = &(dataplus->data);
+
+	int status = MB_SUCCESS;
 
 	/* first translate values from data storage structure */
 	if (store != NULL) {
@@ -1186,7 +1011,7 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		header->ss_chan_stbd = store->ss_chan_stbd;
 
 		/* raw data */
-		for (i = 0; i < header->num_chan; i++) {
+		for (int i = 0; i < header->num_chan; i++) {
 			/* copy channel info */
 			header->channel[i].offset = store->channel[i].offset;
 			header->channel[i].type = store->channel[i].type;
@@ -1206,7 +1031,7 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 			/* copy the data */
 			if (status == MB_SUCCESS) {
-				for (j = 0; j < data->rawsize[i]; j++) {
+				for (int j = 0; j < data->rawsize[i]; j++) {
 					data->raw[i][j] = store->raw[i][j];
 				}
 			}
@@ -1261,7 +1086,7 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			status = mb_mallocd(verbose, __FILE__, __LINE__, data->pixels_ss_alloc * sizeof(float),
 			                    (void **)&(data->ssalongtrack), error);
 		}
-		for (i = 0; i < header->beams_bath; i++) {
+		for (int i = 0; i < header->beams_bath; i++) {
 			data->beamflag[i] = store->beamflag[i];
 			data->bath[i] = store->bath[i];
 			data->bathacrosstrack[i] = store->bathacrosstrack[i];
@@ -1269,23 +1094,22 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			data->tt[i] = store->tt[i];
 			data->angle[i] = store->angle[i];
 		}
-		for (i = 0; i < header->beams_amp; i++) {
+		for (int i = 0; i < header->beams_amp; i++) {
 			data->amp[i] = store->amp[i];
 		}
-		for (i = 0; i < header->pixels_ss; i++) {
+		for (int i = 0; i < header->pixels_ss; i++) {
 			data->ss[i] = store->ss[i];
 			data->ssacrosstrack[i] = store->ssacrosstrack[i];
 			data->ssalongtrack[i] = store->ssalongtrack[i];
 		}
 
 		/* client */
-		for (i = 0; i < header->client_size; i++)
+		for (int i = 0; i < header->client_size; i++)
 			dataplus->client[i] = store->client[i];
 	}
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  New header set in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New header set in function <%s>\n", __func__);
 		fprintf(stderr, "dbg5       type:             %d\n", header->type);
 		fprintf(stderr, "dbg5       proc_status:      %d\n", header->proc_status);
 		fprintf(stderr, "dbg5       data_size:        %d\n", header->data_size);
@@ -1326,7 +1150,7 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5       pixels_ss:        %d\n", header->pixels_ss);
 		fprintf(stderr, "dbg5       ss_chan_port:     %d\n", header->ss_chan_port);
 		fprintf(stderr, "dbg5       ss_chan_stbd:     %d\n", header->ss_chan_stbd);
-		for (i = 0; i < header->num_chan; i++) {
+		for (int i = 0; i < header->num_chan; i++) {
 			fprintf(stderr, "dbg5       offset[%1d]:      %d\n", i, header->channel[i].offset);
 			fprintf(stderr, "dbg5       type[%1d]:        %d\n", i, header->channel[i].type);
 			fprintf(stderr, "dbg5       side[%1d]:        %d\n", i, header->channel[i].side);
@@ -1341,8 +1165,8 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 	/* print debug messages */
 	if (verbose >= 5 && status == MB_SUCCESS) {
-		for (i = 0; i < header->num_chan; i++) {
-			fprintf(stderr, "\ndbg5  New data set in function <%s>\n", function_name);
+		for (int i = 0; i < header->num_chan; i++) {
+			fprintf(stderr, "\ndbg5  New data set in function <%s>\n", __func__);
 			fprintf(stderr, "dbg5       channel:   %d\n", i);
 			if (header->channel[i].type == OIC_TYPE_SIDESCAN)
 				fprintf(stderr, "dbg5       data type: sidescan\n");
@@ -1363,35 +1187,35 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			if (header->channel[i].size == OIC_SIZE_CHAR) {
 				fprintf(stderr, "dbg5       size:      char (1 byte)\n");
 				char_ptr = (char *)data->raw[i];
-				for (j = 0; j < header->channel[i].num_samples; j++) {
+				for (int j = 0; j < header->channel[i].num_samples; j++) {
 					fprintf(stderr, "dbg5      %5d  %5d\n", j, char_ptr[j]);
 				}
 			}
 			else if (header->channel[i].size == OIC_SIZE_SHORT) {
 				fprintf(stderr, "dbg5       size:      short (2 bytes)\n");
 				short_ptr = (short *)data->raw[i];
-				for (j = 0; j < header->channel[i].num_samples; j++) {
+				for (int j = 0; j < header->channel[i].num_samples; j++) {
 					fprintf(stderr, "dbg5      %5d  %5d\n", j, short_ptr[j]);
 				}
 			}
 			else if (header->channel[i].size == OIC_SIZE_INT) {
 				fprintf(stderr, "dbg5       size:      int (4 bytes)\n");
 				int_ptr = (int *)data->raw[i];
-				for (j = 0; j < header->channel[i].num_samples; j++) {
+				for (int j = 0; j < header->channel[i].num_samples; j++) {
 					fprintf(stderr, "dbg5      %5d  %5d\n", j, int_ptr[j]);
 				}
 			}
 			else if (header->channel[i].size == OIC_SIZE_FLOAT) {
 				fprintf(stderr, "dbg5       size:      float (4 bytes)\n");
 				float_ptr = (float *)data->raw[i];
-				for (j = 0; j < header->channel[i].num_samples; j++) {
+				for (int j = 0; j < header->channel[i].num_samples; j++) {
 					fprintf(stderr, "dbg5      %5d  %10f\n", j, float_ptr[j]);
 				}
 			}
 			else if (header->channel[i].size == OIC_SIZE_3FLOAT) {
 				fprintf(stderr, "dbg5       size:      3 floats (12 bytes)\n");
 				float_ptr = (float *)data->raw[i];
-				for (j = 0; j < header->channel[i].num_samples; j++) {
+				for (int j = 0; j < header->channel[i].num_samples; j++) {
 					fprintf(stderr, "dbg5      %5d  %10f %10f %10f\n", j, float_ptr[3 * j], float_ptr[3 * j + 1],
 					        float_ptr[3 * j + 2]);
 				}
@@ -1401,24 +1225,23 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		}
 	}
 
-	/* print debug statements */
 	if (verbose >= 5 && status == MB_SUCCESS) {
-		fprintf(stderr, "\ndbg5  New processed data set in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New processed data set in function <%s>\n", __func__);
 		fprintf(stderr, "dbg5       beams_bath:       %d\n", header->beams_bath);
 		fprintf(stderr, "dbg5       beam   bath  xtrack ltrack   tt   angle\n");
-		for (i = 0; i < header->beams_bath; i++) {
+		for (int i = 0; i < header->beams_bath; i++) {
 			fprintf(stderr, "dbg5       %4d %10f %10f %10f %10f %10f\n", i, data->bath[i], data->bathacrosstrack[i],
 			        data->bathalongtrack[i], data->tt[i], data->angle[i]);
 		}
 		fprintf(stderr, "dbg5       beams_amp:       %d\n", header->beams_amp);
 		fprintf(stderr, "dbg5       beam   amp  xtrack ltrack\n");
-		for (i = 0; i < header->beams_amp; i++) {
+		for (int i = 0; i < header->beams_amp; i++) {
 			fprintf(stderr, "dbg5       %4d %10f %10f %10f\n", i, data->amp[i], data->bathacrosstrack[i],
 			        data->bathalongtrack[i]);
 		}
 		fprintf(stderr, "dbg5       pixels_ss:       %d\n", header->pixels_ss);
 		fprintf(stderr, "dbg5       beam   ss  xtrack ltrack\n");
-		for (i = 0; i < header->pixels_ss; i++) {
+		for (int i = 0; i < header->pixels_ss; i++) {
 			fprintf(stderr, "dbg5       %4d %10f %10f %10f\n", i, data->ss[i], data->ssacrosstrack[i], data->ssalongtrack[i]);
 		}
 	}
@@ -1434,9 +1257,9 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index += 1;
 		buffer[index] = header->type;
 		index += 1;
-		mb_put_binary_int(MB_NO, header->proc_status, &buffer[index]);
+		mb_put_binary_int(false, header->proc_status, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->data_size, &buffer[index]);
+		mb_put_binary_int(false, header->data_size, &buffer[index]);
 		index += 4;
 		buffer[index] = header->client_size;
 		index += 1;
@@ -1446,63 +1269,63 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index += 1;
 		buffer[index] = header->nav_type;
 		index += 1;
-		mb_put_binary_int(MB_NO, header->utm_zone, &buffer[index]);
+		mb_put_binary_int(false, header->utm_zone, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->ship_x, &buffer[index]);
+		mb_put_binary_float(false, header->ship_x, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->ship_y, &buffer[index]);
+		mb_put_binary_float(false, header->ship_y, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->ship_course, &buffer[index]);
+		mb_put_binary_float(false, header->ship_course, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->ship_speed, &buffer[index]);
+		mb_put_binary_float(false, header->ship_speed, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->sec, &buffer[index]);
+		mb_put_binary_int(false, header->sec, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->usec, &buffer[index]);
+		mb_put_binary_int(false, header->usec, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->spare_gain, &buffer[index]);
+		mb_put_binary_float(false, header->spare_gain, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_heading, &buffer[index]);
+		mb_put_binary_float(false, header->fish_heading, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_depth, &buffer[index]);
+		mb_put_binary_float(false, header->fish_depth, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_range, &buffer[index]);
+		mb_put_binary_float(false, header->fish_range, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_pulse_width, &buffer[index]);
+		mb_put_binary_float(false, header->fish_pulse_width, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->gain_c0, &buffer[index]);
+		mb_put_binary_float(false, header->gain_c0, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->gain_c1, &buffer[index]);
+		mb_put_binary_float(false, header->gain_c1, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->gain_c2, &buffer[index]);
+		mb_put_binary_float(false, header->gain_c2, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_pitch, &buffer[index]);
+		mb_put_binary_float(false, header->fish_pitch, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_roll, &buffer[index]);
+		mb_put_binary_float(false, header->fish_roll, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_yaw, &buffer[index]);
+		mb_put_binary_float(false, header->fish_yaw, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_x, &buffer[index]);
+		mb_put_binary_float(false, header->fish_x, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_y, &buffer[index]);
+		mb_put_binary_float(false, header->fish_y, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_layback, &buffer[index]);
+		mb_put_binary_float(false, header->fish_layback, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_altitude, &buffer[index]);
+		mb_put_binary_float(false, header->fish_altitude, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->fish_altitude_samples, &buffer[index]);
+		mb_put_binary_int(false, header->fish_altitude_samples, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->fish_ping_period, &buffer[index]);
+		mb_put_binary_float(false, header->fish_ping_period, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, header->sound_velocity, &buffer[index]);
+		mb_put_binary_float(false, header->sound_velocity, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->num_chan, &buffer[index]);
+		mb_put_binary_int(false, header->num_chan, &buffer[index]);
 		index += 4;
-		for (i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
-			mb_put_binary_int(MB_NO, header->channel[i].offset, &buffer[index]);
+		for (int i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
+			mb_put_binary_int(false, header->channel[i].offset, &buffer[index]);
 			index += 4;
 		}
-		for (i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
+		for (int i = 0; i < MBF_OICMBARI_MAX_CHANNELS; i++) {
 			buffer[index] = header->channel[i].type;
 			index += 1;
 			buffer[index] = header->channel[i].side;
@@ -1511,24 +1334,24 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			index += 1;
 			buffer[index] = header->channel[i].empty;
 			index += 1;
-			mb_put_binary_int(MB_NO, header->channel[i].frequency, &buffer[index]);
+			mb_put_binary_int(false, header->channel[i].frequency, &buffer[index]);
 			index += 4;
-			mb_put_binary_int(MB_NO, header->channel[i].num_samples, &buffer[index]);
+			mb_put_binary_int(false, header->channel[i].num_samples, &buffer[index]);
 			index += 4;
 		}
-		mb_put_binary_int(MB_NO, header->beams_bath, &buffer[index]);
+		mb_put_binary_int(false, header->beams_bath, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->beams_amp, &buffer[index]);
+		mb_put_binary_int(false, header->beams_amp, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->bath_chan_port, &buffer[index]);
+		mb_put_binary_int(false, header->bath_chan_port, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->bath_chan_stbd, &buffer[index]);
+		mb_put_binary_int(false, header->bath_chan_stbd, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->pixels_ss, &buffer[index]);
+		mb_put_binary_int(false, header->pixels_ss, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->ss_chan_port, &buffer[index]);
+		mb_put_binary_int(false, header->ss_chan_port, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_NO, header->ss_chan_stbd, &buffer[index]);
+		mb_put_binary_int(false, header->ss_chan_stbd, &buffer[index]);
 		index += 4;
 	}
 
@@ -1553,7 +1376,7 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 	/* loop over each data channel and write data */
 	if (status == MB_SUCCESS && header->num_chan > 0) {
-		for (i = 0; i < header->num_chan; i++) {
+		for (int i = 0; i < header->num_chan; i++) {
 			/* get size of data array */
 			if (header->channel[i].size == OIC_SIZE_CHAR)
 				data_size = sizeof(char) * header->channel[i].num_samples;
@@ -1571,25 +1394,25 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			if (status == MB_SUCCESS) {
 				if (header->channel[i].size == OIC_SIZE_SHORT) {
 					short_ptr = (short *)data->raw[i];
-					for (j = 0; j < header->channel[i].num_samples; j++) {
+					for (int j = 0; j < header->channel[i].num_samples; j++) {
 						short_ptr[j] = mb_swap_short(short_ptr[j]);
 					}
 				}
 				else if (header->channel[i].size == OIC_SIZE_INT) {
 					int_ptr = (int *)data->raw[i];
-					for (j = 0; j < header->channel[i].num_samples; j++) {
+					for (int j = 0; j < header->channel[i].num_samples; j++) {
 						int_ptr[j] = mb_swap_int(int_ptr[j]);
 					}
 				}
 				else if (header->channel[i].size == OIC_SIZE_FLOAT) {
 					float_ptr = (float *)data->raw[i];
-					for (j = 0; j < header->channel[i].num_samples; j++) {
+					for (int j = 0; j < header->channel[i].num_samples; j++) {
 						mb_swap_float(&float_ptr[j]);
 					}
 				}
 				else if (header->channel[i].size == OIC_SIZE_3FLOAT) {
 					float_ptr = (float *)data->raw[i];
-					for (j = 0; j < 3 * header->channel[i].num_samples; j++) {
+					for (int j = 0; j < 3 * header->channel[i].num_samples; j++) {
 						mb_swap_float(&float_ptr[j]);
 					}
 				}
@@ -1609,17 +1432,17 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 /* byte swap the processed data if necessary */
 #ifdef BYTESWAPPED
 	if (status == MB_SUCCESS) {
-		for (j = 0; j < header->beams_bath; j++) {
+		for (int j = 0; j < header->beams_bath; j++) {
 			mb_swap_float(&data->bath[j]);
 			mb_swap_float(&data->bathacrosstrack[j]);
 			mb_swap_float(&data->bathalongtrack[j]);
 			mb_swap_float(&data->tt[j]);
 			mb_swap_float(&data->angle[j]);
 		}
-		for (j = 0; j < header->beams_amp; j++) {
+		for (int j = 0; j < header->beams_amp; j++) {
 			mb_swap_float(&data->amp[j]);
 		}
-		for (j = 0; j < header->pixels_ss; j++) {
+		for (int j = 0; j < header->pixels_ss; j++) {
 			mb_swap_float(&data->ssacrosstrack[j]);
 			mb_swap_float(&data->ssalongtrack[j]);
 			mb_swap_float(&data->ss[j]);
@@ -1706,16 +1529,107 @@ int mbr_wt_oicmbari(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+
+/*--------------------------------------------------------------------*/
+int mbr_register_oicmbari(int verbose, void *mbio_ptr, int *error) {
+	int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+	}
+
+	/* get mb_io_ptr */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* set format info parameters */
+	status = mbr_info_oicmbari(
+	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
+	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
+	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
+	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
+	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
+
+	/* set format and system specific function pointers */
+	mb_io_ptr->mb_io_format_alloc = &mbr_alm_oicmbari;
+	mb_io_ptr->mb_io_format_free = &mbr_dem_oicmbari;
+	mb_io_ptr->mb_io_store_alloc = &mbsys_oic_alloc;
+	mb_io_ptr->mb_io_store_free = &mbsys_oic_deall;
+	mb_io_ptr->mb_io_read_ping = &mbr_rt_oicmbari;
+	mb_io_ptr->mb_io_write_ping = &mbr_wt_oicmbari;
+	mb_io_ptr->mb_io_dimensions = &mbsys_oic_dimensions;
+	mb_io_ptr->mb_io_extract = &mbsys_oic_extract;
+	mb_io_ptr->mb_io_insert = &mbsys_oic_insert;
+	mb_io_ptr->mb_io_extract_nav = &mbsys_oic_extract_nav;
+	mb_io_ptr->mb_io_insert_nav = &mbsys_oic_insert_nav;
+	mb_io_ptr->mb_io_extract_altitude = &mbsys_oic_extract_altitude;
+	mb_io_ptr->mb_io_insert_altitude = &mbsys_oic_insert_altitude;
+	mb_io_ptr->mb_io_extract_svp = NULL;
+	mb_io_ptr->mb_io_insert_svp = NULL;
+	mb_io_ptr->mb_io_ttimes = &mbsys_oic_ttimes;
+	mb_io_ptr->mb_io_detects = &mbsys_oic_detects;
+	mb_io_ptr->mb_io_copyrecord = &mbsys_oic_copy;
+	mb_io_ptr->mb_io_extract_rawss = NULL;
+	mb_io_ptr->mb_io_insert_rawss = NULL;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
+		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
+		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
+		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
+		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
+		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
+		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
+		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
+		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
+		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
+		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
+		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
+		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
+		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
+		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
+		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
+		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
+		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
+		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
+		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
+		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
+		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
+		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
+		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
+		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
+		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
+		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
+		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
+		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
+		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
+		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
+		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
+		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
+		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
+		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
+		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
+		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
+		fprintf(stderr, "dbg2       error:              %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:         %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/

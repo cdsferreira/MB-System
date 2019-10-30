@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbr_em12darw.c	2/2/93
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -26,138 +25,16 @@
  *
  */
 
-/* standard include files */
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
+#include "mb_status.h"
 #include "mbf_em12darw.h"
 #include "mbsys_simrad.h"
-
-/* include for byte swapping on little-endian machines */
-#ifdef BYTESWAPPED
-#include "mb_swap.h"
-#endif
-
-/* essential function prototypes */
-int mbr_register_em12darw(int verbose, void *mbio_ptr, int *error);
-int mbr_info_em12darw(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
-                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
-                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
-                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
-                      double *beamwidth_ltrack, int *error);
-int mbr_alm_em12darw(int verbose, void *mbio_ptr, int *error);
-int mbr_dem_em12darw(int verbose, void *mbio_ptr, int *error);
-int mbr_zero_em12darw(int verbose, char *data_ptr, int *error);
-int mbr_rt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_wt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-
-static char rcs_id[] = "$Id$";
-
-/*--------------------------------------------------------------------*/
-int mbr_register_em12darw(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_register_em12darw";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-	}
-
-	/* get mb_io_ptr */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set format info parameters */
-	status = mbr_info_em12darw(
-	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
-	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
-	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
-	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
-	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
-
-	/* set format and system specific function pointers */
-	mb_io_ptr->mb_io_format_alloc = &mbr_alm_em12darw;
-	mb_io_ptr->mb_io_format_free = &mbr_dem_em12darw;
-	mb_io_ptr->mb_io_store_alloc = &mbsys_simrad_alloc;
-	mb_io_ptr->mb_io_store_free = &mbsys_simrad_deall;
-	mb_io_ptr->mb_io_read_ping = &mbr_rt_em12darw;
-	mb_io_ptr->mb_io_write_ping = &mbr_wt_em12darw;
-	mb_io_ptr->mb_io_dimensions = &mbsys_simrad_dimensions;
-	mb_io_ptr->mb_io_extract = &mbsys_simrad_extract;
-	mb_io_ptr->mb_io_insert = &mbsys_simrad_insert;
-	mb_io_ptr->mb_io_extract_nav = &mbsys_simrad_extract_nav;
-	mb_io_ptr->mb_io_insert_nav = &mbsys_simrad_insert_nav;
-	mb_io_ptr->mb_io_extract_altitude = &mbsys_simrad_extract_altitude;
-	mb_io_ptr->mb_io_insert_altitude = NULL;
-	mb_io_ptr->mb_io_extract_svp = NULL;
-	mb_io_ptr->mb_io_insert_svp = NULL;
-	mb_io_ptr->mb_io_ttimes = &mbsys_simrad_ttimes;
-	mb_io_ptr->mb_io_detects = &mbsys_simrad_detects;
-	mb_io_ptr->mb_io_gains = &mbsys_simrad_gains;
-	mb_io_ptr->mb_io_copyrecord = &mbsys_simrad_copy;
-	mb_io_ptr->mb_io_extract_rawss = NULL;
-	mb_io_ptr->mb_io_insert_rawss = NULL;
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
-		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
-		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
-		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
-		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
-		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
-		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
-		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
-		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
-		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
-		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
-		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
-		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
-		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
-		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
-		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
-		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
-		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
-		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
-		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
-		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
-		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
-		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
-		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
-		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
-		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
-		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
-		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
-		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
-		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
-		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
-		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
-		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
-		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
-		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
-		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
-		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
-		fprintf(stderr, "dbg2       error:              %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:         %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
 
 /*--------------------------------------------------------------------*/
 int mbr_info_em12darw(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
@@ -165,19 +42,13 @@ int mbr_info_em12darw(int verbose, int *system, int *beams_bath_max, int *beams_
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error) {
-	char *function_name = "mbr_info_em12darw";
-	int status = MB_SUCCESS;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 	}
 
 	/* set format info parameters */
-	status = MB_SUCCESS;
 	*error = MB_ERROR_NO_ERROR;
 	*system = MB_SYS_SIMRAD;
 	*beams_bath_max = MBF_EM12DARW_BEAMS;
@@ -191,9 +62,9 @@ int mbr_info_em12darw(int verbose, int *system, int *beams_bath_max, int *beams_
 	        MB_DESCRIPTION_LENGTH);
 	*numfile = 1;
 	*filetype = MB_FILETYPE_NORMAL;
-	*variable_beams = MB_NO;
-	*traveltime = MB_YES;
-	*beam_flagging = MB_YES;
+	*variable_beams = false;
+	*traveltime = true;
+	*beam_flagging = true;
 	*platform_source = MB_DATA_NONE;
 	*nav_source = MB_DATA_DATA;
 	*sensordepth_source = MB_DATA_DATA;
@@ -203,9 +74,10 @@ int mbr_info_em12darw(int verbose, int *system, int *beams_bath_max, int *beams_
 	*beamwidth_xtrack = 2.0;
 	*beamwidth_ltrack = 2.0;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       system:             %d\n", *system);
 		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", *beams_bath_max);
@@ -232,111 +104,19 @@ int mbr_info_em12darw(int verbose, int *system, int *beams_bath_max, int *beams_
 		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_alm_em12darw(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_alm_em12darw";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_em12darw_struct *data;
-	char *data_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-	}
-
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set initial status */
-	status = MB_SUCCESS;
-
-	/* allocate memory for data structure */
-	mb_io_ptr->structure_size = sizeof(struct mbf_em12darw_struct);
-	status = mb_mallocd(verbose, __FILE__, __LINE__, mb_io_ptr->structure_size, &mb_io_ptr->raw_data, error);
-	status = mbsys_simrad_alloc(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
-
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	data = (struct mbf_em12darw_struct *)mb_io_ptr->raw_data;
-	data_ptr = (char *)data;
-
-	/* initialize everything to zeros */
-	mbr_zero_em12darw(verbose, data_ptr, error);
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_dem_em12darw(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_dem_em12darw";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_simrad_struct *store;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-	}
-
-	/* get pointers to mbio descriptor and data structures */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	store = (struct mbsys_simrad_struct *)mb_io_ptr->store_data;
-
-	/* deallocate memory for data descriptor */
-	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->raw_data, error);
-	status = mbsys_simrad_deall(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_zero_em12darw(int verbose, char *data_ptr, int *error) {
-	char *function_name = "mbr_zero_em12darw";
-	int status = MB_SUCCESS;
-	struct mbf_em12darw_struct *data;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       data_ptr:   %p\n", (void *)data_ptr);
 	}
 
 	/* get pointer to data descriptor */
-	data = (struct mbf_em12darw_struct *)data_ptr;
+	struct mbf_em12darw_struct *data = (struct mbf_em12darw_struct *)data_ptr;
 
 	/* initialize everything to zeros */
 	if (data != NULL) {
@@ -369,7 +149,7 @@ int mbr_zero_em12darw(int verbose, char *data_ptr, int *error) {
 		data->sndval = 0.0;
 
 		/* beam values */
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
 			data->depth[i] = 0;
 			data->distacr[i] = 0;
 			data->distalo[i] = 0;
@@ -380,41 +160,90 @@ int mbr_zero_em12darw(int verbose, char *data_ptr, int *error) {
 	}
 
 	/* assume success */
-	status = MB_SUCCESS;
+	const int status = MB_SUCCESS;
 	*error = MB_ERROR_NO_ERROR;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_alm_em12darw(int verbose, void *mbio_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+	}
+
+	/* get pointer to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* allocate memory for data structure */
+	mb_io_ptr->structure_size = sizeof(struct mbf_em12darw_struct);
+	int status = mb_mallocd(verbose, __FILE__, __LINE__, mb_io_ptr->structure_size, &mb_io_ptr->raw_data, error);
+	status &= mbsys_simrad_alloc(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
+
+	/* get pointer to mbio descriptor */
+	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbf_em12darw_struct *data = (struct mbf_em12darw_struct *)mb_io_ptr->raw_data;
+	char *data_ptr = (char *)data;
+
+	/* initialize everything to zeros */
+	mbr_zero_em12darw(verbose, data_ptr, error);
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_dem_em12darw(int verbose, void *mbio_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+	}
+
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* deallocate memory for data descriptor */
+	int status = mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->raw_data, error);
+	status &= mbsys_simrad_deall(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_rt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_rt_em12darw";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_em12darw_struct *data;
-	struct mbsys_simrad_struct *store;
 	struct mbsys_simrad_survey_struct *ping;
 	char line[MBF_EM12DARW_RECORD_LENGTH];
 	int index;
-	char *datacomment;
 	int time_j[5];
 	int time_i[7];
 	int kind;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -422,15 +251,17 @@ int mbr_rt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get pointer to raw data structure */
-	data = (struct mbf_em12darw_struct *)mb_io_ptr->raw_data;
-	datacomment = (char *)&line[80];
-	store = (struct mbsys_simrad_struct *)store_ptr;
+	struct mbf_em12darw_struct *data = (struct mbf_em12darw_struct *)mb_io_ptr->raw_data;
+	char *datacomment = (char *)&line[80];
+	struct mbsys_simrad_struct *store = (struct mbsys_simrad_struct *)store_ptr;
 
 	/* set file position */
 	mb_io_ptr->file_pos = mb_io_ptr->file_bytes;
+
+	int status = MB_SUCCESS;
 
 	/* read next record from file */
 	if ((status = fread(line, 1, MBF_EM12DARW_RECORD_LENGTH, mb_io_ptr->mbfp)) == MBF_EM12DARW_RECORD_LENGTH) {
@@ -447,7 +278,7 @@ int mbr_rt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	/* get data type */
 	kind = MB_DATA_NONE;
 	if (status == MB_SUCCESS) {
-		mb_get_binary_short(MB_NO, &line[0], &(data->func));
+		mb_get_binary_short(false, &line[0], &(data->func));
 	}
 
 	/* deal with comment */
@@ -462,72 +293,71 @@ int mbr_rt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		kind = MB_DATA_DATA;
 
 		index = 2;
-		mb_get_binary_short(MB_NO, &line[index], &(data->year));
+		mb_get_binary_short(false, &line[index], &(data->year));
 		index += 2;
-		mb_get_binary_short(MB_NO, &line[index], &(data->jday));
+		mb_get_binary_short(false, &line[index], &(data->jday));
 		index += 2;
-		mb_get_binary_short(MB_NO, &line[index], &(data->minute));
+		mb_get_binary_short(false, &line[index], &(data->minute));
 		index += 2;
-		mb_get_binary_short(MB_NO, &line[index], &(data->secs));
+		mb_get_binary_short(false, &line[index], &(data->secs));
 		index += 8;
-		mb_get_binary_double(MB_NO, &line[index], &(data->latitude));
+		mb_get_binary_double(false, &line[index], &(data->latitude));
 		index += 8;
-		mb_get_binary_double(MB_NO, &line[index], &(data->longitude));
+		mb_get_binary_double(false, &line[index], &(data->longitude));
 		index += 8;
-		mb_get_binary_short(MB_NO, &line[index], &(data->corflag));
+		mb_get_binary_short(false, &line[index], &(data->corflag));
 		index += 4;
-		mb_get_binary_float(MB_NO, &line[index], &(data->utm_merd));
+		mb_get_binary_float(false, &line[index], &(data->utm_merd));
 		index += 4;
-		mb_get_binary_short(MB_NO, &line[index], &(data->utm_zone));
+		mb_get_binary_short(false, &line[index], &(data->utm_zone));
 		index += 2;
-		mb_get_binary_short(MB_NO, &line[index], &(data->posq));
+		mb_get_binary_short(false, &line[index], &(data->posq));
 		index += 2;
-		mb_get_binary_int(MB_NO, &line[index], &(data->pingno));
+		mb_get_binary_int(false, &line[index], &(data->pingno));
 		index += 4;
-		mb_get_binary_short(MB_NO, &line[index], &(data->mode));
+		mb_get_binary_short(false, &line[index], &(data->mode));
 		index += 4;
-		mb_get_binary_float(MB_NO, &line[index], &(data->depthl));
+		mb_get_binary_float(false, &line[index], &(data->depthl));
 		index += 4;
-		mb_get_binary_float(MB_NO, &line[index], &(data->speed));
+		mb_get_binary_float(false, &line[index], &(data->speed));
 		index += 4;
-		mb_get_binary_float(MB_NO, &line[index], &(data->gyro));
+		mb_get_binary_float(false, &line[index], &(data->gyro));
 		index += 4;
-		mb_get_binary_float(MB_NO, &line[index], &(data->roll));
+		mb_get_binary_float(false, &line[index], &(data->roll));
 		index += 4;
-		mb_get_binary_float(MB_NO, &line[index], &(data->pitch));
+		mb_get_binary_float(false, &line[index], &(data->pitch));
 		index += 4;
-		mb_get_binary_float(MB_NO, &line[index], &(data->heave));
+		mb_get_binary_float(false, &line[index], &(data->heave));
 		index += 4;
-		mb_get_binary_float(MB_NO, &line[index], &(data->sndval));
+		mb_get_binary_float(false, &line[index], &(data->sndval));
 		index += 4;
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_get_binary_short(MB_NO, &line[index], &(data->depth[i]));
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_get_binary_short(false, &line[index], &(data->depth[i]));
 			index += 2;
 		}
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_get_binary_short(MB_NO, &line[index], &(data->distacr[i]));
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_get_binary_short(false, &line[index], &(data->distacr[i]));
 			index += 2;
 		}
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_get_binary_short(MB_NO, &line[index], &(data->distalo[i]));
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_get_binary_short(false, &line[index], &(data->distalo[i]));
 			index += 2;
 		}
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_get_binary_short(MB_NO, &line[index], &(data->range[i]));
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_get_binary_short(false, &line[index], &(data->range[i]));
 			index += 2;
 		}
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_get_binary_short(MB_NO, &line[index], &(data->refl[i]));
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_get_binary_short(false, &line[index], &(data->refl[i]));
 			index += 2;
 		}
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_get_binary_short(MB_NO, &line[index], &(data->beamq[i]));
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_get_binary_short(false, &line[index], &(data->beamq[i]));
 			index += 2;
 		}
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg4  Data read by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data read by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Read values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -550,7 +380,7 @@ int mbr_rt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			fprintf(stderr, "dbg4       pitch:      %f\n", data->pitch);
 			fprintf(stderr, "dbg4       heave:      %f\n", data->heave);
 			fprintf(stderr, "dbg4       sndval:     %f\n", data->sndval);
-			for (i = 0; i < MBF_EM12DARW_BEAMS; i++)
+			for (int i = 0; i < MBF_EM12DARW_BEAMS; i++)
 				fprintf(stderr, "dbg4       beam:%d  depth:%d  distacr:%d  distalo:%d  range:%d refl:%d beamq:%d\n", i,
 				        data->depth[i], data->distacr[i], data->distalo[i], data->range[i], data->refl[i], data->beamq[i]);
 		}
@@ -645,7 +475,7 @@ int mbr_rt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			ping->sound_vel = (int)10 * data->sndval;
 			ping->pixels_ss = 0;
 			ping->ss_mode = 0;
-			for (i = 0; i < ping->beams_bath; i++) {
+			for (int i = 0; i < ping->beams_bath; i++) {
 				if (data->depth[i] > 0) {
 					ping->bath[i] = data->depth[i];
 					ping->beamflag[i] = MB_FLAG_NONE;
@@ -676,38 +506,27 @@ int mbr_rt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_wt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_wt_em12darw";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_em12darw_struct *data;
-	struct mbsys_simrad_struct *store;
 	struct mbsys_simrad_survey_struct *ping;
 	char line[MBF_EM12DARW_RECORD_LENGTH];
 	int index;
-	char *datacomment;
 	int time_i[7];
 	int time_j[5];
 	int year;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -715,19 +534,17 @@ int mbr_wt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get pointer to raw data structure */
-	data = (struct mbf_em12darw_struct *)mb_io_ptr->raw_data;
-	datacomment = (char *)&line[80];
-	store = (struct mbsys_simrad_struct *)store_ptr;
+	struct mbf_em12darw_struct *data = (struct mbf_em12darw_struct *)mb_io_ptr->raw_data;
+	char *datacomment = (char *)&line[80];
+	struct mbsys_simrad_struct *store = (struct mbsys_simrad_struct *)store_ptr;
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Status at beginning of MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Status at beginning of MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5       store->kind:    %d\n", store->kind);
 		fprintf(stderr, "dbg5       error:          %d\n", *error);
-		fprintf(stderr, "dbg5       status:         %d\n", status);
 	}
 
 	/*  translate values from em12 data storage structure */
@@ -782,7 +599,7 @@ int mbr_wt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			data->pitch = 0.01 * ping->pitch;
 			data->heave = 0.01 * ping->ping_heave;
 			data->sndval = 0.1 * ping->sound_vel;
-			for (i = 0; i < ping->beams_bath; i++) {
+			for (int i = 0; i < ping->beams_bath; i++) {
 				if (ping->beamflag[i] == MB_FLAG_NULL)
 					data->depth[i] = 0;
 				else if (!mb_beam_ok(ping->beamflag[i]))
@@ -804,21 +621,17 @@ int mbr_wt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		strncpy(datacomment, store->comment, MBSYS_SIMRAD_COMMENT_LENGTH);
 	}
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Ready to write data in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Ready to write data in MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5       store->kind:       %d\n", store->kind);
 		fprintf(stderr, "dbg5       error:             %d\n", *error);
-		fprintf(stderr, "dbg5       status:            %d\n", status);
 	}
 
-	/* print debug statements */
-	if (verbose >= 4 && status == MB_SUCCESS) {
-		fprintf(stderr, "\ndbg4  Data to be written by MBIO function <%s>\n", function_name);
+	if (verbose >= 4) {
+		fprintf(stderr, "\ndbg4  Data to be written by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg4  Status values:\n");
 		fprintf(stderr, "dbg4       store->kind:%d\n", store->kind);
 		fprintf(stderr, "dbg4       error:      %d\n", *error);
-		fprintf(stderr, "dbg4       status:     %d\n", status);
 		if (store->kind == MB_DATA_DATA) {
 			fprintf(stderr, "dbg4  Survey values:\n");
 			fprintf(stderr, "dbg4       year:       %d\n", data->year);
@@ -840,7 +653,7 @@ int mbr_wt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			fprintf(stderr, "dbg4       pitch:      %f\n", data->pitch);
 			fprintf(stderr, "dbg4       heave:      %f\n", data->heave);
 			fprintf(stderr, "dbg4       sndval:     %f\n", data->sndval);
-			for (i = 0; i < MBF_EM12DARW_BEAMS; i++)
+			for (int i = 0; i < MBF_EM12DARW_BEAMS; i++)
 				fprintf(stderr, "dbg4       beam:%d  depth:%d  distacr:%d  distalo:%d  range:%d refl:%d beamq:%d\n", i,
 				        data->depth[i], data->distacr[i], data->distalo[i], data->range[i], data->refl[i], data->beamq[i]);
 		}
@@ -851,83 +664,85 @@ int mbr_wt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* deal with comment */
-	if (status == MB_SUCCESS && store->kind == MB_DATA_COMMENT) {
+	if (store->kind == MB_DATA_COMMENT) {
 		index = 0;
-		for (i = 0; i < MBF_EM12DARW_RECORD_LENGTH; i++)
+		for (int i = 0; i < MBF_EM12DARW_RECORD_LENGTH; i++)
 			line[i] = 0;
-		mb_put_binary_short(MB_NO, data->func, &line[0]);
+		mb_put_binary_short(false, data->func, &line[0]);
 		index += 2;
 		strncpy(datacomment, store->comment, MBSYS_SIMRAD_COMMENT_LENGTH);
 	}
 
 	/* deal with data */
-	else if (status == MB_SUCCESS && store->kind == MB_DATA_DATA) {
+	else if (store->kind == MB_DATA_DATA) {
 		index = 0;
-		mb_put_binary_short(MB_NO, data->func, &line[0]);
+		mb_put_binary_short(false, data->func, &line[0]);
 		index += 2;
-		mb_put_binary_short(MB_NO, data->year, &line[index]);
+		mb_put_binary_short(false, data->year, &line[index]);
 		index += 2;
-		mb_put_binary_short(MB_NO, data->jday, &line[index]);
+		mb_put_binary_short(false, data->jday, &line[index]);
 		index += 2;
-		mb_put_binary_short(MB_NO, data->minute, &line[index]);
+		mb_put_binary_short(false, data->minute, &line[index]);
 		index += 2;
-		mb_put_binary_short(MB_NO, data->secs, &line[index]);
+		mb_put_binary_short(false, data->secs, &line[index]);
 		index += 8;
-		mb_put_binary_double(MB_NO, data->latitude, &line[index]);
+		mb_put_binary_double(false, data->latitude, &line[index]);
 		index += 8;
-		mb_put_binary_double(MB_NO, data->longitude, &line[index]);
+		mb_put_binary_double(false, data->longitude, &line[index]);
 		index += 8;
-		mb_put_binary_short(MB_NO, data->corflag, &line[index]);
+		mb_put_binary_short(false, data->corflag, &line[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, data->utm_merd, &line[index]);
+		mb_put_binary_float(false, data->utm_merd, &line[index]);
 		index += 4;
-		mb_put_binary_short(MB_NO, data->utm_zone, &line[index]);
+		mb_put_binary_short(false, data->utm_zone, &line[index]);
 		index += 2;
-		mb_put_binary_short(MB_NO, data->posq, &line[index]);
+		mb_put_binary_short(false, data->posq, &line[index]);
 		index += 2;
-		mb_put_binary_int(MB_NO, data->pingno, &line[index]);
+		mb_put_binary_int(false, data->pingno, &line[index]);
 		index += 4;
-		mb_put_binary_short(MB_NO, data->mode, &line[index]);
+		mb_put_binary_short(false, data->mode, &line[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, data->depthl, &line[index]);
+		mb_put_binary_float(false, data->depthl, &line[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, data->speed, &line[index]);
+		mb_put_binary_float(false, data->speed, &line[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, data->gyro, &line[index]);
+		mb_put_binary_float(false, data->gyro, &line[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, data->roll, &line[index]);
+		mb_put_binary_float(false, data->roll, &line[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, data->pitch, &line[index]);
+		mb_put_binary_float(false, data->pitch, &line[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, data->heave, &line[index]);
+		mb_put_binary_float(false, data->heave, &line[index]);
 		index += 4;
-		mb_put_binary_float(MB_NO, data->sndval, &line[index]);
+		mb_put_binary_float(false, data->sndval, &line[index]);
 		index += 4;
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_put_binary_short(MB_NO, data->depth[i], &line[index]);
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_put_binary_short(false, data->depth[i], &line[index]);
 			index += 2;
 		}
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_put_binary_short(MB_NO, data->distacr[i], &line[index]);
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_put_binary_short(false, data->distacr[i], &line[index]);
 			index += 2;
 		}
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_put_binary_short(MB_NO, data->distalo[i], &line[index]);
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_put_binary_short(false, data->distalo[i], &line[index]);
 			index += 2;
 		}
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_put_binary_short(MB_NO, data->range[i], &line[index]);
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_put_binary_short(false, data->range[i], &line[index]);
 			index += 2;
 		}
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_put_binary_short(MB_NO, data->refl[i], &line[index]);
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_put_binary_short(false, data->refl[i], &line[index]);
 			index += 2;
 		}
-		for (i = 0; i < MBF_EM12DARW_BEAMS; i++) {
-			mb_put_binary_short(MB_NO, data->beamq[i], &line[index]);
+		for (int i = 0; i < MBF_EM12DARW_BEAMS; i++) {
+			mb_put_binary_short(false, data->beamq[i], &line[index]);
 			index += 2;
 		}
 	}
+
+	int status = MB_SUCCESS;
 
 	/* write next record to file */
 	if (store->kind == MB_DATA_DATA || store->kind == MB_DATA_COMMENT) {
@@ -944,19 +759,109 @@ int mbr_wt_em12darw(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		status = MB_SUCCESS;
 		*error = MB_ERROR_NO_ERROR;
 		if (verbose >= 5)
-			fprintf(stderr, "\ndbg5  No data written in MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg5  No data written in MBIO function <%s>\n", __func__);
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+
+/*--------------------------------------------------------------------*/
+int mbr_register_em12darw(int verbose, void *mbio_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+	}
+
+	/* get mb_io_ptr */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* set format info parameters */
+	const int status = mbr_info_em12darw(
+	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
+	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
+	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
+	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
+	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
+
+	/* set format and system specific function pointers */
+	mb_io_ptr->mb_io_format_alloc = &mbr_alm_em12darw;
+	mb_io_ptr->mb_io_format_free = &mbr_dem_em12darw;
+	mb_io_ptr->mb_io_store_alloc = &mbsys_simrad_alloc;
+	mb_io_ptr->mb_io_store_free = &mbsys_simrad_deall;
+	mb_io_ptr->mb_io_read_ping = &mbr_rt_em12darw;
+	mb_io_ptr->mb_io_write_ping = &mbr_wt_em12darw;
+	mb_io_ptr->mb_io_dimensions = &mbsys_simrad_dimensions;
+	mb_io_ptr->mb_io_extract = &mbsys_simrad_extract;
+	mb_io_ptr->mb_io_insert = &mbsys_simrad_insert;
+	mb_io_ptr->mb_io_extract_nav = &mbsys_simrad_extract_nav;
+	mb_io_ptr->mb_io_insert_nav = &mbsys_simrad_insert_nav;
+	mb_io_ptr->mb_io_extract_altitude = &mbsys_simrad_extract_altitude;
+	mb_io_ptr->mb_io_insert_altitude = NULL;
+	mb_io_ptr->mb_io_extract_svp = NULL;
+	mb_io_ptr->mb_io_insert_svp = NULL;
+	mb_io_ptr->mb_io_ttimes = &mbsys_simrad_ttimes;
+	mb_io_ptr->mb_io_detects = &mbsys_simrad_detects;
+	mb_io_ptr->mb_io_gains = &mbsys_simrad_gains;
+	mb_io_ptr->mb_io_copyrecord = &mbsys_simrad_copy;
+	mb_io_ptr->mb_io_extract_rawss = NULL;
+	mb_io_ptr->mb_io_insert_rawss = NULL;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
+		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
+		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
+		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
+		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
+		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
+		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
+		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
+		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
+		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
+		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
+		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
+		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
+		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
+		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
+		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
+		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
+		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
+		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
+		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
+		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
+		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
+		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
+		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
+		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
+		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
+		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
+		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
+		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
+		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
+		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
+		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
+		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
+		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
+		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
+		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
+		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
+		fprintf(stderr, "dbg2       error:              %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:         %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/

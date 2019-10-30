@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mb_swap.h	6/21/94
- *    $Id$
  *
- *    Copyright (c) 1993-2017 by
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -26,17 +25,12 @@
  *
  */
 
-/*--------------------------------------------------------------------*/
-
-/* include this code only once */
-#ifndef MB_SWAP_DEF
-#define MB_SWAP_DEF
+#ifndef MB_SWAP_H_
+#define MB_SWAP_H_
 
 #define mb_swap_short(a) (((a & 0xff) << 8) | ((unsigned short)(a) >> 8))
 
 #define mb_swap_int(a) (((a) << 24) | (((a) << 8) & 0x00ff0000) | (((a) >> 8) & 0x0000ff00) | ((unsigned int)(a) >> 24))
 
-/* end conditional include */
-#endif
+#endif  /* MB_SWAP_H_ */
 
-/*--------------------------------------------------------------------*/

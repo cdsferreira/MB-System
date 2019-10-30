@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_mstiff.h	4/10/98
- *	$Id$
  *
- *    Copyright (c) 1998-2017 by
+ *    Copyright (c) 1998-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -105,6 +104,9 @@
  *          285        Y2KTimeCorrelation
  */
 
+#ifndef MBSYS_MSTIFF_H_
+#define MBSYS_MSTIFF_H_
+
 /* number of sidescan pixels for Sea Scan sidescan sonars */
 #define MBSYS_MSTIFF_PIXELS 1024
 
@@ -158,3 +160,5 @@ int mbsys_mstiff_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int ti
                             double navlat, double speed, double heading, double draft, double roll, double pitch, double heave,
                             int *error);
 int mbsys_mstiff_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
+
+#endif  /* MBSYS_MSTIFF_H_ */

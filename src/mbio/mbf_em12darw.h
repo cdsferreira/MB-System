@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_em12darw.h	1/20/93
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -45,6 +44,9 @@
  *
  */
 
+#ifndef MBF_EM12DARW_H_
+#define MBF_EM12DARW_H_
+
 /* record length in bytes */
 #define MBF_EM12DARW_RECORD_LENGTH 1056
 
@@ -86,3 +88,5 @@ struct mbf_em12darw_struct {
 	short beamq[MBF_EM12DARW_BEAMS];
 	/* Beam Quality, unscaled */
 };
+
+#endif  /* MBF_EM12DARW_H_ */

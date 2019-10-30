@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_reson.h	8/20/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -416,6 +415,9 @@
  *
  */
 
+#ifndef MBSYS_RESON_H_
+#define MBSYS_RESON_H_
+
 /* sonar types */
 #define MBSYS_RESON_UNKNOWN 0
 #define MBSYS_RESON_SEABAT9001 1
@@ -592,3 +594,5 @@ int mbsys_reson_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *k
                             int *error);
 int mbsys_reson_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp, double *depth, double *velocity, int *error);
 int mbsys_reson_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
+
+#endif  /* MBSYS_RESON_H_ */

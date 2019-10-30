@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_oicmbari.h	1/8/99
- *	$Id$
  *
- *    Copyright (c) 1999-2017 by
+ *    Copyright (c) 1999-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -53,6 +52,9 @@
  *      sonar type value.
  *
  */
+
+#ifndef MBF_OICMBARI_H_
+#define MBF_OICMBARI_H_
 
 /* defines sizes of things */
 #define MBF_OICMBARI_HEADER_SIZE 276
@@ -186,3 +188,5 @@ struct mbf_oicmbari_struct {
 	char client[MBF_OICMBARI_MAX_CLIENT];
 	struct mbf_oicmbari_data_struct data;
 };
+
+#endif /* MBF_OICMBARI_H_ */

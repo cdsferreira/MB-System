@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_simrad2.h		10/9/98
- *	$Id$
  *
- *    Copyright (c) 1998-2017 by
+ *    Copyright (c) 1998-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -224,10 +223,10 @@
  *
  */
 
-/* include mb_define.h */
-#ifndef MB_DEFINE_DEF
+#ifndef MBSYS_SIMRAD2_H_
+#define MBSYS_SIMRAD2_H_
+
 #include "mb_define.h"
-#endif
 
 /* sonar models */
 #define MBSYS_SIMRAD2_UNKNOWN 0
@@ -676,16 +675,16 @@ struct mbsys_simrad2_extraparameters_struct {
 	                                        0: External PU decode
 	                                        1: PU decodes Q-factor (default)
 	                                    Each positioning system has its own individual setting.
-	                                    Value Ô1Õ indicates that the PU should decode the quality
+	                                    Value 1 indicates that the PU should decode the quality
 	                                    factors in the traditional way. This is the default.
-	                                    Value Ô0Õ indicates that the PU should skip quality factor
+	                                    Value 0 indicates that the PU should skip quality factor
 	                                    decoding as this is performed externally. The PU should
-	                                    always transmit the height datagram ÔhÕ.*/
+	                                    always transmit the height datagram 'h'. */
 	int xtr_pqf_nqualityfactors[3]; /* number of quality factors for each positioning system
 	                                    Each positioning system have an independent set of
 	                                    additional quality factors. The number of quality
 	                                    factors for each system must be specified.
-	                                    Default value is 0.*/
+	                                    Default value is 0. */
 	                                /* Each quality factor is described by two entries, the
 	                                   quality factor itself and a limit, forming a pair.
 	                                   This results in a variable number of such pairs,
@@ -1097,7 +1096,7 @@ int mbsys_simrad2_deall(int verbose, void *mbio_ptr, void **store_ptr, int *erro
 int mbsys_simrad2_zero_ss(int verbose, void *store_ptr, int *error);
 int mbsys_simrad2_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss,
                              int *error);
-int mbsys_simrad2_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error);
+int mbsys_simrad2_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error);
 int mbsys_simrad2_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, int *error);
 int mbsys_simrad2_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, int *error);
 int mbsys_simrad2_preprocess(int verbose, void *mbio_ptr, void *store_ptr, void *platform_ptr, void *preprocess_pars_ptr,
@@ -1135,3 +1134,5 @@ int mbsys_simrad2_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int n
 int mbsys_simrad2_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
 int mbsys_simrad2_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel_size_set, double *pixel_size,
                          int swath_width_set, double *swath_width, int pixel_int, int *error);
+
+#endif  /* MBSYS_SIMRAD2_H_ */

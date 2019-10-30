@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mb_swap.c	7/6/94
- *    $Id$
  *
- *    Copyright (c) 1993-2017 by
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -22,24 +21,18 @@
  * between IEEE values and other representations.
  * Note that the functions take pointers to float or double values
  * as arguments.
-
  *
  * Author:	D. W. Caress
  * Date:	July 6, 1994
- *
- *
  */
 
-/* standard include files */
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-/* include for byte swapping on little-endian machines */
+#include "mb_define.h"
 #include "mb_status.h"
 #include "mb_swap.h"
-#include "mb_define.h"
-
-/* static	char	rcs_id[]="$Id$"; */
 
 /*--------------------------------------------------------------------*/
 /* function mb_swap_check determines if the cpu is byteswapped */
@@ -49,9 +42,9 @@ int mb_swap_check() {
 	int byteswapped;
 	testchar = (char *)&testshort;
 	if (testchar[0] == 0)
-		byteswapped = MB_NO;
+		byteswapped = false;
 	else
-		byteswapped = MB_YES;
+		byteswapped = true;
 
 	return (byteswapped);
 }

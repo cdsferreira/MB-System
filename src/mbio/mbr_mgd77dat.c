@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbr_mgd77dat.c	5/18/99
- *	$Id$
  *
- *    Copyright (c) 1999-2017 by
+ *    Copyright (c) 1999-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -23,138 +22,18 @@
  *
  * Author:	D. W. Caress
  * Date:	May 18, 1999
- *
- *
  */
 
-/* standard include files */
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
-#include "mbsys_singlebeam.h"
+#include "mb_status.h"
 #include "mbf_mgd77dat.h"
-
-/* essential function prototypes */
-int mbr_register_mgd77dat(int verbose, void *mbio_ptr, int *error);
-int mbr_info_mgd77dat(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
-                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
-                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
-                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
-                      double *beamwidth_ltrack, int *error);
-int mbr_alm_mgd77dat(int verbose, void *mbio_ptr, int *error);
-int mbr_dem_mgd77dat(int verbose, void *mbio_ptr, int *error);
-int mbr_zero_mgd77dat(int verbose, char *data_ptr, int *error);
-int mbr_rt_mgd77dat(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_wt_mgd77dat(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error);
-int mbr_mgd77dat_wr_data(int verbose, void *mbio_ptr, void *data_ptr, int *error);
-
-static char rcs_id[] = "$Id$";
-
-/*--------------------------------------------------------------------*/
-int mbr_register_mgd77dat(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_register_mgd77dat";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-	}
-
-	/* get mb_io_ptr */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set format info parameters */
-	status = mbr_info_mgd77dat(
-	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
-	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
-	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
-	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
-	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
-
-	/* set format and system specific function pointers */
-	mb_io_ptr->mb_io_format_alloc = &mbr_alm_mgd77dat;
-	mb_io_ptr->mb_io_format_free = &mbr_dem_mgd77dat;
-	mb_io_ptr->mb_io_store_alloc = &mbsys_singlebeam_alloc;
-	mb_io_ptr->mb_io_store_free = &mbsys_singlebeam_deall;
-	mb_io_ptr->mb_io_read_ping = &mbr_rt_mgd77dat;
-	mb_io_ptr->mb_io_write_ping = &mbr_wt_mgd77dat;
-	mb_io_ptr->mb_io_dimensions = &mbsys_singlebeam_dimensions;
-	mb_io_ptr->mb_io_extract = &mbsys_singlebeam_extract;
-	mb_io_ptr->mb_io_insert = &mbsys_singlebeam_insert;
-	mb_io_ptr->mb_io_extract_nav = &mbsys_singlebeam_extract_nav;
-	mb_io_ptr->mb_io_insert_nav = &mbsys_singlebeam_insert_nav;
-	mb_io_ptr->mb_io_extract_altitude = &mbsys_singlebeam_extract_altitude;
-	mb_io_ptr->mb_io_insert_altitude = NULL;
-	mb_io_ptr->mb_io_extract_svp = NULL;
-	mb_io_ptr->mb_io_insert_svp = NULL;
-	mb_io_ptr->mb_io_ttimes = &mbsys_singlebeam_ttimes;
-	mb_io_ptr->mb_io_detects = &mbsys_singlebeam_detects;
-	mb_io_ptr->mb_io_copyrecord = &mbsys_singlebeam_copy;
-	mb_io_ptr->mb_io_extract_rawss = NULL;
-	mb_io_ptr->mb_io_insert_rawss = NULL;
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
-		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
-		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
-		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
-		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
-		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
-		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
-		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
-		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
-		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
-		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
-		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
-		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
-		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
-		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
-		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
-		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
-		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
-		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
-		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
-		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
-		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
-		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
-		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
-		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
-		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
-		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
-		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
-		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
-		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
-		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
-		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
-		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
-		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
-		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
-		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
-		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
-		fprintf(stderr, "dbg2       error:              %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:         %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
+#include "mbsys_singlebeam.h"
 
 /*--------------------------------------------------------------------*/
 int mbr_info_mgd77dat(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
@@ -162,19 +41,13 @@ int mbr_info_mgd77dat(int verbose, int *system, int *beams_bath_max, int *beams_
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error) {
-	char *function_name = "mbr_info_mgd77dat";
-	int status = MB_SUCCESS;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 	}
 
 	/* set format info parameters */
-	status = MB_SUCCESS;
 	*error = MB_ERROR_NO_ERROR;
 	*system = MB_SYS_SINGLEBEAM;
 	*beams_bath_max = 1;
@@ -188,9 +61,9 @@ int mbr_info_mgd77dat(int verbose, int *system, int *beams_bath_max, int *beams_
 	        MB_DESCRIPTION_LENGTH);
 	*numfile = 1;
 	*filetype = MB_FILETYPE_NORMAL;
-	*variable_beams = MB_NO;
-	*traveltime = MB_YES;
-	*beam_flagging = MB_NO;
+	*variable_beams = false;
+	*traveltime = true;
+	*beam_flagging = false;
 	*platform_source = MB_DATA_NONE;
 	*nav_source = MB_DATA_DATA;
 	*sensordepth_source = MB_DATA_DATA;
@@ -200,9 +73,10 @@ int mbr_info_mgd77dat(int verbose, int *system, int *beams_bath_max, int *beams_
 	*beamwidth_xtrack = 0.0;
 	*beamwidth_ltrack = 0.0;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       system:             %d\n", *system);
 		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", *beams_bath_max);
@@ -229,121 +103,27 @@ int mbr_info_mgd77dat(int verbose, int *system, int *beams_bath_max, int *beams_
 		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_alm_mgd77dat(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_alm_mgd77dat";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_mgd77dat_struct *data;
-	char *data_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-	}
-
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set initial status */
-	status = MB_SUCCESS;
-
-	/* allocate memory for data structure */
-	mb_io_ptr->structure_size = sizeof(struct mbf_mgd77dat_struct);
-	mb_io_ptr->data_structure_size = 0;
-	status = mb_mallocd(verbose, __FILE__, __LINE__, mb_io_ptr->structure_size, &mb_io_ptr->raw_data, error);
-	status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_singlebeam_struct), &mb_io_ptr->store_data, error);
-
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	data = (struct mbf_mgd77dat_struct *)mb_io_ptr->raw_data;
-	data_ptr = (char *)data;
-
-	/* set number of header records read to zero */
-	mb_io_ptr->save1 = 0;
-
-	/* initialize everything to zeros */
-	mbr_zero_mgd77dat(verbose, data_ptr, error);
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_dem_mgd77dat(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_dem_mgd77dat";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-	}
-
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* deallocate memory for data descriptor */
-	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->raw_data, error);
-	status = mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->store_data, error);
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_zero_mgd77dat(int verbose, char *data_ptr, int *error) {
-	char *function_name = "mbr_zero_mgd77dat";
-	int status = MB_SUCCESS;
-	struct mbf_mgd77dat_struct *data;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       data_ptr:   %p\n", (void *)data_ptr);
 	}
 
 	/* get pointer to data descriptor */
-	data = (struct mbf_mgd77dat_struct *)data_ptr;
+	struct mbf_mgd77dat_struct *data = (struct mbf_mgd77dat_struct *)data_ptr;
 
 	/* initialize everything to zeros */
 	if (data != NULL) {
 		data->kind = MB_DATA_NONE;
-		for (i = 0; i < 8; i++)
+		for (int i = 0; i < 8; i++)
 			data->survey_id[i] = 0;
 		data->time_d = 0.0;
-		for (i = 0; i < 7; i++)
+		for (int i = 0; i < 7; i++)
 			data->time_i[i] = 0;
 		data->timezone = 0;
 		data->longitude = 0.0;
@@ -371,195 +151,91 @@ int mbr_zero_mgd77dat(int verbose, char *data_ptr, int *error) {
 		data->free_air = 0.0;
 		data->seismic_line = 0;
 		data->seismic_shot = 0;
-		for (i = 0; i < MBF_MGD77DAT_DATA_LEN; i++)
+		for (int i = 0; i < MBF_MGD77DAT_DATA_LEN; i++)
 			data->comment[i] = 0;
 	}
 
 	/* assume success */
-	status = MB_SUCCESS;
+	const int status = MB_SUCCESS;
 	*error = MB_ERROR_NO_ERROR;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
-int mbr_rt_mgd77dat(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_rt_mgd77dat";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_mgd77dat_struct *data;
-	struct mbsys_singlebeam_struct *store;
-	int i;
-
-	/* print input debug statements */
+int mbr_alm_mgd77dat(int verbose, void *mbio_ptr, int *error) {
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
-	}
-
-	/* get pointers to mbio descriptor and data structures */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	data = (struct mbf_mgd77dat_struct *)mb_io_ptr->raw_data;
-	store = (struct mbsys_singlebeam_struct *)store_ptr;
-
-	/* read next data from file */
-	status = mbr_mgd77dat_rd_data(verbose, mbio_ptr, error);
-
-	/* set error and kind in mb_io_ptr */
-	mb_io_ptr->new_error = *error;
-	mb_io_ptr->new_kind = data->kind;
-
-	/* translate values to data storage structure */
-	if (status == MB_SUCCESS && store != NULL) {
-		store->kind = data->kind;
-		for (i = 0; i < 8; i++)
-			store->survey_id[i] = data->survey_id[i];
-		store->time_d = data->time_d;
-		for (i = 0; i < 7; i++)
-			store->time_i[i] = data->time_i[i];
-		store->timezone = data->timezone;
-		store->longitude = data->longitude;
-		store->latitude = data->latitude;
-		store->heading = data->heading;
-		store->speed = data->speed;
-		store->nav_type = data->nav_type;
-		store->nav_quality = data->nav_quality;
-		store->roll = data->roll;
-		store->pitch = data->pitch;
-		store->heave = data->heave;
-		store->flag = data->flag;
-		store->tt = data->tt;
-		store->bath = data->bath;
-		store->bath_corr = data->bath_corr;
-		store->bath_type = data->bath_type;
-		store->mag_tot_1 = data->mag_tot_1;
-		store->mag_tot_2 = data->mag_tot_2;
-		store->mag_res = data->mag_res;
-		store->mag_res_sensor = data->mag_res_sensor;
-		store->mag_diurnal = data->mag_diurnal;
-		store->mag_altitude = data->mag_altitude;
-		store->gravity = data->gravity;
-		store->eotvos = data->eotvos;
-		store->free_air = data->free_air;
-		store->seismic_line = data->seismic_line;
-		store->seismic_shot = data->seismic_shot;
-		for (i = 0; i < MBF_MGD77DAT_DATA_LEN; i++)
-			store->comment[i] = data->comment[i];
-		for (i = MBF_MGD77DAT_DATA_LEN; i < MB_COMMENT_MAXLINE; i++)
-			store->comment[i] = 0;
-	}
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_wt_mgd77dat(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_wt_mgd77dat";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_mgd77dat_struct *data;
-	struct mbsys_singlebeam_struct *store;
-	int i;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* allocate memory for data structure */
+	mb_io_ptr->structure_size = sizeof(struct mbf_mgd77dat_struct);
+	mb_io_ptr->data_structure_size = 0;
+	int status = mb_mallocd(verbose, __FILE__, __LINE__, mb_io_ptr->structure_size, &mb_io_ptr->raw_data, error);
+	status &= mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_singlebeam_struct), &mb_io_ptr->store_data, error);
+
+	/* get pointer to mbio descriptor */
 	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbf_mgd77dat_struct *data = (struct mbf_mgd77dat_struct *)mb_io_ptr->raw_data;
+	char *data_ptr = (char *)data;
 
-	/* get pointer to raw data structure */
-	data = (struct mbf_mgd77dat_struct *)mb_io_ptr->raw_data;
-	store = (struct mbsys_singlebeam_struct *)store_ptr;
+	/* set number of header records read to zero */
+	mb_io_ptr->save1 = 0;
 
-	/* first translate values from data storage structure */
-	if (store != NULL) {
-		data->kind = store->kind;
-		for (i = 0; i < 8; i++)
-			data->survey_id[i] = store->survey_id[i];
-		data->time_d = store->time_d;
-		for (i = 0; i < 7; i++)
-			data->time_i[i] = store->time_i[i];
-		data->timezone = store->timezone;
-		data->longitude = store->longitude;
-		data->latitude = store->latitude;
-		data->heading = store->heading;
-		data->speed = store->speed;
-		data->nav_type = store->nav_type;
-		data->nav_quality = store->nav_quality;
-		data->roll = store->roll;
-		data->pitch = store->pitch;
-		data->heave = store->heave;
-		data->flag = store->flag;
-		data->tt = store->tt;
-		data->bath = store->bath;
-		data->bath_corr = store->bath_corr;
-		data->bath_type = store->bath_type;
-		data->mag_tot_1 = store->mag_tot_1;
-		data->mag_tot_2 = store->mag_tot_2;
-		data->mag_res = store->mag_res;
-		data->mag_res_sensor = store->mag_res_sensor;
-		data->mag_diurnal = store->mag_diurnal;
-		data->mag_altitude = store->mag_altitude;
-		data->gravity = store->gravity;
-		data->eotvos = store->eotvos;
-		data->free_air = store->free_air;
-		data->seismic_line = store->seismic_line;
-		data->seismic_shot = store->seismic_shot;
-		for (i = 0; i < MBF_MGD77DAT_DATA_LEN; i++)
-			data->comment[i] = store->comment[i];
-	}
+	/* initialize everything to zeros */
+	mbr_zero_mgd77dat(verbose, data_ptr, error);
 
-	/* write next data to file */
-	status = mbr_mgd77dat_wr_data(verbose, mbio_ptr, (void *)data, error);
-
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_dem_mgd77dat(int verbose, void *mbio_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+	}
+
+	/* get pointer to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* deallocate memory for data descriptor */
+	int status = mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->raw_data, error);
+	status &= mb_freed(verbose, __FILE__, __LINE__, (void **)&mb_io_ptr->store_data, error);
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_mgd77dat_rd_data";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_mgd77dat_struct *data;
-	int *header_read;
 	char line[MBF_MGD77DAT_DATA_LEN] = "";
 	size_t read_len;
 	size_t skip;
@@ -567,23 +243,20 @@ int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error) {
 	int neg_unit;
 	int itmp;
 	double dtmp;
-	int i, j;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get pointer to raw data structure */
-	data = (struct mbf_mgd77dat_struct *)mb_io_ptr->raw_data;
-	header_read = (int *)&mb_io_ptr->save1;
+	struct mbf_mgd77dat_struct *data = (struct mbf_mgd77dat_struct *)mb_io_ptr->raw_data;
+	int *header_read = (int *)&mb_io_ptr->save1;
 
 	/* initialize everything to zeros */
 	mbr_zero_mgd77dat(verbose, mb_io_ptr->raw_data, error);
@@ -591,6 +264,8 @@ int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error) {
 	/* set file position */
 	mb_io_ptr->file_bytes = ftell(mb_io_ptr->mbfp);
 	mb_io_ptr->file_pos = mb_io_ptr->file_bytes;
+
+	int status = MB_SUCCESS;
 
 	/* read next record */
 	if ((read_len = fread(line, 1, MBF_MGD77DAT_DATA_LEN, mb_io_ptr->mbfp)) == MBF_MGD77DAT_DATA_LEN) {
@@ -603,10 +278,6 @@ int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error) {
 		status = MB_FAILURE;
 		*error = MB_ERROR_EOF;
 	}
-	/*fprintf(stderr,"_RAWLINE:");
-	for (i=0;i<MBF_MGD77DAT_DATA_LEN;i++)
-	fprintf(stderr,"%c",line[i]);
-	fprintf(stderr,"\n");*/
 
 	/* handle "pseudo-mgd77" in which each record is
 	 * followed by a cr or lf or both */
@@ -616,7 +287,7 @@ int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error) {
 	if (line[1] == '\r' || line[1] == '\n')
 		skip++;
 	if (skip > 0) {
-		for (j = 0; j < MBF_MGD77DAT_DATA_LEN - skip; j++) {
+		for (int j = 0; j < MBF_MGD77DAT_DATA_LEN - skip; j++) {
 			line[j] = line[j + skip];
 		}
 		if ((read_len = fread(&line[MBF_MGD77DAT_DATA_LEN - skip], 1, skip, mb_io_ptr->mbfp)) == skip) {
@@ -629,12 +300,7 @@ int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error) {
 			status = MB_FAILURE;
 			*error = MB_ERROR_EOF;
 		}
-		/*fprintf(stderr,"---SKIPPED %zu BYTES---\n",skip);*/
 	}
-	/*fprintf(stderr,"+FIXLINE:");
-	for (i=0;i<MBF_MGD77DAT_DATA_LEN;i++)
-	fprintf(stderr,"%c",line[i]);
-	fprintf(stderr,"\n");*/
 
 	mb_io_ptr->file_bytes = ftell(mb_io_ptr->mbfp);
 
@@ -642,13 +308,13 @@ int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error) {
 	if (status == MB_SUCCESS && *header_read > 0 && *header_read < MBF_MGD77DAT_HEADER_NUM) {
 		data->kind = MB_DATA_HEADER;
 		(*header_read)++;
-		for (i = 0; i < MBF_MGD77DAT_DATA_LEN; i++)
+		for (int i = 0; i < MBF_MGD77DAT_DATA_LEN; i++)
 			data->comment[i] = line[i];
 	}
 	else if (status == MB_SUCCESS && (line[0] == '1' || line[0] == '4')) {
 		data->kind = MB_DATA_HEADER;
 		(*header_read) = 1;
-		for (i = 0; i < MBF_MGD77DAT_DATA_LEN; i++)
+		for (int i = 0; i < MBF_MGD77DAT_DATA_LEN; i++)
 			data->comment[i] = line[i];
 	}
 	else if (status == MB_SUCCESS && line[0] == '#') {
@@ -660,7 +326,7 @@ int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error) {
 
 		/* get survey id */
 		shift = 1;
-		for (i = 0; i < 8; i++)
+		for (int i = 0; i < 8; i++)
 			data->survey_id[i] = line[i + shift];
 
 		/* get time */
@@ -771,7 +437,7 @@ int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error) {
 
 		/* get survey id */
 		shift = 1;
-		for (i = 0; i < 8; i++)
+		for (int i = 0; i < 8; i++)
 			data->survey_id[i] = line[i + shift];
 
 		/* get time */
@@ -875,37 +541,100 @@ int mbr_mgd77dat_rd_data(int verbose, void *mbio_ptr, int *error) {
 
 		/* get nav quality */
 		mb_get_int(&data->nav_quality, &line[shift], 1);
-		shift += 1;
+		/* shift += 1; */
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_rt_mgd77dat(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
+	}
+
+	/* get pointers to mbio descriptor and data structures */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mbf_mgd77dat_struct *data = (struct mbf_mgd77dat_struct *)mb_io_ptr->raw_data;
+	struct mbsys_singlebeam_struct *store = (struct mbsys_singlebeam_struct *)store_ptr;
+
+	/* read next data from file */
+	const int status = mbr_mgd77dat_rd_data(verbose, mbio_ptr, error);
+
+	/* set error and kind in mb_io_ptr */
+	mb_io_ptr->new_error = *error;
+	mb_io_ptr->new_kind = data->kind;
+
+	/* translate values to data storage structure */
+	if (status == MB_SUCCESS && store != NULL) {
+		store->kind = data->kind;
+		for (int i = 0; i < 8; i++)
+			store->survey_id[i] = data->survey_id[i];
+		store->time_d = data->time_d;
+		for (int i = 0; i < 7; i++)
+			store->time_i[i] = data->time_i[i];
+		store->timezone = data->timezone;
+		store->longitude = data->longitude;
+		store->latitude = data->latitude;
+		store->heading = data->heading;
+		store->speed = data->speed;
+		store->nav_type = data->nav_type;
+		store->nav_quality = data->nav_quality;
+		store->roll = data->roll;
+		store->pitch = data->pitch;
+		store->heave = data->heave;
+		store->flag = data->flag;
+		store->tt = data->tt;
+		store->bath = data->bath;
+		store->bath_corr = data->bath_corr;
+		store->bath_type = data->bath_type;
+		store->mag_tot_1 = data->mag_tot_1;
+		store->mag_tot_2 = data->mag_tot_2;
+		store->mag_res = data->mag_res;
+		store->mag_res_sensor = data->mag_res_sensor;
+		store->mag_diurnal = data->mag_diurnal;
+		store->mag_altitude = data->mag_altitude;
+		store->gravity = data->gravity;
+		store->eotvos = data->eotvos;
+		store->free_air = data->free_air;
+		store->seismic_line = data->seismic_line;
+		store->seismic_shot = data->seismic_shot;
+		for (int i = 0; i < MBF_MGD77DAT_DATA_LEN; i++)
+			store->comment[i] = data->comment[i];
+		for (int i = MBF_MGD77DAT_DATA_LEN; i < MB_COMMENT_MAXLINE; i++)
+			store->comment[i] = 0;
+	}
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_mgd77dat_wr_data(int verbose, void *mbio_ptr, void *data_ptr, int *error) {
-	char *function_name = "mbr_mgd77dat_wr_data";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbf_mgd77dat_struct *data;
 	char line[MBF_MGD77DAT_DATA_LEN + 1] = "";
 	int itmp;
 	int write_len;
 	int shift;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -913,21 +642,21 @@ int mbr_mgd77dat_wr_data(int verbose, void *mbio_ptr, void *data_ptr, int *error
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get pointer to raw data structure */
-	data = (struct mbf_mgd77dat_struct *)data_ptr;
+	struct mbf_mgd77dat_struct *data = (struct mbf_mgd77dat_struct *)data_ptr;
 
 	/* handle the data */
 	if (data->kind == MB_DATA_HEADER) {
 		strcpy(line, data->comment);
-		for (i = strlen(line); i < MBF_MGD77DAT_DATA_LEN; i++)
+		for (int i = strlen(line); i < MBF_MGD77DAT_DATA_LEN; i++)
 			line[i] = ' ';
 	}
 	else if (data->kind == MB_DATA_COMMENT) {
 		line[0] = '#';
 		strncpy(&line[1], data->comment, MBF_MGD77DAT_DATA_LEN - 1);
-		for (i = strlen(line); i < MBF_MGD77DAT_DATA_LEN; i++)
+		for (int i = strlen(line); i < MBF_MGD77DAT_DATA_LEN; i++)
 			line[i] = ' ';
 	}
 	else if (data->kind == MB_DATA_DATA) {
@@ -937,7 +666,7 @@ int mbr_mgd77dat_wr_data(int verbose, void *mbio_ptr, void *data_ptr, int *error
 		shift += 1;
 
 		/* get survey id */
-		for (i = 0; i < 8; i++)
+		for (int i = 0; i < 8; i++)
 			line[i + shift] = data->survey_id[i];
 		shift += 8;
 
@@ -1040,8 +769,10 @@ int mbr_mgd77dat_wr_data(int verbose, void *mbio_ptr, void *data_ptr, int *error
 
 		/* get nav quality */
 		sprintf(&line[shift], "%1.1d", data->nav_quality);
-		shift += 1;
+		/* shift += 1; */
 	}
+
+	int status = MB_SUCCESS;
 
 	write_len = fwrite(line, 1, MBF_MGD77DAT_DATA_LEN, mb_io_ptr->mbfp);
 	if (write_len != MBF_MGD77DAT_DATA_LEN) {
@@ -1053,22 +784,178 @@ int mbr_mgd77dat_wr_data(int verbose, void *mbio_ptr, void *data_ptr, int *error
 		status = MB_SUCCESS;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Data record kind in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Data record kind in MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5       kind:       %d\n", data->kind);
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_wt_mgd77dat(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
+	}
+
+	/* get pointer to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* get pointer to raw data structure */
+	struct mbf_mgd77dat_struct *data = (struct mbf_mgd77dat_struct *)mb_io_ptr->raw_data;
+	struct mbsys_singlebeam_struct *store = (struct mbsys_singlebeam_struct *)store_ptr;
+
+	/* first translate values from data storage structure */
+	if (store != NULL) {
+		data->kind = store->kind;
+		for (int i = 0; i < 8; i++)
+			data->survey_id[i] = store->survey_id[i];
+		data->time_d = store->time_d;
+		for (int i = 0; i < 7; i++)
+			data->time_i[i] = store->time_i[i];
+		data->timezone = store->timezone;
+		data->longitude = store->longitude;
+		data->latitude = store->latitude;
+		data->heading = store->heading;
+		data->speed = store->speed;
+		data->nav_type = store->nav_type;
+		data->nav_quality = store->nav_quality;
+		data->roll = store->roll;
+		data->pitch = store->pitch;
+		data->heave = store->heave;
+		data->flag = store->flag;
+		data->tt = store->tt;
+		data->bath = store->bath;
+		data->bath_corr = store->bath_corr;
+		data->bath_type = store->bath_type;
+		data->mag_tot_1 = store->mag_tot_1;
+		data->mag_tot_2 = store->mag_tot_2;
+		data->mag_res = store->mag_res;
+		data->mag_res_sensor = store->mag_res_sensor;
+		data->mag_diurnal = store->mag_diurnal;
+		data->mag_altitude = store->mag_altitude;
+		data->gravity = store->gravity;
+		data->eotvos = store->eotvos;
+		data->free_air = store->free_air;
+		data->seismic_line = store->seismic_line;
+		data->seismic_shot = store->seismic_shot;
+		for (int i = 0; i < MBF_MGD77DAT_DATA_LEN; i++)
+			data->comment[i] = store->comment[i];
+	}
+
+	/* write next data to file */
+	const int status = mbr_mgd77dat_wr_data(verbose, mbio_ptr, (void *)data, error);
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
+	return (status);
+}
+
+/*--------------------------------------------------------------------*/
+int mbr_register_mgd77dat(int verbose, void *mbio_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+	}
+
+	/* get mb_io_ptr */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* set format info parameters */
+	const int status = mbr_info_mgd77dat(
+	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
+	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
+	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
+	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
+	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
+
+	/* set format and system specific function pointers */
+	mb_io_ptr->mb_io_format_alloc = &mbr_alm_mgd77dat;
+	mb_io_ptr->mb_io_format_free = &mbr_dem_mgd77dat;
+	mb_io_ptr->mb_io_store_alloc = &mbsys_singlebeam_alloc;
+	mb_io_ptr->mb_io_store_free = &mbsys_singlebeam_deall;
+	mb_io_ptr->mb_io_read_ping = &mbr_rt_mgd77dat;
+	mb_io_ptr->mb_io_write_ping = &mbr_wt_mgd77dat;
+	mb_io_ptr->mb_io_dimensions = &mbsys_singlebeam_dimensions;
+	mb_io_ptr->mb_io_extract = &mbsys_singlebeam_extract;
+	mb_io_ptr->mb_io_insert = &mbsys_singlebeam_insert;
+	mb_io_ptr->mb_io_extract_nav = &mbsys_singlebeam_extract_nav;
+	mb_io_ptr->mb_io_insert_nav = &mbsys_singlebeam_insert_nav;
+	mb_io_ptr->mb_io_extract_altitude = &mbsys_singlebeam_extract_altitude;
+	mb_io_ptr->mb_io_insert_altitude = NULL;
+	mb_io_ptr->mb_io_extract_svp = NULL;
+	mb_io_ptr->mb_io_insert_svp = NULL;
+	mb_io_ptr->mb_io_ttimes = &mbsys_singlebeam_ttimes;
+	mb_io_ptr->mb_io_detects = &mbsys_singlebeam_detects;
+	mb_io_ptr->mb_io_copyrecord = &mbsys_singlebeam_copy;
+	mb_io_ptr->mb_io_extract_rawss = NULL;
+	mb_io_ptr->mb_io_insert_rawss = NULL;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
+		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
+		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
+		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
+		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
+		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
+		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
+		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
+		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
+		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
+		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
+		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
+		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
+		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
+		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
+		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
+		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
+		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
+		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
+		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
+		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
+		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
+		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
+		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
+		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
+		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
+		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
+		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
+		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
+		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
+		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
+		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
+		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
+		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
+		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
+		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
+		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
+		fprintf(stderr, "dbg2       error:              %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:         %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/

@@ -1,8 +1,7 @@
 /*------------------------------------------------------------------------------
  *    The MB-system:	mbview_profile.c	3/8/2006
- *    $Id$
  *
- *    Copyright (c) 2006-2017 by
+ *    Copyright (c) 2006-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -28,6 +27,15 @@
 #include <ctype.h>
 #include <math.h>
 
+/* Need to include windows.h BEFORE the the Xm stuff otherwise VC14+ barf with conflicts */
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+#	ifndef WIN32
+#		define WIN32
+#	endif
+#	include <WinSock2.h>
+#include <windows.h>
+#endif
+
 /* Motif required Headers */
 #include <X11/StringDefs.h>
 #include <X11/cursorfont.h>
@@ -47,11 +55,6 @@
 #include "MB3DNavList.h"
 
 /* OpenGL include files */
-#ifdef WIN32
-#undef BOOL /* It was defined by a chain of inclusions in the (patched) X11/Xmd.h */
-#include <windows.h>
-#endif
-
 #include <GL/gl.h>
 #include <GL/glu.h>
 #ifndef WIN32
@@ -85,22 +88,19 @@ static Cardinal ac = 0;
 static Arg args[256];
 static char value_text[MB_PATH_MAXLINE];
 
-static char rcs_id[] = "$Id$";
 
 /*------------------------------------------------------------------------------*/
 int mbview_getprofilecount(int verbose, size_t instance, int *npoints, int *error)
 
 {
 	/* local variables */
-	char *function_name = "mbview_getprofilecount";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -116,7 +116,7 @@ int mbview_getprofilecount(int verbose, size_t instance, int *npoints, int *erro
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       npoints:                   %d\n", *npoints);
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
@@ -133,13 +133,11 @@ int mbview_allocprofilepoints(int verbose, int npoints, struct mbview_profilepoi
 
 {
 	/* local variables */
-	char *function_name = "mbview_allocprofilepoints";
 	int status = MB_SUCCESS;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -153,7 +151,7 @@ int mbview_allocprofilepoints(int verbose, int npoints, struct mbview_profilepoi
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       points:                    %p\n", *points);
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
@@ -170,13 +168,11 @@ int mbview_freeprofilepoints(int verbose, double **points, int *error)
 
 {
 	/* local variables */
-	char *function_name = "mbview_freeprofilepoints";
 	int status = MB_SUCCESS;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -188,7 +184,7 @@ int mbview_freeprofilepoints(int verbose, double **points, int *error)
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       points:                    %p\n", *points);
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
@@ -206,13 +202,11 @@ int mbview_allocprofilearrays(int verbose, int npoints, double **distance, doubl
 
 {
 	/* local variables */
-	char *function_name = "mbview_allocprofilearrays";
 	int status = MB_SUCCESS;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -239,7 +233,7 @@ int mbview_allocprofilearrays(int verbose, int npoints, double **distance, doubl
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       distance:                  %p\n", *distance);
 		fprintf(stderr, "dbg2       zdata:                     %p\n", *zdata);
@@ -264,13 +258,11 @@ int mbview_freeprofilearrays(int verbose, double **distance, double **zdata, int
 
 {
 	/* local variables */
-	char *function_name = "mbview_freeprofilearrays";
 	int status = MB_SUCCESS;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -296,7 +288,7 @@ int mbview_freeprofilearrays(int verbose, double **distance, double **zdata, int
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       distance:                  %p\n", *distance);
 		fprintf(stderr, "dbg2       zdata:                     %p\n", *zdata);
@@ -322,7 +314,6 @@ int mbview_getprofile(int verbose, size_t instance, mb_path source_name, double 
 
 {
 	/* local variables */
-	char *function_name = "mbview_getprofile";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -330,8 +321,7 @@ int mbview_getprofile(int verbose, size_t instance, mb_path source_name, double 
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -371,7 +361,7 @@ int mbview_getprofile(int verbose, size_t instance, mb_path source_name, double 
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       source_name:                %s\n", source_name);
 		fprintf(stderr, "dbg2       length:                     %f\n", *length);
@@ -395,7 +385,6 @@ int mbview_getprofile(int verbose, size_t instance, mb_path source_name, double 
 /*------------------------------------------------------------------------------*/
 int mbview_reset_prglx(size_t instance) {
 	/* local variables */
-	char *function_name = "mbview_reset_prglx";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -404,8 +393,7 @@ int mbview_reset_prglx(size_t instance) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -418,15 +406,15 @@ int mbview_reset_prglx(size_t instance) {
 	/* If profile view enabled update opengl plotting widget */
 	if (data->profile_view_mode == MBV_VIEW_ON) {
 		/* delete old glx_context if it exists */
-		if (view->prglx_init == MB_YES) {
+		if (view->prglx_init == true) {
 #ifdef MBV_DEBUG_GLX
-			fprintf(stderr, "%s:%d:%s instance:%zu glXDestroyContext(%p,%p)\n", __FILE__, __LINE__, function_name, instance, view->dpy, view->prglx_context);
+			fprintf(stderr, "%s:%d:%s instance:%zu glXDestroyContext(%p,%p)\n", __FILE__, __LINE__, __func__, instance, view->dpy, view->prglx_context);
 #endif
 			glXDestroyContext(view->dpy, view->prglx_context);
 #ifdef MBV_GET_GLX_ERRORS
-			mbview_glerrorcheck(instance, __FILE__, __LINE__, function_name);
+			mbview_glerrorcheck(instance, __FILE__, __LINE__, __func__);
 #endif
-			view->prglx_init = MB_NO;
+			view->prglx_init = false;
 		}
 
 		/* get and set sizes of the drawingArea */
@@ -457,27 +445,27 @@ int mbview_reset_prglx(size_t instance) {
 		ac++;
 		XtGetValues(view->prglwmda, args, ac);
 #ifdef MBV_DEBUG_GLX
-		fprintf(stderr, "%s:%d:%s instance:%zu glXCreateContext(%p,%p)\n", __FILE__, __LINE__, function_name, instance, view->dpy,
+		fprintf(stderr, "%s:%d:%s instance:%zu glXCreateContext(%p,%p)\n", __FILE__, __LINE__, __func__, instance, view->dpy,
 		        view->prvi);
 #endif
 		view->prglx_context = glXCreateContext(view->dpy, view->prvi, NULL, GL_TRUE);
 #ifdef MBV_DEBUG_GLX
-		fprintf(stderr, "%s:%d:%s instance:%zu glXMakeCurrent(%p,%p,%p)\n", __FILE__, __LINE__, function_name, instance,
+		fprintf(stderr, "%s:%d:%s instance:%zu glXMakeCurrent(%p,%p,%p)\n", __FILE__, __LINE__, __func__, instance,
 		        view->dpy, XtWindow(view->prglwmda), view->prglx_context);
 #endif
 		glXMakeCurrent(view->dpy, XtWindow(view->prglwmda), view->prglx_context);
 
 #ifdef MBV_GET_GLX_ERRORS
-		mbview_glerrorcheck(instance, __FILE__, __LINE__, function_name);
+		mbview_glerrorcheck(instance, __FILE__, __LINE__, __func__);
 #endif
-		view->prglx_init = MB_YES;
+		view->prglx_init = true;
 		glViewport(0, 0, data->prwidth, data->prheight);
 		view->praspect_ratio = ((float)data->prheight) / ((float)data->prwidth);
 	}
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:                %d\n", status);
 		fprintf(stderr, "dbg2       view->dpy:             %p\n", view->dpy);
@@ -494,15 +482,13 @@ int mbview_reset_prglx(size_t instance) {
 /*------------------------------------------------------------------------------*/
 int mbview_destroy_prglx(size_t instance) {
 	/* local variables */
-	char *function_name = "mbview_destroy_prglx";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -515,15 +501,15 @@ int mbview_destroy_prglx(size_t instance) {
 	/* If profile view enabled update opengl plotting widget */
 	if (data->profile_view_mode == MBV_VIEW_ON) {
 		/* delete old glx_context if it exists */
-		if (view->prglx_init == MB_YES) {
+		if (view->prglx_init == true) {
 			glXDestroyContext(view->dpy, view->prglx_context);
-			view->prglx_init = MB_NO;
+			view->prglx_init = false;
 		}
 	}
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:                %d\n", status);
 		fprintf(stderr, "dbg2       view->dpy:             %p\n", view->dpy);
@@ -540,7 +526,6 @@ int mbview_destroy_prglx(size_t instance) {
 /*------------------------------------------------------------------------------*/
 int mbview_plotprofile(size_t instance) {
 	/* local variables */
-	char *function_name = "mbview_plotprofile";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -554,8 +539,7 @@ int mbview_plotprofile(size_t instance) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -579,17 +563,17 @@ int mbview_plotprofile(size_t instance) {
 		zmax = zcenter + 0.5 * view->praspect_ratio * data->profile.length / data->profile_exageration;
 		yzmin = scale * data->profile_exageration * (zmin - zcenter);
 		yzmax = scale * data->profile_exageration * (zmax - zcenter);
-		clip = MB_NO;
+		clip = false;
 
 /* set projection to 2D */
 #ifdef MBV_DEBUG_GLX
-		fprintf(stderr, "%s:%d:%s instance:%zu glXMakeCurrent(%p,%p,%p)\n", __FILE__, __LINE__, function_name, instance,
+		fprintf(stderr, "%s:%d:%s instance:%zu glXMakeCurrent(%p,%p,%p)\n", __FILE__, __LINE__, __func__, instance,
 		        view->dpy, XtWindow(view->prglwmda), view->prglx_context);
 #endif
 		glXMakeCurrent(view->dpy, XtWindow(view->prglwmda), view->prglx_context);
 
 #ifdef MBV_GET_GLX_ERRORS
-		mbview_glerrorcheck(instance, __FILE__, __LINE__, function_name);
+		mbview_glerrorcheck(instance, __FILE__, __LINE__, __func__);
 #endif
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
@@ -608,7 +592,7 @@ int mbview_plotprofile(size_t instance) {
 		glLineWidth(1.0);
 		glBegin(GL_QUADS);
 		for (i = 0; i < data->profile.npoints - 1; i++) {
-			if (data->profile.points[i].boundary == MB_NO || data->profile.points[i + 1].boundary == MB_NO) {
+			if (data->profile.points[i].boundary == false || data->profile.points[i + 1].boundary == false) {
 				if (data->profile.points[i].slope < data->profile_slopethreshold) {
 					glColor3f(colortable_object_red[MBV_COLOR_BLACK], colortable_object_green[MBV_COLOR_BLACK],
 					          colortable_object_blue[MBV_COLOR_BLACK]);
@@ -620,11 +604,11 @@ int mbview_plotprofile(size_t instance) {
 				x = scale * data->profile.points[i].distance;
 				y = scale * data->profile_exageration * (data->profile.points[i].zdata - zcenter);
 				if (y < yzmin) {
-					clip = MB_YES;
+					clip = true;
 					y = yzmin;
 				}
 				if (y > yzmax) {
-					clip = MB_YES;
+					clip = true;
 					y = yzmax;
 				}
 				glVertex3f(x, yzmin, MBV_OPENGL_ZPROFILE1);
@@ -632,11 +616,11 @@ int mbview_plotprofile(size_t instance) {
 				x = scale * data->profile.points[i + 1].distance;
 				y = scale * data->profile_exageration * (data->profile.points[i + 1].zdata - zcenter);
 				if (y < yzmin) {
-					clip = MB_YES;
+					clip = true;
 					y = yzmin;
 				}
 				if (y > yzmax) {
-					clip = MB_YES;
+					clip = true;
 					y = yzmax;
 				}
 				glVertex3f(x, y, MBV_OPENGL_ZPROFILE1);
@@ -651,7 +635,7 @@ int mbview_plotprofile(size_t instance) {
 		glLineWidth(2.0);
 		glBegin(GL_LINES);
 		for (i = 0; i < data->profile.npoints; i++) {
-			if (data->profile.points[i].boundary == MB_YES) {
+			if (data->profile.points[i].boundary == true) {
 				x = scale * data->profile.points[i].distance;
 				glVertex3f(x, yzmin, MBV_OPENGL_ZPROFILE1);
 				glVertex3f(x, yzmax, MBV_OPENGL_ZPROFILE1);
@@ -660,7 +644,7 @@ int mbview_plotprofile(size_t instance) {
 		glEnd();
 
 		/* draw box */
-		if (clip == MB_NO)
+		if (clip == false)
 			glColor3f(colortable_object_red[MBV_COLOR_BLACK], colortable_object_green[MBV_COLOR_BLACK],
 			          colortable_object_blue[MBV_COLOR_BLACK]);
 		else
@@ -674,19 +658,19 @@ int mbview_plotprofile(size_t instance) {
 		glVertex3f((float)(0.0), yzmax, (float)(MBV_OPENGL_ZPROFILE1));
 		glEnd();
 #ifdef MBV_GETERRORS
-		mbview_glerrorcheck(instance, __FILE__, __LINE__, function_name);
+		mbview_glerrorcheck(instance, __FILE__, __LINE__, __func__);
 #endif
 
 		/* flush opengl buffers */
 		glFlush();
 #ifdef MBV_GETERRORS
-		mbview_glerrorcheck(instance, 2, function_name);
+		mbview_glerrorcheck(instance, 2, __func__);
 #endif
 
 		/* swap opengl buffers */
 		glXSwapBuffers(XtDisplay(view->prglwmda), XtWindow(view->prglwmda));
 #ifdef MBV_GETERRORS
-		mbview_glerrorcheck(instance, 3, function_name);
+		mbview_glerrorcheck(instance, 3, __func__);
 #endif
 
 		/* update info label */
@@ -695,7 +679,7 @@ int mbview_plotprofile(size_t instance) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
@@ -708,15 +692,13 @@ int mbview_plotprofile(size_t instance) {
 int mbview_profile_text(size_t instance) {
 
 	/* local variables */
-	char *function_name = "mbview_profile_text";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -739,7 +721,7 @@ int mbview_profile_text(size_t instance) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}

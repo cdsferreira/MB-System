@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbbs_defines.h	3/3/2014
- *	$Id$
  *
- *    Copyright (c) 2014-2017 by
+ *    Copyright (c) 2014-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -38,7 +37,7 @@
 #define __MBBS_DEFINES__
 
 #include <time.h>
-#ifndef WIN32
+#ifndef _WIN32
 #include <sys/time.h>
 #endif
 
@@ -89,7 +88,7 @@
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 #endif
-#ifdef WIN32
+#ifdef _WIN32
 #include <rpc/rpc.h>
 #endif
 #ifdef OTHER
@@ -97,7 +96,7 @@
 #include <rpc/xdr.h>
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <float.h>
 #define isnan _isnan
 #endif

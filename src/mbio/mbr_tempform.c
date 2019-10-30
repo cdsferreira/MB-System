@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbr_tempform.c	1/27/2014
- *	$Id$
  *
- *    Copyright (c) 2014-2017 by
+ *    Copyright (c) 2014-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -26,56 +25,399 @@
  *
  */
 
-/* standard include files */
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
+#include "mb_status.h"
+/* #include "mb_swap.h" */
 #include "mbsys_templatesystem.h"
-
-/* include for byte swapping */
-#include "mb_swap.h"
 
 /* turn on debug statements here */
 /* #define MBR_TEMPFORM_DEBUG 1 */
 
-/* essential function prototypes */
-int mbr_register_tempform(int verbose, void *mbio_ptr, int *error);
+/*--------------------------------------------------------------------*/
 int mbr_info_tempform(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
                       char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
-                      double *beamwidth_ltrack, int *error);
-int mbr_alm_tempform(int verbose, void *mbio_ptr, int *error);
-int mbr_dem_tempform(int verbose, void *mbio_ptr, int *error);
-int mbr_rt_tempform(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_wt_tempform(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_tempform_rd_data(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_tempform_wr_data(int verbose, void *mbio_ptr, void *store_ptr, int *error);
+                      double *beamwidth_ltrack, int *error) {
+	int status = MB_SUCCESS;
 
-static char rcs_id[] = "$Id$";
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+	}
+
+	/* set format info parameters */
+	status = MB_SUCCESS;
+	*error = MB_ERROR_NO_ERROR;
+	*system = MB_SYS_TEMPLATESYSTEM;
+	*beams_bath_max = MBSYS_TEMPLATESYSTEM_MAX_BEAMS;
+	*beams_amp_max = MBSYS_TEMPLATESYSTEM_MAX_BEAMS;
+	*pixels_ss_max = MBSYS_TEMPLATESYSTEM_MAX_PIXELS;
+	strncpy(format_name, "TEMPFORM", MB_NAME_LENGTH);
+	strncpy(system_name, "TEMPLATESYSTEM", MB_NAME_LENGTH);
+	strncpy(format_description,
+	        "Format name:          MBF_TEMPFORM\nInformal Description: Example format\nAttributes:           Name the relevant "
+	        "sensor(s), \n                      what data types are supported\n                      how many beams and pixels, "
+	        "file type (ascii, binary, netCDF), Organization that defined this format.\n",
+	        MB_DESCRIPTION_LENGTH);
+	*numfile = 1;
+	*filetype = MB_FILETYPE_SINGLE;
+	*variable_beams = true;
+	*traveltime = true;
+	*beam_flagging = true;
+	*platform_source = MB_DATA_NONE;
+	*nav_source = MB_DATA_DATA;
+	*sensordepth_source = MB_DATA_DATA;
+	*heading_source = MB_DATA_DATA;
+	*attitude_source = MB_DATA_DATA;
+	*svp_source = MB_DATA_VELOCITY_PROFILE;
+	*beamwidth_xtrack = 1.0;
+	*beamwidth_ltrack = 1.0;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       system:             %d\n", *system);
+		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", *beams_bath_max);
+		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", *beams_amp_max);
+		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", *pixels_ss_max);
+		fprintf(stderr, "dbg2       format_name:        %s\n", format_name);
+		fprintf(stderr, "dbg2       system_name:        %s\n", system_name);
+		fprintf(stderr, "dbg2       format_description: %s\n", format_description);
+		fprintf(stderr, "dbg2       numfile:            %d\n", *numfile);
+		fprintf(stderr, "dbg2       filetype:           %d\n", *filetype);
+		fprintf(stderr, "dbg2       variable_beams:     %d\n", *variable_beams);
+		fprintf(stderr, "dbg2       traveltime:         %d\n", *traveltime);
+		fprintf(stderr, "dbg2       beam_flagging:      %d\n", *beam_flagging);
+		fprintf(stderr, "dbg2       platform_source:    %d\n", *platform_source);
+		fprintf(stderr, "dbg2       nav_source:         %d\n", *nav_source);
+		fprintf(stderr, "dbg2       sensordepth_source: %d\n", *sensordepth_source);
+		fprintf(stderr, "dbg2       heading_source:     %d\n", *heading_source);
+		fprintf(stderr, "dbg2       attitude_source:      %d\n", *attitude_source);
+		fprintf(stderr, "dbg2       svp_source:         %d\n", *svp_source);
+		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", *beamwidth_xtrack);
+		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", *beamwidth_ltrack);
+		fprintf(stderr, "dbg2       error:              %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:         %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_alm_tempform(int verbose, void *mbio_ptr, int *error) {
+	int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+	}
+
+	/* get pointer to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* set initial status */
+	status = MB_SUCCESS;
+
+	/* allocate memory for data structure */
+	mb_io_ptr->structure_size = 0;
+	mb_io_ptr->data_structure_size = 0;
+	status = mbsys_templatesystem_alloc(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_dem_tempform(int verbose, void *mbio_ptr, int *error) {
+	int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+	}
+
+	/* get pointers to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* deallocate memory for data descriptor */
+	status = mbsys_templatesystem_deall(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_tempform_rd_data(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
+	int read_kind = MB_DATA_NONE;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
+	}
+
+	/* get pointer to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* get pointer to raw data structure */
+	struct mbsys_templatesystem_struct *store = (struct mbsys_templatesystem_struct *)store_ptr;
+	mbfp = mb_io_ptr->mbfp;
+
+	/* set file position */
+	mb_io_ptr->file_pos = mb_io_ptr->file_bytes;
+
+	/* loop over reading data until a record is ready for return */
+	*error = MB_ERROR_NO_ERROR;
+	int status = MB_SUCCESS;
+        done = false;
+	while (done == false) {
+		/* read the next record header - set read_kind value */
+
+		/* if valid read the record type */
+		if (status == MB_SUCCESS) {
+
+			/* read survey data */
+			if (read_kind == MB_DATA_DATA) {
+
+				store->kind = MB_DATA_DATA;
+			}
+
+			/* read asynchronous navigation data */
+			else if (read_kind == MB_DATA_NAV) {
+
+				store->kind = MB_DATA_NAV;
+			}
+
+			/* read asynchronous sensordepth data */
+			else if (read_kind == MB_DATA_SONARDEPTH) {
+
+				store->kind = MB_DATA_SONARDEPTH;
+			}
+
+			/* read asynchronous attitude data */
+			else if (read_kind == MB_DATA_ATTITUDE) {
+
+				store->kind = MB_DATA_ATTITUDE;
+			}
+
+			/* read comment */
+			else if (read_kind == MB_DATA_COMMENT) {
+
+				store->kind = MB_DATA_COMMENT;
+			}
+
+			/* done if read success or EOF */
+			if (status == MB_SUCCESS) {
+				done = true;
+			}
+			else if (*error == MB_ERROR_EOF) {
+				done = true;
+			}
+		}
+
+		/* set done if read failure */
+		else {
+			done = true;
+		}
+	}
+
+	/* get file position */
+	if (*save_flag == true)
+		mb_io_ptr->file_bytes = ftell(mbfp) - *size;
+	else
+		mb_io_ptr->file_bytes = ftell(mbfp);
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_rt_tempform(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
+	/* int interp_status; */
+	/* int interp_error = MB_ERROR_NO_ERROR; */
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
+	}
+
+	/* get pointers to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+#ifdef MBR_TEMPFORM_DEBUG
+	fprintf(stderr, "About to call mbr_tempform_rd_data...\n");
+#endif
+
+	/* read next data from file */
+	const int status = mbr_tempform_rd_data(verbose, mbio_ptr, store_ptr, error);
+
+	/* get pointers to data structures */
+	struct mbsys_templatesystem_struct *store = (struct mbsys_templatesystem_struct *)store_ptr;
+
+	/* set error and kind in mb_io_ptr */
+	mb_io_ptr->new_error = *error;
+	mb_io_ptr->new_kind = store->kind;
+
+#ifdef MBR_TEMPFORM_DEBUG
+	fprintf(stderr, "Done with mbr_tempform_rd_data: status:%d error:%d record kind:%d\n", status, *error, store->kind);
+#endif
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_tempform_wr_data(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
+	}
+
+	/* get pointer to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* get pointer to raw data structure */
+	struct mbsys_templatesystem_struct *store = (struct mbsys_templatesystem_struct *)store_ptr;
+	FILE *mbfp = mb_io_ptr->mbfp;
+
+	/* write fileheader if needed (not all formats have distinct fileheaders) */
+
+	/* write the current data record type */
+
+	/* write survey data */
+	if (store->kind == MB_DATA_DATA) {
+	}
+
+	/* write asynchronous navigation data */
+	else if (store->kind == MB_DATA_NAV) {
+	}
+
+	/* write asynchronous sensordepth data */
+	else if (store->kind == MB_DATA_SONARDEPTH) {
+	}
+
+	/* write asynchronous attitude data */
+	else if (store->kind == MB_DATA_ATTITUDE) {
+	}
+
+	/* write asynchronous attitude data */
+	else if (store->kind == MB_DATA_ATTITUDE) {
+	}
+
+	/* write comment */
+	else if (store->kind == MB_DATA_COMMENT) {
+	}
+
+	int status = MB_SUCCESS;
+
+#ifdef MBR_TEMPFORM_DEBUG
+	fprintf(stderr, "TEMPFORM DATA WRITTEN: type:%d status:%d error:%d\n\n", store->kind, status, *error);
+#endif
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_wt_tempform(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
+	}
+
+	/* get pointer to mbio descriptor */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* get pointer to raw data structure */
+	struct mbsys_templatesystem_struct *store = (struct mbsys_templatesystem_struct *)store_ptr;
+
+#ifdef MBR_TEMPFORM_DEBUG
+	fprintf(stderr, "About to call mbr_tempform_wr_data record kind:%d\n", store->kind);
+#endif
+
+	/* write next data to file */
+	const int status = mbr_tempform_wr_data(verbose, mbio_ptr, store_ptr, error);
+
+#ifdef MBR_TEMPFORM_DEBUG
+	fprintf(stderr, "Done with mbr_tempform_wr_data: status:%d error:%d\n", status, *error);
+#endif
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       error:      %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+	}
+
+	return (status);
+}
 
 /*--------------------------------------------------------------------*/
 int mbr_register_tempform(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_register_tempform";
 	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 	}
 
 	/* get mb_io_ptr */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* set format info parameters */
 	status = mbr_info_tempform(
@@ -117,9 +459,8 @@ int mbr_register_tempform(int verbose, void *mbio_ptr, int *error) {
 	mb_io_ptr->mb_io_ctd = NULL;
 	mb_io_ptr->mb_io_ancilliarysensor = NULL;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
 		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
@@ -168,423 +509,6 @@ int mbr_register_tempform(int verbose, void *mbio_ptr, int *error) {
 		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
-	return (status);
-}
-
-/*--------------------------------------------------------------------*/
-int mbr_info_tempform(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
-                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
-                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
-                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
-                      double *beamwidth_ltrack, int *error) {
-	char *function_name = "mbr_info_tempform";
-	int status = MB_SUCCESS;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-	}
-
-	/* set format info parameters */
-	status = MB_SUCCESS;
-	*error = MB_ERROR_NO_ERROR;
-	*system = MB_SYS_TEMPLATESYSTEM;
-	*beams_bath_max = MBSYS_TEMPLATESYSTEM_MAX_BEAMS;
-	*beams_amp_max = MBSYS_TEMPLATESYSTEM_MAX_BEAMS;
-	*pixels_ss_max = MBSYS_TEMPLATESYSTEM_MAX_PIXELS;
-	strncpy(format_name, "TEMPFORM", MB_NAME_LENGTH);
-	strncpy(system_name, "TEMPLATESYSTEM", MB_NAME_LENGTH);
-	strncpy(format_description,
-	        "Format name:          MBF_TEMPFORM\nInformal Description: Example format\nAttributes:           Name the relevant "
-	        "sensor(s), \n                      what data types are supported\n                      how many beams and pixels, "
-	        "file type (ascii, binary, netCDF), Organization that defined this format.\n",
-	        MB_DESCRIPTION_LENGTH);
-	*numfile = 1;
-	*filetype = MB_FILETYPE_SINGLE;
-	*variable_beams = MB_YES;
-	*traveltime = MB_YES;
-	*beam_flagging = MB_YES;
-	*platform_source = MB_DATA_NONE;
-	*nav_source = MB_DATA_DATA;
-	*sensordepth_source = MB_DATA_DATA;
-	*heading_source = MB_DATA_DATA;
-	*attitude_source = MB_DATA_DATA;
-	*svp_source = MB_DATA_VELOCITY_PROFILE;
-	*beamwidth_xtrack = 1.0;
-	*beamwidth_ltrack = 1.0;
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       system:             %d\n", *system);
-		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", *beams_bath_max);
-		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", *beams_amp_max);
-		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", *pixels_ss_max);
-		fprintf(stderr, "dbg2       format_name:        %s\n", format_name);
-		fprintf(stderr, "dbg2       system_name:        %s\n", system_name);
-		fprintf(stderr, "dbg2       format_description: %s\n", format_description);
-		fprintf(stderr, "dbg2       numfile:            %d\n", *numfile);
-		fprintf(stderr, "dbg2       filetype:           %d\n", *filetype);
-		fprintf(stderr, "dbg2       variable_beams:     %d\n", *variable_beams);
-		fprintf(stderr, "dbg2       traveltime:         %d\n", *traveltime);
-		fprintf(stderr, "dbg2       beam_flagging:      %d\n", *beam_flagging);
-		fprintf(stderr, "dbg2       platform_source:    %d\n", *platform_source);
-		fprintf(stderr, "dbg2       nav_source:         %d\n", *nav_source);
-		fprintf(stderr, "dbg2       sensordepth_source: %d\n", *sensordepth_source);
-		fprintf(stderr, "dbg2       heading_source:     %d\n", *heading_source);
-		fprintf(stderr, "dbg2       attitude_source:      %d\n", *attitude_source);
-		fprintf(stderr, "dbg2       svp_source:         %d\n", *svp_source);
-		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", *beamwidth_xtrack);
-		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", *beamwidth_ltrack);
-		fprintf(stderr, "dbg2       error:              %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:         %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_alm_tempform(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_alm_tempform";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-	}
-
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set initial status */
-	status = MB_SUCCESS;
-
-	/* allocate memory for data structure */
-	mb_io_ptr->structure_size = 0;
-	mb_io_ptr->data_structure_size = 0;
-	status = mbsys_templatesystem_alloc(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_dem_tempform(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_dem_tempform";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-	}
-
-	/* get pointers to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* deallocate memory for data descriptor */
-	status = mbsys_templatesystem_deall(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_rt_tempform(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_rt_tempform";
-	int status = MB_SUCCESS;
-	int interp_status;
-	int interp_error = MB_ERROR_NO_ERROR;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_templatesystem_struct *store;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
-	}
-
-	/* get pointers to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-#ifdef MBR_TEMPFORM_DEBUG
-	fprintf(stderr, "About to call mbr_tempform_rd_data...\n");
-#endif
-
-	/* read next data from file */
-	status = mbr_tempform_rd_data(verbose, mbio_ptr, store_ptr, error);
-
-	/* get pointers to data structures */
-	store = (struct mbsys_templatesystem_struct *)store_ptr;
-
-	/* set error and kind in mb_io_ptr */
-	mb_io_ptr->new_error = *error;
-	mb_io_ptr->new_kind = store->kind;
-
-#ifdef MBR_TEMPFORM_DEBUG
-	fprintf(stderr, "Done with mbr_tempform_rd_data: status:%d error:%d record kind:%d\n", status, *error, store->kind);
-#endif
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_wt_tempform(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_wt_tempform";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_templatesystem_struct *store;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
-	}
-
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get pointer to raw data structure */
-	store = (struct mbsys_templatesystem_struct *)store_ptr;
-
-#ifdef MBR_TEMPFORM_DEBUG
-	fprintf(stderr, "About to call mbr_tempform_wr_data record kind:%d\n", store->kind);
-#endif
-
-	/* write next data to file */
-	status = mbr_tempform_wr_data(verbose, mbio_ptr, store_ptr, error);
-
-#ifdef MBR_TEMPFORM_DEBUG
-	fprintf(stderr, "Done with mbr_tempform_wr_data: status:%d error:%d\n", status, *error);
-#endif
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_tempform_rd_data(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_tempform_rd_data";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_templatesystem_struct *store;
-	int read_kind = MB_DATA_NONE;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
-	}
-
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get pointer to raw data structure */
-	store = (struct mbsys_templatesystem_struct *)store_ptr;
-	mbfp = mb_io_ptr->mbfp;
-
-	/* set file position */
-	mb_io_ptr->file_pos = mb_io_ptr->file_bytes;
-
-	/* loop over reading data until a record is ready for return */
-	done = MB_NO;
-	*error = MB_ERROR_NO_ERROR;
-	while (done == MB_NO) {
-		/* read the next record header - set read_kind value */
-
-		/* if valid read the record type */
-		if (status == MB_SUCCESS) {
-
-			/* read survey data */
-			if (read_kind == MB_DATA_DATA) {
-
-				store->kind = MB_DATA_DATA;
-			}
-
-			/* read asynchronous navigation data */
-			else if (read_kind == MB_DATA_NAV) {
-
-				store->kind = MB_DATA_NAV;
-			}
-
-			/* read asynchronous sensordepth data */
-			else if (read_kind == MB_DATA_SONARDEPTH) {
-
-				store->kind = MB_DATA_SONARDEPTH;
-			}
-
-			/* read asynchronous attitude data */
-			else if (read_kind == MB_DATA_ATTITUDE) {
-
-				store->kind = MB_DATA_ATTITUDE;
-			}
-
-			/* read comment */
-			else if (read_kind == MB_DATA_COMMENT) {
-
-				store->kind = MB_DATA_COMMENT;
-			}
-
-			/* done if read success or EOF */
-			if (status == MB_SUCCESS) {
-				done = MB_YES;
-			}
-			else if (*error == MB_ERROR_EOF) {
-				done = MB_YES;
-			}
-		}
-
-		/* set done if read failure */
-		else {
-			done = MB_YES;
-		}
-	}
-
-	/* get file position */
-	if (*save_flag == MB_YES)
-		mb_io_ptr->file_bytes = ftell(mbfp) - *size;
-	else
-		mb_io_ptr->file_bytes = ftell(mbfp);
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_tempform_wr_data(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_tempform_wr_data";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_templatesystem_struct *store;
-	FILE *mbfp;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
-	}
-
-	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* get pointer to raw data structure */
-	store = (struct mbsys_templatesystem_struct *)store_ptr;
-	mbfp = mb_io_ptr->mbfp;
-
-	/* write fileheader if needed (not all formats have distinct fileheaders) */
-
-	/* write the current data record type */
-
-	/* write survey data */
-	if (store->kind == MB_DATA_DATA) {
-	}
-
-	/* write asynchronous navigation data */
-	else if (store->kind == MB_DATA_NAV) {
-	}
-
-	/* write asynchronous sensordepth data */
-	else if (store->kind == MB_DATA_SONARDEPTH) {
-	}
-
-	/* write asynchronous attitude data */
-	else if (store->kind == MB_DATA_ATTITUDE) {
-	}
-
-	/* write asynchronous attitude data */
-	else if (store->kind == MB_DATA_ATTITUDE) {
-	}
-
-	/* write comment */
-	else if (store->kind == MB_DATA_COMMENT) {
-	}
-
-#ifdef MBR_TEMPFORM_DEBUG
-	fprintf(stderr, "TEMPFORM DATA WRITTEN: type:%d status:%d error:%d\n\n", store->kind, status, *error);
-#endif
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       error:      %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-	}
-
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/

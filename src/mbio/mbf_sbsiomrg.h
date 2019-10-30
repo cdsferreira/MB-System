@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_sbsiomrg.h	1/20/93
- *	$Id$
  *
- *    Copyright (c) 1993-2017 by
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -47,6 +46,9 @@
  * of the binary data structure used in the MBF_SBSIOMRG format.
  */
 
+#ifndef MBF_SBSIOMRG_H_
+#define MBF_SBSIOMRG_H_
+
 /* size of data records */
 #define MBF_SBSIOMRG_RECORD_SIZE 100
 
@@ -83,3 +85,5 @@ struct mbf_sbsiomrg_struct {
 	int kind;
 	struct mbf_sbsiomrg_data_struct data;
 };
+
+#endif  /* MBF_SBSIOMRG_H_ */

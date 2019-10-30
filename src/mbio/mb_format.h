@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mb_format.h	1/19/93
- *    $Id$
  *
- *    Copyright (c) 1993-2018 by
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -21,17 +20,10 @@
  *
  */
 
-/* make sure mb_status.h has been included */
-#ifndef MB_STATUS_DEF
+#ifndef MB_FORMAT_H_
+#define MB_FORMAT_H_
+
 #include "mb_status.h"
-#endif
-
-/* include this code only once */
-#ifndef MB_FORMAT_DEF
-#define MB_FORMAT_DEF
-
-/* define date of last format update */
-#define MB_FORMAT_UPDATEDATE "$Id$ $Revision: $"
 
 /* Supported swath sonar systems */
 #define MB_SYS_NONE 0
@@ -73,9 +65,11 @@
 #define MB_SYS_3DDWISSL 36
 #define MB_SYS_WASSP 37
 #define MB_SYS_STEREOPAIR 38
+#define MB_SYS_KMBES 39
+#define MB_SYS_RESON7K3 40
 
 /* Number of supported MBIO data formats */
-#define MB_FORMATS 79
+#define MB_FORMATS 81
 
 /* Data formats supported by MBIO */
 
@@ -242,6 +236,10 @@ pixel sidescan, xdr binary, SOEST */
 bathymetry, amplitude, and sidescan \
 binary, centered, L-DEO. */
 
+#define MBF_MBARIMB1 72
+/* Generic in-house swath bathymetry, variable beam, \
+bathymetry only, binary, centered, MBARI. */
+
 #define MBF_MBNETCDF 75
 /* CARAIBES CDF multibeam, variable beam, \
 netCDF, IFREMER. */
@@ -290,11 +288,11 @@ Reson 7K series multibeam sonars, \
 bathymetry, amplitude, three channels sidescan, and subbottom  \
 up to 254 beams, variable pixels, binary, Reson. */
 
-#define MBF_RESON7KP 89
-/* MBARI processing format for Reson 7K multibeam data  \
-Reson 7K series multibeam sonars, \
+#define MBF_RESON7K3 89
+/* Teledyne 7k version 3 format  \
+Teledyne Reson and Teledyne Atlas multibeam sonars, \
 bathymetry, amplitude, three channels sidescan, and subbottom  \
-up to 254 beams, variable pixels, binary, Reson. */
+variable beams, variable pixels, binary, Teledyne. */
 
 #define MBF_BCHRTUNB 91
 /* Elac BottomChart multibeam, 56 beams \
@@ -492,13 +490,13 @@ variable beams, bathymetry, amplitude, \
 binary, single files, 3DatDepth. */
 
 #define MBF_3DWISSLR 232
-/* 3D at Depth vendor format for 3D at Depth WiSSL 
+/* 3D at Depth vendor format for 3D at Depth WiSSL
 (Wide Swath Subsea Lidar, \
 variable beams, bathymetry, amplitude, \
 binary, single files, 3D at Depth. */
 
 #define MBF_3DWISSLP 233
-/* 3D at Depth processed format for 3D at Depth WiSSL 
+/* 3D at Depth processed format for 3D at Depth WiSSL
 (Wide Swath Subsea Lidar, \
 variable beams, bathymetry, amplitude, \
 binary, single files, MBARI. */
@@ -514,6 +512,12 @@ bathymetry and amplitude,  \
 stereo camera rigs, \
 bathymetry,  \
 variable soundings, binary, MBARI. */
+
+#define MBF_KEMKMALL 261
+/* Kongsberg multibeam echosounder system kmall datagram format, \
+Kongsberg fourth generation multibeam sonars (EM2040, EM712, EM304, EM124), \
+variable beams, bathymetry, amplitude, \
+binary. */
 
 /* format registration function prototypes */
 int mbr_register_sbsiomrg(int verbose, void *mbio_ptr, int *error);
@@ -546,6 +550,7 @@ int mbr_register_mr1aldeo(int verbose, void *mbio_ptr, int *error);
 int mbr_register_mr1bldeo(int verbose, void *mbio_ptr, int *error);
 int mbr_register_mr1prvr2(int verbose, void *mbio_ptr, int *error);
 int mbr_register_mbldeoih(int verbose, void *mbio_ptr, int *error);
+int mbr_register_mbarimb1(int verbose, void *mbio_ptr, int *error);
 int mbr_register_mbnetcdf(int verbose, void *mbio_ptr, int *error);
 int mbr_register_mbnetcdf(int verbose, void *mbio_ptr, int *error);
 int mbr_register_cbat9001(int verbose, void *mbio_ptr, int *error);
@@ -553,6 +558,7 @@ int mbr_register_cbat8101(int verbose, void *mbio_ptr, int *error);
 int mbr_register_hypc8101(int verbose, void *mbio_ptr, int *error);
 int mbr_register_xtfr8101(int verbose, void *mbio_ptr, int *error);
 int mbr_register_reson7kr(int verbose, void *mbio_ptr, int *error);
+int mbr_register_reson7k3(int verbose, void *mbio_ptr, int *error);
 int mbr_register_bchrtunb(int verbose, void *mbio_ptr, int *error);
 int mbr_register_elmk2unb(int verbose, void *mbio_ptr, int *error);
 int mbr_register_bchrxunb(int verbose, void *mbio_ptr, int *error);
@@ -598,6 +604,7 @@ int mbr_register_wasspenl(int verbose, void *mbio_ptr, int *error);
 int mbr_register_mgd77txt(int verbose, void *mbio_ptr, int *error);
 int mbr_register_mgd77tab(int verbose, void *mbio_ptr, int *error);
 int mbr_register_photgram(int verbose, void *mbio_ptr, int *error);
+int mbr_register_kemkmall(int verbose, void *mbio_ptr, int *error);
 int mbr_info_sbsiomrg(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
                       char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sonardepth_source,
@@ -748,6 +755,11 @@ int mbr_info_mbldeoih(int verbose, int *system, int *beams_bath_max, int *beams_
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sonardepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error);
+int mbr_info_mbarimb1(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
+                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
+                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sonardepth_source,
+                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
+                      double *beamwidth_ltrack, int *error);
 int mbr_info_mbnetcdf(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
                       char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sonardepth_source,
@@ -779,6 +791,11 @@ int mbr_info_hypc8101(int verbose, int *system, int *beams_bath_max, int *beams_
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error);
 int mbr_info_xtfr8101(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
+                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
+                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sonardepth_source,
+                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
+                      double *beamwidth_ltrack, int *error);
+int mbr_info_reson7k3(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
                       char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sonardepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
@@ -1013,5 +1030,10 @@ int mbr_info_photgram(int verbose, int *system, int *beams_bath_max, int *beams_
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sonardepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error);
-/* end conditional include */
-#endif
+int mbr_info_kemkmall(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
+                     char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
+                     int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
+                     int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
+                     double *beamwidth_ltrack, int *error);
+
+#endif  /* MB_FORTMAT_H_ */

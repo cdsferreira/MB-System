@@ -1,8 +1,7 @@
 /*------------------------------------------------------------------------------
  *    The MB-system:	mbview_site.c	9/25/2003
- *    $Id$
  *
- *    Copyright (c) 2003-2017 by
+ *    Copyright (c) 2003-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -31,6 +30,15 @@
 #include <ctype.h>
 #include <math.h>
 
+/* Need to include windows.h BEFORE the the Xm stuff otherwise VC14+ barf with conflicts */
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+#	ifndef WIN32
+#		define WIN32
+#	endif
+#	include <WinSock2.h>
+#include <windows.h>
+#endif
+
 /* Motif required Headers */
 #include <X11/StringDefs.h>
 #include <X11/cursorfont.h>
@@ -51,11 +59,6 @@
 #include "MB3DNavList.h"
 
 /* OpenGL include files */
-#ifdef WIN32
-#undef BOOL /* It was defined by a chain of inclusions in the (patched) X11/Xmd.h */
-#include <windows.h>
-#endif
-
 #include <GL/gl.h>
 #include <GL/glu.h>
 #ifndef WIN32
@@ -83,22 +86,19 @@ extern char *mbsystem_library_name;
 /* local variables */
 static char value_string[MB_PATH_MAXLINE];
 
-static char rcs_id[] = "$Id$";
 
 /*------------------------------------------------------------------------------*/
 int mbview_getsitecount(int verbose, size_t instance, int *nsite, int *error)
 
 {
 	/* local variables */
-	char *function_name = "mbview_getsitecount";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -114,7 +114,7 @@ int mbview_getsitecount(int verbose, size_t instance, int *nsite, int *error)
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       nsite:                     %d\n", *nsite);
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
@@ -132,13 +132,11 @@ int mbview_allocsitearrays(int verbose, int nsite, double **sitelon, double **si
 
 {
 	/* local variables */
-	char *function_name = "mbview_allocsitearrays";
 	int status = MB_SUCCESS;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -166,7 +164,7 @@ int mbview_allocsitearrays(int verbose, int nsite, double **sitelon, double **si
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       sitelon:                   %p\n", *sitelon);
 		fprintf(stderr, "dbg2       sitelat:                   %p\n", *sitelat);
@@ -189,13 +187,11 @@ int mbview_freesitearrays(int verbose, double **sitelon, double **sitelat, doubl
 
 {
 	/* local variables */
-	char *function_name = "mbview_freesitearrays";
 	int status = MB_SUCCESS;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -217,7 +213,7 @@ int mbview_freesitearrays(int verbose, double **sitelon, double **sitelat, doubl
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       sitelon:                   %p\n", *sitelon);
 		fprintf(stderr, "dbg2       sitelat:                   %p\n", *sitelat);
@@ -240,7 +236,6 @@ int mbview_addsites(int verbose, size_t instance, int nsite, double *sitelon, do
 
 {
 	/* local variables */
-	char *function_name = "mbview_addsites";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -251,8 +246,7 @@ int mbview_addsites(int verbose, size_t instance, int nsite, double *sitelon, do
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -356,7 +350,7 @@ int mbview_addsites(int verbose, size_t instance, int nsite, double *sitelon, do
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -372,7 +366,6 @@ int mbview_getsites(int verbose, size_t instance, int *nsite, double *sitelon, d
 
 {
 	/* local variables */
-	char *function_name = "mbview_getsites";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -380,8 +373,7 @@ int mbview_getsites(int verbose, size_t instance, int *nsite, double *sitelon, d
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -421,7 +413,7 @@ int mbview_getsites(int verbose, size_t instance, int *nsite, double *sitelon, d
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       nsite:                     %d\n", *nsite);
 		for (i = 0; i < *nsite; i++) {
@@ -442,15 +434,13 @@ int mbview_enableviewsites(int verbose, size_t instance, int *error)
 
 {
 	/* local variables */
-	char *function_name = "mbview_enableviewsites";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -467,13 +457,13 @@ int mbview_enableviewsites(int verbose, size_t instance, int *error)
 		data = &(view->data);
 
 		/* if instance active reset action sensitivity */
-		if (data->active == MB_YES)
+		if (data->active == true)
 			mbview_update_sensitivity(verbose, instance, error);
 	}
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -489,15 +479,13 @@ int mbview_enableeditsites(int verbose, size_t instance, int *error)
 
 {
 	/* local variables */
-	char *function_name = "mbview_enableeditsites";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -512,12 +500,12 @@ int mbview_enableeditsites(int verbose, size_t instance, int *error)
 	shared.shareddata.site_mode = MBV_SITE_EDIT;
 
 	/* set widget sensitivity */
-	if (data->active == MB_YES)
+	if (data->active == true)
 		mbview_update_sensitivity(mbv_verbose, instance, error);
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -532,7 +520,6 @@ int mbview_enableeditsites(int verbose, size_t instance, int *error)
 int mbview_pick_site_select(size_t instance, int which, int xpixel, int ypixel) {
 
 	/* local variables */
-	char *function_name = "mbview_pick_site_select";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -545,8 +532,7 @@ int mbview_pick_site_select(size_t instance, int which, int xpixel, int ypixel) 
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -566,7 +552,7 @@ int mbview_pick_site_select(size_t instance, int which, int xpixel, int ypixel) 
 		mbview_findpoint(instance, xpixel, ypixel, &found, &xgrid, &ygrid, &xlon, &ylat, &zdata, &xdisplay, &ydisplay, &zdisplay);
 
 		/* look for nearest site */
-		if (found == MB_YES) {
+		if (found == true) {
 			/* first deselect previously selected site */
 			shared.shareddata.site_selected = MBV_SELECT_NONE;
 
@@ -644,7 +630,7 @@ int mbview_pick_site_select(size_t instance, int which, int xpixel, int ypixel) 
 
 	/* print site debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Site data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Site data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Site values:\n");
 		fprintf(stderr, "dbg2       site_view_mode:      %d\n", data->site_view_mode);
 		fprintf(stderr, "dbg2       site_mode:           %d\n", shared.shareddata.site_mode);
@@ -668,7 +654,7 @@ int mbview_pick_site_select(size_t instance, int which, int xpixel, int ypixel) 
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -681,7 +667,6 @@ int mbview_pick_site_select(size_t instance, int which, int xpixel, int ypixel) 
 int mbview_pick_site_add(size_t instance, int which, int xpixel, int ypixel) {
 
 	/* local variables */
-	char *function_name = "mbview_pick_site_add";
 	int status = MB_SUCCESS;
 	int error = MB_ERROR_NO_ERROR;
 	struct mbview_world_struct *view;
@@ -694,8 +679,7 @@ int mbview_pick_site_add(size_t instance, int which, int xpixel, int ypixel) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -823,7 +807,7 @@ int mbview_pick_site_add(size_t instance, int which, int xpixel, int ypixel) {
 
 	/* print site debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Site data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Site data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Site values:\n");
 		fprintf(stderr, "dbg2       site_view_mode:      %d\n", data->site_view_mode);
 		fprintf(stderr, "dbg2       site_mode:           %d\n", shared.shareddata.site_mode);
@@ -847,7 +831,7 @@ int mbview_pick_site_add(size_t instance, int which, int xpixel, int ypixel) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -860,7 +844,6 @@ int mbview_pick_site_add(size_t instance, int which, int xpixel, int ypixel) {
 int mbview_pick_site_delete(size_t instance, int xpixel, int ypixel) {
 
 	/* local variables */
-	char *function_name = "mbview_pick_site_delete";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -873,8 +856,7 @@ int mbview_pick_site_delete(size_t instance, int xpixel, int ypixel) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -941,7 +923,7 @@ int mbview_pick_site_delete(size_t instance, int xpixel, int ypixel) {
 
 	/* print site debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Site data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Site data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Site values:\n");
 		fprintf(stderr, "dbg2       site_view_mode:      %d\n", data->site_view_mode);
 		fprintf(stderr, "dbg2       site_mode:           %d\n", shared.shareddata.site_mode);
@@ -965,7 +947,7 @@ int mbview_pick_site_delete(size_t instance, int xpixel, int ypixel) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -978,7 +960,6 @@ int mbview_pick_site_delete(size_t instance, int xpixel, int ypixel) {
 int mbview_site_delete(size_t instance, int isite) {
 
 	/* local variables */
-	char *function_name = "mbview_site_delete";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -986,8 +967,7 @@ int mbview_site_delete(size_t instance, int isite) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       isite:            %d\n", isite);
@@ -1017,7 +997,7 @@ int mbview_site_delete(size_t instance, int isite) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -1029,7 +1009,6 @@ int mbview_site_delete(size_t instance, int isite) {
 /*------------------------------------------------------------------------------*/
 int mbview_drawsite(size_t instance, int rez) {
 	/* local variables */
-	char *function_name = "mbview_drawsite";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -1042,8 +1021,7 @@ int mbview_drawsite(size_t instance, int rez) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -1136,12 +1114,12 @@ int mbview_drawsite(size_t instance, int rez) {
 		}
 	}
 #ifdef MBV_GETERRORS
-	mbview_glerrorcheck(instance, 1, function_name);
+	mbview_glerrorcheck(instance, 1, __func__);
 #endif
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
@@ -1153,7 +1131,6 @@ int mbview_drawsite(size_t instance, int rez) {
 /*------------------------------------------------------------------------------*/
 int mbview_updatesitelist() {
 	/* local variables */
-	char *function_name = "mbview_updatesitelist";
 	int status = MB_SUCCESS;
 	XmString *xstr;
 	int isite;
@@ -1162,8 +1139,7 @@ int mbview_updatesitelist() {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 	}
@@ -1212,7 +1188,7 @@ int mbview_updatesitelist() {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}

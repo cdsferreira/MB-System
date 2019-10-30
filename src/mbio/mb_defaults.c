@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mb_defaults.c	10/7/94
- *    $Id$
- *
- *    Copyright (c) 1993-2017 by
+  *
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -26,28 +25,21 @@
  *
  */
 
-/* standard include files */
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
 #include "mb_define.h"
+#include "mb_status.h"
 
-static char svn_id[] = "$Id$";
+static const char *HOME = "HOME";
 
 /*--------------------------------------------------------------------*/
 int mb_version(int verbose, char *version_string, int *version_id, int *version_major, int *version_minor, int *version_archive,
                int *error) {
-	char *function_name = "mb_version";
-	int status = MB_SUCCESS;
-	int nscan;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 	}
@@ -56,7 +48,7 @@ int mb_version(int verbose, char *version_string, int *version_id, int *version_
 	strcpy(version_string, PACKAGE_VERSION);
 
 	/* get version components */
-	nscan = sscanf(version_string, "%d.%d.%d", version_major, version_minor, version_archive);
+	const int nscan = sscanf(version_string, "%d.%d.%d", version_major, version_minor, version_archive);
 	if (nscan == 3) {
 		*error = MB_ERROR_NO_ERROR;
 		// 5.5.2303 ==> 50000000 + 500000 + 2303 ==>  50502303
@@ -70,41 +62,26 @@ int mb_version(int verbose, char *version_string, int *version_id, int *version_
 		*version_archive = 0;
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_defaults(int verbose, int *format, int *pings, int *lonflip, double bounds[4], int *btime_i, int *etime_i,
                 double *speedmin, double *timegap) {
-	char *function_name = "mb_defaults";
-	int status;
-	FILE *fp;
-	char file[MB_PATH_MAXLINE];
-	char string[MB_PATH_MAXLINE];
-	char *HOME = "HOME";
-	char *home_ptr;
-	char *getenv();
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose: %d\n", verbose);
 	}
-
-	/* successful no matter what happens */
-	status = MB_SUCCESS;
 
 	/* set system default values */
 	*format = 0;
@@ -132,12 +109,16 @@ int mb_defaults(int verbose, int *format, int *pings, int *lonflip, double bound
 	*timegap = 1.0;
 
 	/* set the filename */
-	if ((home_ptr = getenv(HOME)) != NULL) {
+	const char *home_ptr = getenv(HOME);
+	if (home_ptr != NULL) {
+		char file[MB_PATH_MAXLINE];
 		strcpy(file, home_ptr);
 		strcat(file, "/.mbio_defaults");
 
 		/* open and read values from file if possible */
-		if ((fp = fopen(file, "r")) != NULL) {
+		FILE *fp = fopen(file, "r");
+		if (fp != NULL) {
+			char string[MB_PATH_MAXLINE];
 			while (fgets(string, sizeof(string), fp) != NULL) {
 				if (strncmp(string, "lonflip:", 8) == 0)
 					sscanf(string, "lonflip: %d", lonflip);
@@ -148,10 +129,11 @@ int mb_defaults(int verbose, int *format, int *pings, int *lonflip, double bound
 		}
 	}
 
-	/* print output debug statements */
+	/* successful no matter what happens */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       format:     %d\n", *format);
 		fprintf(stderr, "dbg2       pings:      %d\n", *pings);
@@ -180,84 +162,40 @@ int mb_defaults(int verbose, int *format, int *pings, int *lonflip, double bound
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_env(int verbose, char *psdisplay, char *imgdisplay, char *mbproject) {
-	char *function_name = "mbenv";
-	int status;
-	FILE *fp;
-	char file[MB_PATH_MAXLINE];
-	char string[MB_PATH_MAXLINE];
-	char *HOME = "HOME";
-	char *home_ptr;
-	char *getenv();
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose: %d\n", verbose);
 	}
 
 /* set system default Postscript displayer */
-#ifdef IRIX
-	strcpy(psdisplay, "xpsview");
-	strcpy(imgdisplay, "xv");
-#endif
-#ifdef IRIX64
-	strcpy(psdisplay, "xpsview");
-	strcpy(imgdisplay, "xv");
-#endif
-#ifdef SOLARIS
-	strcpy(psdisplay, "pageview");
-	strcpy(imgdisplay, "xv");
-#endif
-#ifdef LYNX
-	strcpy(psdisplay, "gv");
-	strcpy(imgdisplay, "xv");
-#endif
-#ifdef LINUX
-	strcpy(psdisplay, "gv");
-	strcpy(imgdisplay, "gimp");
-#endif
-#ifdef SUN
-	strcpy(psdisplay, "pageview");
-	strcpy(imgdisplay, "xv");
-#endif
-#ifdef HPUX
-	strcpy(psdisplay, "gv");
-	strcpy(imgdisplay, "xv");
-#endif
-#ifdef DARWIN
-	strcpy(psdisplay, "gv");
-	strcpy(imgdisplay, "display");
-#endif
-#ifdef CYGWIN
-	strcpy(psdisplay, "gv");
-	strcpy(imgdisplay, "xv");
-#endif
-#ifdef OTHER
-	strcpy(psdisplay, "gv");
-	strcpy(imgdisplay, "xv");
-#endif
-
-	/* successful no matter what happens */
-	status = MB_SUCCESS;
+/* for Linux, Darwin (Mac), OpenBSD, and Cygwin the system default programs
+   as set by the user should be used - the value "Default" results in the
+   appropriate program being used. On older Unix systems the relevant programs
+   need to be directly referenced.
+  If desired, users can set the default postscript and image screen viewers
+  using mbdefaults. */
+	strcpy(psdisplay, "Default");
+	strcpy(imgdisplay, "Default");
 
 	/* set system default project name */
 	strcpy(mbproject, "none");
 
 	/* set the filename */
-	if ((home_ptr = getenv(HOME)) != NULL) {
+	const char *home_ptr = getenv(HOME);
+	if (home_ptr != NULL) {
+		char file[MB_PATH_MAXLINE];
 		strcpy(file, home_ptr);
 		strcat(file, "/.mbio_defaults");
 
 		/* open and read values from file if possible */
-		if ((fp = fopen(file, "r")) != NULL) {
-			status = MB_SUCCESS;
+		FILE *fp = fopen(file, "r");
+		if (fp != NULL) {
+			char string[MB_PATH_MAXLINE];
 			while (fgets(string, sizeof(string), fp) != NULL) {
 				if (strncmp(string, "ps viewer:", 10) == 0)
 					sscanf(string, "ps viewer: %s", psdisplay);
@@ -270,10 +208,11 @@ int mb_env(int verbose, char *psdisplay, char *imgdisplay, char *mbproject) {
 		}
 	}
 
-	/* print output debug statements */
+	/* successful no matter what happens */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       psdisplay:  %s\n", psdisplay);
 		fprintf(stderr, "dbg2       mbproject:  %s\n", mbproject);
@@ -281,41 +220,30 @@ int mb_env(int verbose, char *psdisplay, char *imgdisplay, char *mbproject) {
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_lonflip(int verbose, int *lonflip) {
-	char *function_name = "mb_lonflip";
-	int status;
-	FILE *fp;
-	char file[MB_PATH_MAXLINE];
-	char string[MB_PATH_MAXLINE];
-	char *HOME = "HOME";
-	char *home_ptr;
-	char *getenv();
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose: %d\n", verbose);
 	}
-
-	/* successful no matter what happens */
-	status = MB_SUCCESS;
 
 	/* set system default values */
 	*lonflip = 0;
 
 	/* set the filename */
-	if ((home_ptr = getenv(HOME)) != NULL) {
+	const char *home_ptr = getenv(HOME);
+	if (home_ptr != NULL) {
+		char file[MB_PATH_MAXLINE];
 		strcpy(file, home_ptr);
 		strcat(file, "/.mbio_defaults");
 
 		/* open and read values from file if possible */
-		if ((fp = fopen(file, "r")) != NULL) {
+		FILE *fp = fopen(file, "r");
+		if (fp != NULL) {
+			char string[MB_PATH_MAXLINE];
 			while (fgets(string, sizeof(string), fp) != NULL) {
 				if (strncmp(string, "lonflip:", 8) == 0)
 					sscanf(string, "lonflip: %d", lonflip);
@@ -324,17 +252,17 @@ int mb_lonflip(int verbose, int *lonflip) {
 		}
 	}
 
-	/* print output debug statements */
+	/* successful no matter what happens */
+	int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       lonflip:    %d\n", *lonflip);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -342,25 +270,11 @@ int mb_mbview_defaults(int verbose, int *primary_colortable, int *primary_colort
                        int *slope_colortable, int *slope_colortable_mode, int *secondary_colortable,
                        int *secondary_colortable_mode, double *illuminate_magnitude, double *illuminate_elevation,
                        double *illuminate_azimuth, double *slope_magnitude) {
-	char *function_name = "mb_mbview_defaults";
-	int status;
-	FILE *fp;
-	char file[MB_PATH_MAXLINE];
-	char string[MB_PATH_MAXLINE];
-	char *HOME = "HOME";
-	char *home_ptr;
-	char *getenv();
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose: %d\n", verbose);
 	}
-
-	/* successful no matter what happens */
-	status = MB_SUCCESS;
 
 	/* set system default values */
 	*primary_colortable = 0;
@@ -376,12 +290,16 @@ int mb_mbview_defaults(int verbose, int *primary_colortable, int *primary_colort
 	*slope_magnitude = 1.0;
 
 	/* set the filename */
-	if ((home_ptr = getenv(HOME)) != NULL) {
+	const char *home_ptr = getenv(HOME);
+	if (home_ptr != NULL) {
+		char file[MB_PATH_MAXLINE];
 		strcpy(file, home_ptr);
 		strcat(file, "/.mbio_defaults");
 
 		/* open and read values from file if possible */
-		if ((fp = fopen(file, "r")) != NULL) {
+		FILE *fp = fopen(file, "r");
+		if (fp != NULL) {
+			char string[MB_PATH_MAXLINE];
 			while (fgets(string, sizeof(string), fp) != NULL) {
 				if (strncmp(string, "mbview_primary_colortable:", 25) == 0)
 					sscanf(string, "mbview_primary_colortable:%d", primary_colortable);
@@ -410,10 +328,11 @@ int mb_mbview_defaults(int verbose, int *primary_colortable, int *primary_colort
 		}
 	}
 
-	/* print output debug statements */
+	/* successful no matter what happens */
+	int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       primary_colortable:         %d\n", *primary_colortable);
 		fprintf(stderr, "dbg2       primary_colortable_mode:    %d\n", *primary_colortable_mode);
@@ -430,41 +349,30 @@ int mb_mbview_defaults(int verbose, int *primary_colortable, int *primary_colort
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_fbtversion(int verbose, int *fbtversion) {
-	char *function_name = "mb_fbtversion";
-	int status;
-	FILE *fp;
-	char file[MB_PATH_MAXLINE];
-	char string[MB_PATH_MAXLINE];
-	char *HOME = "HOME";
-	char *home_ptr;
-	char *getenv();
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose: %d\n", verbose);
 	}
-
-	/* successful no matter what happens */
-	status = MB_SUCCESS;
 
 	/* set system default values */
 	*fbtversion = 3;
 
 	/* set the filename */
-	if ((home_ptr = getenv(HOME)) != NULL) {
+	const char *home_ptr = getenv(HOME);
+	if (home_ptr != NULL) {
+		char file[MB_PATH_MAXLINE];
 		strcpy(file, home_ptr);
 		strcat(file, "/.mbio_defaults");
 
 		/* open and read values from file if possible */
-		if ((fp = fopen(file, "r")) != NULL) {
+		FILE *fp = fopen(file, "r");
+		if (fp != NULL) {
+	                char string[MB_PATH_MAXLINE];
 			while (fgets(string, sizeof(string), fp) != NULL) {
 				if (strncmp(string, "fbtversion:", 11) == 0)
 					sscanf(string, "fbtversion: %d", fbtversion);
@@ -473,59 +381,49 @@ int mb_fbtversion(int verbose, int *fbtversion) {
 		}
 	}
 
-	/* print output debug statements */
+	/* successful no matter what happens */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id:     %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       fbtversion: %d\n", *fbtversion);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_uselockfiles(int verbose, int *uselockfiles) {
-	char *function_name = "mb_uselockfiles";
-	int status;
-	FILE *fp;
-	char file[MB_PATH_MAXLINE];
-	char string[MB_PATH_MAXLINE];
-	char *HOME = "HOME";
-	char *home_ptr;
-	char *getenv();
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose: %d\n", verbose);
 	}
-
-	/* successful no matter what happens */
-	status = MB_SUCCESS;
 
 #ifdef WIN32
 	/* It would crash because the lock file is attempted to be created with the new "wx"
 	   that VC12 does not know and we don't have any use for this anyway.
 	*/
 	*uselockfiles = 0;
-	return (status);
-#endif
+	return (MB_SUCCESS);
+#else  /* WIN32 */
 
 	/* set system default values */
 	*uselockfiles = 1;
 
 	/* set the filename */
-	if ((home_ptr = getenv(HOME)) != NULL) {
+	const char *home_ptr = getenv(HOME);
+	if (home_ptr != NULL) {
+		char file[MB_PATH_MAXLINE];
 		strcpy(file, home_ptr);
 		strcat(file, "/.mbio_defaults");
 
 		/* open and read values from file if possible */
-		if ((fp = fopen(file, "r")) != NULL) {
+		FILE *fp = fopen(file, "r");
+		if (fp != NULL) {
+			char string[MB_PATH_MAXLINE];
 			while (fgets(string, sizeof(string), fp) != NULL) {
 				if (strncmp(string, "uselockfiles:", 13) == 0)
 					sscanf(string, "uselockfiles:%d", uselockfiles);
@@ -536,51 +434,42 @@ int mb_uselockfiles(int verbose, int *uselockfiles) {
 		}
 	}
 
-	/* print output debug statements */
+	/* successful no matter what happens */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id:       %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       uselockfiles: %d\n", *uselockfiles);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:       %d\n", status);
 	}
 
-	/* return status */
 	return (status);
+#endif  /* WIN32 */
 }
 /*--------------------------------------------------------------------*/
 int mb_fileiobuffer(int verbose, int *fileiobuffer) {
-	char *function_name = "mb_fileiobuffer";
-	int status;
-	FILE *fp;
-	char file[MB_PATH_MAXLINE];
-	char string[MB_PATH_MAXLINE];
-	char *HOME = "HOME";
-	char *home_ptr;
-	char *getenv();
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose: %d\n", verbose);
 	}
-
-	/* successful no matter what happens */
-	status = MB_SUCCESS;
 
 	/* set system default values */
 	*fileiobuffer = 0;
 
 	/* set the filename */
-	if ((home_ptr = getenv(HOME)) != NULL) {
+	const char *home_ptr = getenv(HOME);
+	if (home_ptr != NULL) {
+		char file[MB_PATH_MAXLINE];
 		strcpy(file, home_ptr);
 		strcat(file, "/.mbio_defaults");
 
 		/* open and read values from file if possible */
-		if ((fp = fopen(file, "r")) != NULL) {
+		FILE *fp = fopen(file, "r");
+		if (fp != NULL) {
+			char string[MB_PATH_MAXLINE];
 			while (fgets(string, sizeof(string), fp) != NULL) {
 				if (strncmp(string, "fileiobuffer:", 13) == 0)
 					sscanf(string, "fileiobuffer:%d", fileiobuffer);
@@ -589,17 +478,17 @@ int mb_fileiobuffer(int verbose, int *fileiobuffer) {
 		}
 	}
 
-	/* print output debug statements */
+	/* successful no matter what happens */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id:       %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       fileiobuffer: %d\n", *fileiobuffer);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:       %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/

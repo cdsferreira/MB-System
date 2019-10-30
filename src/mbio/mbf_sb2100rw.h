@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	MBF_SB2100RW.h	3/3/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -47,6 +46,9 @@
  *   6. The data structure defined below includes all of the values
  *      which are passed in SeaBeam 1000/2100 records.
  */
+
+#ifndef MBF_SB2100RW_H_
+#define MBF_SB2100RW_H_
 
 /* maximum number of depth-velocity pairs */
 #define MBF_SB2100RW_MAXVEL 30
@@ -177,3 +179,5 @@ struct mbf_sb2100rw_struct {
 	/* comment (TR) */
 	char comment[MBF_SB2100RW_MAXLINE];
 };
+
+#endif  /* MBF_SB2100RW_H_ */

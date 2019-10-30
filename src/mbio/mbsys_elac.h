@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_elac.h	8/20/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -54,6 +53,9 @@
  *      the ping telegrams using the program mbmerge.
  *
  */
+
+#ifndef MBSYS_ELAC_H_
+#define MBSYS_ELAC_H_
 
 /* sonar types */
 #define MBSYS_ELAC_UNKNOWN 0
@@ -238,3 +240,5 @@ int mbsys_elac_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *ki
                            int *error);
 int mbsys_elac_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp, double *depth, double *velocity, int *error);
 int mbsys_elac_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
+
+#endif  /* MBSYS_ELAC_H_ */

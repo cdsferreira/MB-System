@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsvpselect.c	03.03.2014
- *	$Id$
  *
- *    Copyright (c) 2014-2017 by
+ *    Copyright (c) 2014-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -183,26 +182,24 @@
  *
  */
 
-/* ---------------------------------------------------------------- */
-
-/* include files */
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
+#include <getopt.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include <unistd.h>
 
+#include "geodesic.h"
 #include "mb_define.h"
 #include "mb_status.h"
-
-#include "geodesic.h"
 
 /* struct info_holder (shortly inf) hold the information from auxiliary files .inf
  * that are created from mbdatalist command */
 
 struct info_holder {
-	int flag;
+	int flag;  // TODO(schwehr): Make this an enum
 	char *file_name;
 	long double s_lat;
 	long double s_lon;
@@ -230,27 +227,10 @@ struct svp_holder {
 };
 typedef struct svp_holder svp;
 
-int Is_Leap(int year);
-char *my_strcpy(char *a, char *b);
-void calc_ave_dateTime(inf *inf_hold);
-void JulianToGregorian(int year, int yearDay, int *year_tm, int *month, int *wDay);
-void GregorianToJulian(int year, int month, int day, int *yearDay);
-void fill_struct_inf(inf *inf_hold, char *holder);
-void fill_struct_svp(svp *svp_hold, char *holder);
-int read_recursive(char *fileName);
-int read_recursive2(char *fileName);
-void read_list(char *list, char *list_2);
-void trim_newline(char string[]);
-void pause_screen();
-double convert_decimal(int deg, int min, int sec);
-void print_inf(inf *cd);
-void print_svp(svp *cd);
-void mid_point(long double lat1, long double lon1, long double lat2, long double lon2, long double *lat3, long double *lon3);
-void pause_screen(void);
 
 /* global variables */
-int counter_i_i2 = 0;
-int p_flag = 0;
+// int counter_i_i2 = 0;
+int p_flag = 0;  // TODO(schwehr): Make this an enum
 int p_3_time = 10;
 int p_4_range = 10000;
 int p_4_flage = 0;
@@ -272,190 +252,29 @@ char buffer[BUFSIZ]; /* String to hold the file name */
 char buffer_2[BUFSIZ];
 int svp_total = 0;
 int surveyLines_total = 0;
-static char version_id[] = "$Id$";
 
-/* ------------------------------------------------------------------- */
-
-int main(int argc, char **argv) {
-	char program_name[] = "mbsvpselect";
-	char help_message[] = "Program mbsvpselect chooses and implements the best available sound speed\n"
-	                      "model for each swath file in a survey. The user provides a list of the\n"
-	                      "available sound speed models and specifies the criteria used for\n"
-	                      "model selection. The program uses mbset to turn on bathymetry\n"
-	                      "recalculation by raytracing through the sound speed model selected\n"
-	                      "for each swath file.";
-	char usage_message[] = "mbsvpselect -H -N -Idatalist -Ssvplist "
-	                       "[-P0, -P1, -P2/period, -P3/range, -P3/range/1]  -V";
-	extern char *optarg;
-	int errflg = 0;
-	int c;
-	int help = 0;
-	int flag = 0;
-
-	/* MBIO status variables */
-	int status = MB_SUCCESS;
-
-	int error = MB_ERROR_NO_ERROR;
-
-	char datalist[BUFSIZ];
-	char svplist[BUFSIZ];
-
-	int n;
-	int n1, n2, n3;
-
-	my_strcpy(datalist, "datalist.mb-1");
-	my_strcpy(svplist, "svplist.mb-1");
-	while ((c = getopt(argc, argv, "HhI:i:S:s:P:p:VvNn")) != -1)
-		switch (c) {
-		case 'H':
-		case 'h':
-			help++;
-			break;
-		case 'I':
-		case 'i':
-			sscanf(optarg, "%s", datalist);
-			flag++;
-			break;
-		case 'N':
-		case 'n':
-			zero_test += 1;
-			break;
-		case 'P':
-		case 'p':
-			n = sscanf(optarg, "%d/%d/%d", &n1, &n2, &n3);
-			n_p2 = n;
-			/* printf("\nthis is n %d \n", n); */
-			if ((n1 != 0) && (n1 != 1) && (n1 != 2) && (n1 != 3)) {
-				puts("Only four options are available: 0 for nearest position, 1 for nearest in time, 2 for both, 3 for nearest "
-				     "in time within range");
-				puts("The default is svp_nearest in position");
-				puts("If option 2 is chosen without specifying time period, 10 hours is the default value");
-				puts("If option 3 is chosen without specifying range, 10000 meters is the default value");
-				puts("If option 3 is chosen two options are available : nearest in time and nearest in month");
-				pause_screen();
-				exit(0);
-			}
-			else {
-				if (n == 0)
-					p_flag = 0;
-				if (n == 1) {
-					p_flag = n1;
-					if (p_flag == 2) {
-						p_3_time = 10;
-						n2 = p_3_time;
-					}
-					if (p_flag == 3) {
-						p_4_range = 10000;
-						n2 = p_4_range;
-					}
-				}
-				if (n == 2) {
-					p_flag = n1;
-					if ((p_flag == 0) || (p_flag == 1))
-						puts("The options -P0 for nearest in position or -P1 for nearest in time do not need further arguments");
-
-					if (p_flag == 2)
-						p_3_time = n2;
-					if (p_flag == 3)
-						p_4_range = n2;
-				}
-				if (n == 3) {
-					p_flag = n1;
-					p_4_range = n2;
-					p_4_flage = n3;
-					if ((p_flag == 0) || (p_flag == 1))
-						puts("The options -P0 for nearest in position or -P1 for nearest in time do not need further arguments");
-
-					if ((p_4_flage != 0) && (p_4_flage != 1)) {
-						puts("If option 3 is chosen two options are available : nearest in time with -P3/0 and nearest in month "
-						     "with -P3/1");
-						pause_screen();
-						exit(0);
-					}
-				}
-			}
-			flag++;
-			break;
-		case 'S':
-		case 's':
-			sscanf(optarg, "%s", svplist);
-			flag++;
-			break;
-		case 'V':
-		case 'v':
-			verbose++;
-			break;
-		default:
-			break;
-		}
-
-	/* if error flagged then print it and exit */
-	if (errflg) {
-		fprintf(stderr, "usage: %s\n", usage_message);
-		fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
-		error = MB_ERROR_BAD_USAGE;
-		exit(error);
-	}
-
-	/* print starting message */
-	if (verbose == 1 || help) {
-		fprintf(stderr, "\nProgram %s\n", program_name);
-		fprintf(stderr, "Version %s\n", version_id);
-		fprintf(stderr, "MB-system Version %s\n", MB_VERSION);
-	}
-
-	/* print starting debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Program <%s>\n", program_name);
-		fprintf(stderr, "dbg2  Version %s\n", version_id);
-		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
-		fprintf(stderr, "dbg2  Control Parameters:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       help:       %d\n", help);
-		fprintf(stderr, "dbg2       datalist:   %s\n", datalist);
-		fprintf(stderr, "dbg2       svplist:    %s\n", svplist);
-		fprintf(stderr, "dbg2       p_flag:     %d\n", p_flag);
-		fprintf(stderr, "dbg2       p_3_time:   %d\n", p_3_time);
-		fprintf(stderr, "dbg2       p_4_range:  %d\n", p_4_range);
-		fprintf(stderr, "dbg2       p_4_flage:  %d\n", p_4_flage);
-		fprintf(stderr, "dbg2       zero_test:  %d\n", zero_test);
-	}
-
-	/* if help desired then print it and exit */
-	if (help) {
-		fprintf(stderr, "\n%s\n", help_message);
-		fprintf(stderr, "\nusage: %s\n", usage_message);
-		exit(error);
-	}
-
-	/* do the work */
-	read_list(datalist, svplist);
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Program <%s> completed\n", program_name);
-		fprintf(stderr, "dbg2  Ending status:\n");
-		fprintf(stderr, "dbg2       status:  %d\n", status);
-		fprintf(stderr, "dbg2       error:   %d\n", error);
-	}
-
-	/* end it all */
-	exit(error);
-
-} /* main */
-/* ---------------------------------------------------------------- */
+static const char program_name[] = "mbsvpselect";
+static const char help_message[] =
+    "Program mbsvpselect chooses and implements the best available sound speed\n"
+    "model for each swath file in a survey. The user provides a list of the\n"
+    "available sound speed models and specifies the criteria used for\n"
+    "model selection. The program uses mbset to turn on bathymetry\n"
+    "recalculation by raytracing through the sound speed model selected\n"
+    "for each swath file.";
+static const char usage_message[] =
+    "mbsvpselect -H -N -Idatalist -Ssvplist "
+    "[-P0, -P1, -P2/period, -P3/range, -P3/range/1]  -V";
 
 /* ---------------------------------------------------------------- */
 /* Is leap old */
-int Is_Leap(int year) {
+bool Is_Leap(int year) {
 	if (year % 400 == 0)
-		return 0;
+		return false;
 	else if (year % 100 == 0)
-		return 1;
+		return true;
 	else if (year % 4 == 0)
-		return 0;
-	else
-		return 1;
+		return false;
+	return true;
 }
 /* ---------------------------------------------------------------- */
 /*
@@ -480,7 +299,7 @@ int Is_Leap(int year) {
 /* ---------------------------------------------------------------- */
 void JulianToGregorian(int year, int yearDay, int *year_tm, int *month, int *wDay) {
 	*year_tm = year - 1900;
-	if (Is_Leap(year) == 0) {
+	if (!Is_Leap(year)) {
 		if (yearDay > 335) {
 			*month = 11;
 			*wDay = yearDay - 335;
@@ -668,20 +487,29 @@ void GregorianToJulian(int year, int month, int day, int *yearDay) {
 			break;
 		} /* switch */
 } /* GregorianToJulian */
+/* --------------------------------------------------------------- */
+/* calculate the average position of two points */
+/* http://www.movable-type.co.uk/scripts/latlong.html */
+void mid_point(long double lat1, long double lon1, long double lat2, long double lon2, long double *lat3, long double *lon3) {
+	const double dLon = DTR * ((lon2) - (lon1));
+	const double lat1_rad = DTR * ((lat1));
+	const double lat2_rad = DTR * ((lat2));
+	const double lon1_rad = DTR * ((lon1));
+	const double bx = cos(lat2_rad) * cos(dLon);
+	const double by = cos(lat2_rad) * sin(dLon);
+	*(lat3) = atan2(sin(lat1_rad) + sin(lat2_rad), sqrt((((cos(lat1_rad)) + bx) * ((cos(lat1_rad)) + bx)) + (by * by))) * RTD;
+	*(lon3) = (lon1_rad + atan2(by, (cos(lat1_rad) + bx))) * RTD;
+}
 /* ---------------------------------------------------------------- */
 /*this function fills the inf struct with the appropriate values
  * it takes a pointer to the inf_struct and the file_name (file_name.inf) to read information from
  */
 void fill_struct_inf(inf *inf_hold, char *holder) {
-	int mon, year;
-	double s_sec;
 	inf_hold->flag = 0;
-	FILE *fileName;
 	inf_hold->file_name = holder;
-	struct tm *ptr;
 
 	/* reading relative inf file */
-	fileName = fopen(inf_hold->file_name, "r");
+	FILE *fileName = fopen(inf_hold->file_name, "r");
 	if (fileName == NULL) {
 		printf("%s could not be opened Please check the datalist files\n", inf_hold->file_name);
 		exit(1);
@@ -695,6 +523,9 @@ void fill_struct_inf(inf *inf_hold, char *holder) {
 	/* parsing date and time*/
 	fgets(buffer, sizeof buffer, fileName);
 
+	int mon;
+	int year;
+	double s_sec;
 	sscanf(buffer, "%*s %d %d %d %i:%i:%lf %*s %*s", &mon, &inf_hold->s_datum_time.tm_mday, &year,
 	       &inf_hold->s_datum_time.tm_hour, &inf_hold->s_datum_time.tm_min, &s_sec);
 	inf_hold->s_datum_time.tm_mon = mon - 1;
@@ -704,7 +535,7 @@ void fill_struct_inf(inf *inf_hold, char *holder) {
 	GregorianToJulian(inf_hold->s_datum_time.tm_year, inf_hold->s_datum_time.tm_mon, inf_hold->s_datum_time.tm_mday,
 	                  &inf_hold->s_datum_time.tm_yday);
 
-	ptr = &inf_hold->s_datum_time;
+	struct tm *ptr = &inf_hold->s_datum_time;
 	inf_hold->s_Time = mktime(ptr);
 
 	/* Lon and Lat processing*/
@@ -757,6 +588,17 @@ void fill_struct_inf(inf *inf_hold, char *holder) {
 
 	fclose(fileName);
 } /* fill_struct_inf */
+/* ---------------------------------------------------------------- */
+/*
+ * convert_decimal function
+ * convert lat or lon from deg(int):min(int):sec(int) to decimal format
+ */
+double convert_decimal(int deg, int min, int sec) {
+	if (deg >= 0)
+		return (double)deg + (((double)min) / 60) + (((double)sec) / 3600);
+
+	return -(fabs((double)deg) + (((double)min) / 60) + (((double)sec) / 3600));
+}
 /* ------------------------------------------------------------------- */
 /* SVP tool is able to read only two SVP formats
  *
@@ -765,7 +607,18 @@ void fill_struct_inf(inf *inf_hold, char *holder) {
 
 /* ------------------------------------------------------------------- */
 void fill_struct_svp(svp *svp_hold, char *holder) {
-	int yearDay, month, year;
+	svp_hold->file_name = holder;
+
+	/* reading relative svp file */
+	FILE *fileName = fopen(svp_hold->file_name, "r");
+	if (fileName == NULL) {
+		printf("%s could not be opend\n", svp_hold->file_name);
+		exit(1);
+	}
+
+	int yearDay;
+	int month;
+	int year;
 	double seconds;
 	int s_lat_min = 0;
 	int s_lat_deg = 0;
@@ -773,8 +626,6 @@ void fill_struct_svp(svp *svp_hold, char *holder) {
 	int s_lon_min = 0;
 	int s_lon_deg = 0;
 	int s_lon_sec = 0;
-	FILE *fileName;
-	svp_hold->file_name = holder;
 	char caris_str[] = "Section";
 	char mb1_str[] = "## MB-SVP";
 	char mb2_str[] = "# MB-SVP";
@@ -782,16 +633,7 @@ void fill_struct_svp(svp *svp_hold, char *holder) {
 	char *ptr_mb1 = NULL;
 	char *ptr_mb2 = NULL;
 
-	/* reading relative svp file */
-	fileName = fopen(svp_hold->file_name, "r");
-
-	if (fileName == NULL) {
-		printf("%s could not be opend\n", svp_hold->file_name);
-		exit(1);
-	}
-
 	/* reaching start of data */
-
 	while ((fgets(buffer, sizeof buffer, fileName)) != NULL) {
 		ptr_caris = strstr(buffer, caris_str);
 		ptr_mb1 = strstr(buffer, mb1_str);
@@ -853,18 +695,34 @@ void fill_struct_svp(svp *svp_hold, char *holder) {
 
 	fclose(fileName);
 } /* fill_struct_svp */
+/* --------------------------------------------------------------- */
+/*copy string and handle possible buffer overlap*/
+char *my_strcpy(char *a, char *b) {
+	if (a == NULL || b == NULL) {
+		return NULL;
+	}
+
+	memmove(a, b, strlen(b) + 1);
+	return a;
+}
+/* ---------------------------------------------------------------- */
+/*
+ *  Function trim_newline
+ *	Delete the '\n' char from string
+ */
+void trim_newline(char string[]) {
+	if (string[strlen(string) - 1] == '\n')
+		string[strlen(string) - 1] = '\0';
+}
 /*---------------------------------------------------------------------*/
 int read_recursive2(char *fname) {
-	char original[strlen(fname)];
+	char original[1024] = {""};
 	my_strcpy(original, fname);
 	const char *result = fname;
-	char *ret;
 	int counter = 0;
-	// int spaceIndex = 0;
 	trim_newline(fname);
 	strcat(fname, ".inf");
-	FILE *dataFile;
-	dataFile = fopen(fname, "r");
+	FILE *dataFile = fopen(fname, "r");
 	if (dataFile != NULL) {
 		my_strcpy(holder[surveyLines_total], fname);
 		counter += 1;
@@ -872,123 +730,145 @@ int read_recursive2(char *fname) {
 		fclose(dataFile);
 		return counter;
 	}
-	else {
-		ret = strchr(result, ' ');
-		if (ret == NULL) {
-			char file2[strlen(original)];
-			my_strcpy(file2, original);
-			// char *file2= original;
-			trim_newline(file2);
-			FILE *dataFile2;
-			dataFile2 = fopen(file2, "r");
-			if (dataFile2 == NULL) {
-				printf("Could not open the file %s", file2);
-				return counter;
-			}
-			else {
-				// char *result2;
-				while ((fgets(dBuffer, sizeof dBuffer, dataFile2)) != NULL) {
-					char strHolder[strlen(original)];
-					my_strcpy(strHolder, original);
-					while (strHolder[strlen(strHolder) - 1] != '/')
-						strHolder[strlen(strHolder) - 1] = 0;
-					strcat(strHolder, dBuffer);
-					int tmp = read_recursive2(strHolder);
-					if (tmp == 0) {
-						tmp = read_recursive2(dBuffer);
-					}
-					// counter +=tmp;
-				}
-				fclose(dataFile2);
-			}
+
+	char *ret = strchr(result, ' ');
+	if (ret == NULL) {
+		char file2[1024] = {""};
+		my_strcpy(file2, original);
+		trim_newline(file2);
+		FILE *dataFile2 = fopen(file2, "r");
+		if (dataFile2 == NULL) {
+			printf("Could not open the file %s", file2);
+			return counter;
 		}
-		else {
-			char strHolder[strlen(original)];
+		while ((fgets(dBuffer, sizeof dBuffer, dataFile2)) != NULL) {
+			//char strHolder[strlen(original)];		INVALID JL
+			char strHolder[1024];
 			my_strcpy(strHolder, original);
-			while (strHolder[strlen(strHolder) - 1] != ' ')
+			while (strHolder[strlen(strHolder) - 1] != '/')
 				strHolder[strlen(strHolder) - 1] = 0;
-			strHolder[strlen(strHolder) - 1] = 0;
-			int tmp2 = read_recursive2(strHolder);
-			counter += tmp2;
+			strcat(strHolder, dBuffer);
+			int tmp = read_recursive2(strHolder);
+			if (tmp == 0) {
+				tmp = read_recursive2(dBuffer);
+			}
+			// counter +=tmp;
 		}
+		fclose(dataFile2);
 	}
+	else {
+		char strHolder[1024];
+		my_strcpy(strHolder, original);
+		while (strHolder[strlen(strHolder) - 1] != ' ')
+			strHolder[strlen(strHolder) - 1] = 0;
+		strHolder[strlen(strHolder) - 1] = 0;
+		const int tmp2 = read_recursive2(strHolder);
+		counter += tmp2;
+	}
+
 	return counter;
 }
 /*---------------------------------------------------------------------*/
 int read_recursive(char *fileName) {
 	trim_newline(fileName);
-	int counter = 0;
-	char str[BUFSIZ];
-	FILE *dataFile;
-	char caris_str[] = "Section";
-	char mb1_str[] = "## MB-SVP";
-	char mb2_str[] = "MB-SVP";
-	char *ptr_caris = NULL;
-	char *ptr_mb1 = NULL;
-	char *ptr_mb2 = NULL;
-	dataFile = fopen(fileName, "r");
+	FILE *dataFile = fopen(fileName, "r");
 	if (dataFile == NULL) {
 		printf("Could not open the file %s", fileName);
+		return 0;
 	}
-	else {
-		fgets(str, sizeof str, dataFile);
-		trim_newline(dBuffer);
-		// initialize the end condition for the svps
-		ptr_caris = strstr(str, caris_str);
-		ptr_mb1 = strstr(str, mb1_str);
-		ptr_mb2 = strstr(str, mb2_str);
 
-		// initialize the end condition for the swaths
+	char str[BUFSIZ];
+	fgets(str, sizeof str, dataFile);
+	trim_newline(dBuffer);
+	// initialize the end condition for the svps
+	const char caris_str[] = "Section";
+	const char *ptr_caris = strstr(str, caris_str);
+	const char mb1_str[] = "## MB-SVP";
+	const char *ptr_mb1 = strstr(str, mb1_str);
+	const char mb2_str[] = "MB-SVP";
+	const char *ptr_mb2 = strstr(str, mb2_str);
 
-		if ((ptr_caris != NULL) || (ptr_mb1 != NULL) || (ptr_mb2 != NULL)) {
-			my_strcpy(svps[svp_total], fileName);
-			counter += 1;
-		}
-		else {
-			read_recursive(str);
-		}
-		fclose(dataFile);
+	// initialize the end condition for the swaths
+
+	int counter = 0;
+	if ((ptr_caris != NULL) || (ptr_mb1 != NULL) || (ptr_mb2 != NULL)) {
+		my_strcpy(svps[svp_total], fileName);
+		counter += 1;
+	} else {
+		read_recursive(str);
 	}
+	fclose(dataFile);
+
 	return counter;
 }
+/* ---------------------------------------------------------------- */
+/* print the inf information on the screen */
+void print_inf(inf *cd) {
+	struct tm *temp = &cd->s_datum_time;
+	puts("==================================================");
+	printf("file_name: %s\n", cd->file_name);
+	puts("starting Date and time");
+	printf("\n%s\n", asctime(temp));
 
+	temp = &cd->e_datum_time;
+	puts("ending Date and time");
+	printf("\n%s\n", asctime(temp));
+	puts("Start position");
+	printf("lat: %Lf\t", cd->s_lat);
+	printf("lon: %Lf\n", cd->s_lon);
+	puts("End position");
+	printf("e_lat: %Lf\t", cd->e_lat);
+	printf("e_lon: %Lf\n", cd->e_lon);
+	puts("Average position");
+	printf("ave_lat: %Lf\t", cd->ave_lat);
+	printf("ave_lon: %Lf\n", cd->ave_lon);
+	puts("==================================================");
+}
+/* --------------------------------------------------------------- */
+/* print the svp information on the screen */
+void print_svp(svp *cd) {
+	struct tm *temp = &cd->svp_datum_time;
+	puts("==================================================");
+	printf("file_name: %s\n", cd->file_name);
+	puts("Date and time");
+	printf("\n%s\n", asctime(temp));
+	puts("position");
+	printf("lat: %Lf\t", cd->s_lat);
+	printf("lon: %Lf\n", cd->s_lon);
+	puts("==================================================");
+}
+
+/* ---------------------------------------------------------------- */
+/*
+ * pause the screen at the exit of the program
+ */
+void pause_screen() {
+	printf("\nEnd the program press ENTER");
+	fflush(stdin);
+	getchar();
+}
 /* ------------------------------------------------------------------- */
 void read_list(char *list, char *list_2) {
-	int size = 0;
-	int i = 0;
-	int i2 = 0;
-	/* int counter_i2 = 0; */
-	int j = 0;
-	FILE *fDatalist;
-	FILE *fSvp;
-	FILE *fresult;
-	inf *inf_hold = NULL;
-	svp *svp_hold = NULL;
-	int n = 0;
-	struct geod_geodesic g;
-	double azi1, azi2;
-	int shellstatus;
-	int count_size2;
-
 	atexit(pause_screen); /* pause the screen */
 
 	/* open datalist.mb-1 for names of the files */
-	fDatalist = fopen(list, "r");
-	fSvp = fopen(list_2, "r");
+	FILE *fDatalist = fopen(list, "r");
 	if (fDatalist == NULL) {
 		printf("%s Could not be found", list);
 		exit(1);
 	}
 
+	FILE *fSvp = fopen(list_2, "r");
 	if (fSvp == NULL) {
 		printf("%s Could not be found", list_2);
 		exit(1);
 	}
-	fresult = fopen("result.txt", "w+");
+	FILE *fresult = fopen("result.txt", "w+");
 	if (fresult == NULL) {
 		printf("result.txt could not be found");
 		exit(1);
 	}
+	int count_size2;
 	/* ------------------------------ */
 	while ((fgets(dBuffer, sizeof dBuffer, fDatalist)) != NULL) {
 		count_size2 = read_recursive2(dBuffer);
@@ -999,21 +879,19 @@ void read_list(char *list, char *list_2) {
 	/* fill size */
 
 	/* Allocate memory for inf_struct */
-	inf_hold = malloc((surveyLines_total) * sizeof(inf));
+	inf *inf_hold = malloc((surveyLines_total) * sizeof(inf));
 	if (inf_hold == NULL) {
 		printf("no memory for the process end of process");
 		exit(1);
 	}
-	size = surveyLines_total;
-	for (i = 0; i < surveyLines_total; i++) {
+	int size = surveyLines_total;
+	for (int i = 0; i < surveyLines_total; i++) {
 		fill_struct_inf(&inf_hold[i], holder[i]);
 		if (verbose == 1)
 			print_inf(&inf_hold[i]);
 	}
 
 	/* reset for svp_hold */
-	i = 0;
-	i2 = 0;
 	/* ------------------------ */
 
 	while ((fgets(sdBuffer, sizeof sdBuffer, fSvp) != NULL)) {
@@ -1026,15 +904,21 @@ void read_list(char *list, char *list_2) {
 	size_2 = svp_total;
 
 	/* Allocate memory for svp_struct */
-	svp_hold = malloc((svp_total) * sizeof(svp));
+	svp *svp_hold = malloc((svp_total) * sizeof(svp));
 	if (svp_hold == NULL) {
 		printf("no memory for the process end of process");
 		exit(1);
 	}
-	int hour_hold[size][size_2];
+#ifdef _WIN32
+	int hour_hold[100][100];	// Have no idea if it's enough JL
+	int min_hold[100][100];
+	int day_hold[100][100];
+#else
+	int hour_hold[size][size_2];	// INVALID STANDARD C
 	int min_hold[size][size_2];
 	int day_hold[size][size_2];
-	for (i = 0; i < size_2; i++) {
+#endif
+	for (int i = 0; i < size_2; i++) {
 		fill_struct_svp(&svp_hold[i], svps[i]);
 		if (verbose == 1)
 			print_svp(&svp_hold[i]);
@@ -1063,11 +947,20 @@ void read_list(char *list, char *list_2) {
 			       "specified range the SVP with the nearest month to the profile regardless of the year. This is the seasonal "
 			       "interpretation \n");
 	}
+	int n = 0;
+	struct geod_geodesic g;
+	double azi1, azi2;
+
 	geod_init(&g, A_, F_);
 	size = surveyLines_total;
-	for (i = 0; i < size; i++) {
+	for (int i = 0; i < size; i++) {
+#ifdef _WIN32
+		double dist[100][100];				// Have no idea if it's enough JL
+		double time_hold[100][100];
+#else
 		double dist[size][size_2];
 		double time_hold[size][size_2];
+#endif
 		char all_in_sys[BUFSIZ] = "mbset";
 		if (p_flag == 0) {
 			switch (inf_hold[i].flag) {
@@ -1078,9 +971,7 @@ void read_list(char *list, char *list_2) {
 				if (verbose == 1)
 					printf("\nCalculating the distances to all svp profiles for %s\n", inf_hold[i].file_name);
 				double temp_dist = 0;
-				for (j = 0; j < size_2; j++) {
-					// print_inf(&inf_hold[i]);
-					// print_svp(&svp_hold[j]);
+				for (int j = 0; j < size_2; j++) {
 					geod_inverse(&g, inf_hold[i].ave_lat, inf_hold[i].ave_lon, svp_hold[j].s_lat, svp_hold[j].s_lon, &dist[0][j],
 					             &azi1, &azi2);
 					if (j == 0) {
@@ -1116,7 +1007,7 @@ void read_list(char *list, char *list_2) {
 				strcat(all_in_sys, " -PSVPFILE:");
 				strcat(all_in_sys, svp_hold[n].file_name);
 				printf("%s\n", all_in_sys);
-				shellstatus = system(all_in_sys);
+				/* int shellstatus = */ system(all_in_sys);
 				break;
 			case 1:
 				if (verbose == 1)
@@ -1126,7 +1017,7 @@ void read_list(char *list, char *list_2) {
 					printf("\nThe file %s has no navigation information at the start position and the svp profile will be "
 					       "assigned to the end point of the file\n",
 					       inf_hold[i].file_name);
-				for (j = 0; j < size_2; j++) {
+				for (int j = 0; j < size_2; j++) {
 					geod_inverse(&g, inf_hold[i].s_lat, inf_hold[i].s_lon, svp_hold[j].s_lat, svp_hold[j].s_lon, &dist[0][j],
 					             &azi1, &azi2);
 					if (j == 0) {
@@ -1162,7 +1053,7 @@ void read_list(char *list, char *list_2) {
 				strcat(all_in_sys, " -P ");
 				strcat(all_in_sys, svp_hold[n].file_name);
 				printf("%s\n", all_in_sys);
-				shellstatus = system(all_in_sys);
+				/* int shellstatus = */ system(all_in_sys);
 				break;
 			case 2:
 				if (verbose == 1)
@@ -1172,7 +1063,7 @@ void read_list(char *list, char *list_2) {
 					printf("\nThe file %s has no navigation information at the end position and the svp profile will be assigned "
 					       "to the start point of the file\n",
 					       inf_hold[i].file_name);
-				for (j = 0; j < size_2; j++) {
+				for (int j = 0; j < size_2; j++) {
 					geod_inverse(&g, inf_hold[i].e_lat, inf_hold[i].e_lon, svp_hold[j].s_lat, svp_hold[j].s_lon, &dist[0][j],
 					             &azi1, &azi2);
 					if (j == 0) {
@@ -1206,7 +1097,7 @@ void read_list(char *list, char *list_2) {
 				strcat(all_in_sys, " -P ");
 				strcat(all_in_sys, svp_hold[n].file_name);
 				printf("%s\n", all_in_sys);
-				shellstatus = system(all_in_sys);
+				/* int shellstatus = */ system(all_in_sys);
 				fprintf(fresult, "%s\n", "=============================================================");
 				break;
 			case 3:
@@ -1232,7 +1123,7 @@ void read_list(char *list, char *list_2) {
 				if (verbose == 1)
 					printf("\nCalculating the nearest svp in time for for %s\n", inf_hold[i].file_name);
 				double temp_time = 0;
-				for (j = 0; j < size_2; j++) {
+				for (int j = 0; j < size_2; j++) {
 					time_hold[0][j] = fabs(difftime(inf_hold[i].s_Time, svp_hold[j].svp_Time));
 					if (j == 0) {
 						temp_time = time_hold[0][j];
@@ -1267,7 +1158,7 @@ void read_list(char *list, char *list_2) {
 				strcat(all_in_sys, " -PSVPFILE:");
 				strcat(all_in_sys, svp_hold[n].file_name);
 				printf("%s\n", all_in_sys);
-				shellstatus = system(all_in_sys);
+				/* int shellstatus = */ system(all_in_sys);
 			}
 			/************calculate the nearest in position within time***************************/
 			if (p_flag == 2) {
@@ -1281,7 +1172,7 @@ void read_list(char *list, char *list_2) {
 				int count = 0;
 				int n_pos_time = 0;
 				int n_pos = 0;
-				for (j = 0; j < size_2; j++) {
+				for (int j = 0; j < size_2; j++) {
 					time_hold[0][j] = fabs(difftime(inf_hold[i].s_Time, svp_hold[j].svp_Time)) - (p_3_time * 3600);
 
 					/* dist[i][j] = distVincenty(inf_hold[i].ave_lat, inf_hold[i].ave_lon,
@@ -1347,7 +1238,7 @@ void read_list(char *list, char *list_2) {
 				strcat(all_in_sys, " -PSVPFILE:");
 				strcat(all_in_sys, svp_hold[n].file_name);
 				printf("%s\n", all_in_sys);
-				shellstatus = system(all_in_sys);
+				/* int shellstatus = */ system(all_in_sys);
 			}
 			if (p_flag == 3) {
 				// SVP nearest in time within range
@@ -1374,7 +1265,7 @@ void read_list(char *list, char *list_2) {
 				int n_pos_seasn = 0;
 				int n_pos_noSeason = 0;
 
-				for (j = 0; j < size_2; j++) {
+				for (int j = 0; j < size_2; j++) {
 					// processing time differences
 					day_hold[0][j] = abs(inf_hold[i].s_datum_time.tm_yday - svp_hold[j].svp_datum_time.tm_yday);
 					hour_hold[0][j] = abs(inf_hold[i].s_datum_time.tm_hour - svp_hold[j].svp_datum_time.tm_hour);
@@ -1526,18 +1417,16 @@ void read_list(char *list, char *list_2) {
 				fprintf(fresult, "%s\n", svp_hold[n].file_name);
 				fprintf(fresult, "%s\n", "=============================================================");
 				printf("Building the parameters to call mbset\n");
-				/* printf("%s\n", all_in_sys); */
 				strcat(all_in_sys, " -I ");
 				inf_hold[i].file_name[strlen(inf_hold[i].file_name) - 1] = '\0';
 				inf_hold[i].file_name[strlen(inf_hold[i].file_name) - 1] = '\0';
 				inf_hold[i].file_name[strlen(inf_hold[i].file_name) - 1] = '\0';
 				inf_hold[i].file_name[strlen(inf_hold[i].file_name) - 1] = '\0';
 				strcat(all_in_sys, inf_hold[i].file_name);
-				/* printf("%s\n", all_in_sys); */
 				strcat(all_in_sys, " -PSVPFILE:");
 				strcat(all_in_sys, svp_hold[n].file_name);
 				printf("%s\n", all_in_sys);
-				shellstatus = system(all_in_sys);
+				/* int shellstatus = */ system(all_in_sys);
 			}
 		}
 	}
@@ -1547,98 +1436,152 @@ void read_list(char *list, char *list_2) {
 	fclose(fSvp);
 	fclose(fresult);
 } /* read_list */
-/* ---------------------------------------------------------------- */
-/*
- *  Function trim_newline
- *	Delete the '\n' char from string
- */
-void trim_newline(char string[]) {
-	if (string[strlen(string) - 1] == '\n')
-		string[strlen(string) - 1] = '\0';
-}
-/* ---------------------------------------------------------------- */
-/*
- * pause the screen at the exit of the program
- */
-void pause_screen() {
-	printf("\nEnd the program press ENTER");
-	fflush(stdin);
-	getchar();
-}
-/* ---------------------------------------------------------------- */
-/*
- * convert_decimal function
- * convert lat or lon from deg(int):min(int):sec(int) to decimal format
- */
-double convert_decimal(int deg, int min, int sec) {
-	if (deg >= 0)
-		return (double)deg + (((double)min) / 60) + (((double)sec) / 3600);
+/* ------------------------------------------------------------------- */
 
-	return -(fabs((double)deg) + (((double)min) / 60) + (((double)sec) / 3600));
-}
-/* ---------------------------------------------------------------- */
-/* print the inf information on the screen */
-void print_inf(inf *cd) {
-	struct tm *temp = &cd->s_datum_time;
-	puts("==================================================");
-	printf("file_name: %s\n", cd->file_name);
-	puts("starting Date and time");
-	printf("\n%s\n", asctime(temp));
-	temp = NULL;
-	temp = &cd->e_datum_time;
-	puts("ending Date and time");
-	printf("\n%s\n", asctime(temp));
-	puts("Start position");
-	printf("lat: %Lf\t", cd->s_lat);
-	printf("lon: %Lf\n", cd->s_lon);
-	puts("End position");
-	printf("e_lat: %Lf\t", cd->e_lat);
-	printf("e_lon: %Lf\n", cd->e_lon);
-	puts("Average position");
-	printf("ave_lat: %Lf\t", cd->ave_lat);
-	printf("ave_lon: %Lf\n", cd->ave_lon);
-	puts("==================================================");
-	temp = NULL;
-}
-/* --------------------------------------------------------------- */
-/* print the svp information on the screen */
-void print_svp(svp *cd) {
-	struct tm *temp = &cd->svp_datum_time;
-	puts("==================================================");
-	printf("file_name: %s\n", cd->file_name);
-	puts("Date and time");
-	printf("\n%s\n", asctime(temp));
-	/*printf("%d-",cd->svp_datum_time.tm_year);
-	 printf("%d\t",cd->svp_datum_time.tm_yday);
-	 printf("%d:",cd->svp_datum_time.tm_hour);
-	 printf("%d:",cd->svp_datum_time.tm_min);
-	 printf("%d\n",cd->svp_datum_time.tm_sec);*/
-	puts("position");
-	printf("lat: %Lf\t", cd->s_lat);
-	printf("lon: %Lf\n", cd->s_lon);
-	puts("==================================================");
-}
-/* --------------------------------------------------------------- */
-/* calculate the average position of two points */
-/* http://www.movable-type.co.uk/scripts/latlong.html */
-void mid_point(long double lat1, long double lon1, long double lat2, long double lon2, long double *lat3, long double *lon3) {
-	double dLon = DTR * ((lon2) - (lon1));
-	double lat1_rad = DTR * ((lat1));
-	double lat2_rad = DTR * ((lat2));
-	double lon1_rad = DTR * ((lon1));
-	double bx = cos(lat2_rad) * cos(dLon);
-	double by = cos(lat2_rad) * sin(dLon);
-	*(lat3) = atan2(sin(lat1_rad) + sin(lat2_rad), sqrt((((cos(lat1_rad)) + bx) * ((cos(lat1_rad)) + bx)) + (by * by))) * RTD;
-	*(lon3) = (lon1_rad + atan2(by, (cos(lat1_rad) + bx))) * RTD;
-}
-/* --------------------------------------------------------------- */
-/*copy string and handle possible buffer overlap*/
-char *my_strcpy(char *a, char *b) {
+int main(int argc, char **argv) {
+	int error = MB_ERROR_NO_ERROR;
 
-	if (a == NULL || b == NULL) {
-		return NULL;
+	char datalist[BUFSIZ];
+	char svplist[BUFSIZ];
+
+	my_strcpy(datalist, "datalist.mb-1");
+	my_strcpy(svplist, "svplist.mb-1");
+
+	{
+		bool errflg = false;
+		int c;
+		bool help = false;
+		while ((c = getopt(argc, argv, "HhI:i:S:s:P:p:VvNn")) != -1)
+			switch (c) {
+			case 'H':
+			case 'h':
+				help = true;
+				break;
+			case 'I':
+			case 'i':
+				sscanf(optarg, "%s", datalist);
+				break;
+			case 'N':
+			case 'n':
+				zero_test += 1;
+				break;
+			case 'P':
+			case 'p':
+			{
+				int n1;
+				int n2;
+				int n3;
+				const int n = sscanf(optarg, "%d/%d/%d", &n1, &n2, &n3);
+				n_p2 = n;
+				/* printf("\nthis is n %d \n", n); */
+				if ((n1 != 0) && (n1 != 1) && (n1 != 2) && (n1 != 3)) {
+					puts("Only four options are available: 0 for nearest position, 1 for nearest in time, 2 for both, 3 for nearest "
+					     "in time within range");
+					puts("The default is svp_nearest in position");
+					puts("If option 2 is chosen without specifying time period, 10 hours is the default value");
+					puts("If option 3 is chosen without specifying range, 10000 meters is the default value");
+					puts("If option 3 is chosen two options are available : nearest in time and nearest in month");
+					pause_screen();
+					exit(0);
+				}
+				else {
+					if (n == 0)
+						p_flag = 0;
+					if (n == 1) {
+						p_flag = n1;
+						if (p_flag == 2) {
+							p_3_time = 10;
+							n2 = p_3_time;
+						}
+						if (p_flag == 3) {
+							p_4_range = 10000;
+							n2 = p_4_range;
+						}
+					}
+					if (n == 2) {
+						p_flag = n1;
+						if ((p_flag == 0) || (p_flag == 1))
+							puts("The options -P0 for nearest in position or -P1 for nearest in time do not need further arguments");
+
+						if (p_flag == 2)
+							p_3_time = n2;
+						if (p_flag == 3)
+							p_4_range = n2;
+					}
+					if (n == 3) {
+						p_flag = n1;
+						p_4_range = n2;
+						p_4_flage = n3;
+						if ((p_flag == 0) || (p_flag == 1))
+							puts("The options -P0 for nearest in position or -P1 for nearest in time do not need further arguments");
+
+						if ((p_4_flage != 0) && (p_4_flage != 1)) {
+							puts("If option 3 is chosen two options are available : nearest in time with -P3/0 and nearest in month "
+							     "with -P3/1");
+							pause_screen();
+							exit(0);
+						}
+					}
+				}
+				break;
+			}
+			case 'S':
+			case 's':
+				sscanf(optarg, "%s", svplist);
+				break;
+			case 'V':
+			case 'v':
+				verbose++;
+				break;
+			default:
+				break;
+			}
+
+		if (errflg) {
+			fprintf(stderr, "usage: %s\n", usage_message);
+			fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
+			exit(MB_ERROR_BAD_USAGE);
+		}
+
+		if (verbose == 1 || help) {
+			fprintf(stderr, "\nProgram %s\n", program_name);
+			fprintf(stderr, "MB-system Version %s\n", MB_VERSION);
+		}
+
+		if (verbose >= 2) {
+			fprintf(stderr, "\ndbg2  Program <%s>\n", program_name);
+			fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
+			fprintf(stderr, "dbg2  Control Parameters:\n");
+			fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+			fprintf(stderr, "dbg2       help:       %d\n", help);
+			fprintf(stderr, "dbg2       datalist:   %s\n", datalist);
+			fprintf(stderr, "dbg2       svplist:    %s\n", svplist);
+			fprintf(stderr, "dbg2       p_flag:     %d\n", p_flag);
+			fprintf(stderr, "dbg2       p_3_time:   %d\n", p_3_time);
+			fprintf(stderr, "dbg2       p_4_range:  %d\n", p_4_range);
+			fprintf(stderr, "dbg2       p_4_flage:  %d\n", p_4_flage);
+			fprintf(stderr, "dbg2       zero_test:  %d\n", zero_test);
+		}
+
+		if (help) {
+			fprintf(stderr, "\n%s\n", help_message);
+			fprintf(stderr, "\nusage: %s\n", usage_message);
+			exit(error);
+		}
 	}
 
-	memmove(a, b, strlen(b) + 1);
-	return a;
-}
+	read_list(datalist, svplist);
+
+	const int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  Program <%s> completed\n", program_name);
+		fprintf(stderr, "dbg2  Ending status:\n");
+		fprintf(stderr, "dbg2       status:  %d\n", status);
+		fprintf(stderr, "dbg2       error:   %d\n", error);
+	}
+
+	exit(error);
+
+} /* main */
+/* ---------------------------------------------------------------- */

@@ -35,7 +35,6 @@ mblist.1 \
 mbm_arc2grd.1 \
 mbm_bpr.1 \
 mbm_copy.1 \
-mbm_dslnavfix.1 \
 mbm_fmtvel.1 \
 mbm_grd2arc.1 \
 mbm_grd2geovrml.1 \
@@ -56,7 +55,6 @@ mbm_plot.1 \
 mbm_route2mission.1 \
 mbm_stat.1 \
 mbm_utm.1 \
-mbm_vrefcheck.1 \
 mbm_xbt.1 \
 mbm_xyplot.1 \
 mbmakeplatform.1 \
@@ -86,6 +84,7 @@ mbswath.1 \
 mbswplspreprocess.1 \
 mbsystem.1 \
 mbtime.1 \
-mbvelocitytool.1
+mbvelocitytool.1 \
+mbvoxelclean.1
 
 EXTRA_DIST = $(man_MANS)

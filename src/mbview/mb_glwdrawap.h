@@ -1,6 +1,5 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mb_glwdrawap.c	5/22/2007
- *    $Id$
  *
  *    Altered from original code for MB-System by
  *    David W. Caress (caress@mbari.org)
@@ -63,7 +62,7 @@
 #include "mb_glwdrawa.h"
 
 typedef struct _mbGLwDrawingAreaClassPart {
-#ifdef WIN32
+#ifdef _WIN32
 	char *extension;
 #else
 	caddr_t extension;

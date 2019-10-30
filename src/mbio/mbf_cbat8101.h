@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_cbat8101.h	8/21/94
- *	$Id$
  *
- *    Copyright (c) 1998-2017 by
+ *    Copyright (c) 1998-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -18,7 +17,6 @@
  *
  * Author:	D. W. Caress
  * Date:	December 10, 1998
- *
  *
  */
 /*
@@ -412,6 +410,11 @@
  *
  */
 
+#ifndef MBF_CBAT8101_H_
+#define MBF_CBAT8101_H_
+
+#include "mbsys_reson.h"
+
 /* maximum number of beams and pixels */
 #define MBF_CBAT8101_MAXBEAMS 101
 #define MBF_CBAT8101_COMMENT_LENGTH 200
@@ -527,3 +530,5 @@ struct mbf_cbat8101_struct {
 	short int amp[MBSYS_RESON_MAXBEAMS];
 	/* ??? */
 };
+
+#endif  /* MBF_CBAT8101_H_ */

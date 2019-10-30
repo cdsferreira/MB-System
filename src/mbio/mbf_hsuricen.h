@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_hsuricen.h	1/20/93
- *	$Id$
  *
- *    Copyright (c) 1993-2017 by
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -44,6 +43,9 @@
  * of the binary data structure used in the MBF_HSURICEN format.
  */
 
+#ifndef MBF_HSURICE_H_
+#define MBF_HSURICE_H_
+
 struct mbf_hsuricen_data_struct {
 	short sec;           /* seconds x 100 */
 	short min;           /* minute of the day */
@@ -68,3 +70,5 @@ struct mbf_hsuricen_struct {
 	int kind;
 	struct mbf_hsuricen_data_struct data;
 };
+
+#endif  /* MBF_HSURICE_H_ */

@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_mbarirov.h	5/20/99
- *	$Id$
  *
- *    Copyright (c) 1999-2017 by
+ *    Copyright (c) 1999-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -30,6 +29,9 @@
  *      of each file. The comment records begin with the character '#'.
  *
  */
+
+#ifndef MBF_MBARIRO_H_
+#define MBF_MBARIRO_H_
 
 #define MBF_MBARIROV_MAXLINE 256
 
@@ -63,3 +65,5 @@ struct mbf_mbarirov_struct {
 	/* comment */
 	char comment[MBF_MBARIROV_MAXLINE];
 };
+
+#endif  /* MBF_MBARIRO_H_ */

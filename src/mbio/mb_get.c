@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mb_get.c	1/26/93
- *    $Id$
  *
- *    Copyright (c) 1993-2017 by
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -19,53 +18,33 @@
  *
  * Author:	D. W. Caress
  * Date:	January 26, 1993
- *
- *
  */
 
-/* standard include files */
-#include <stdio.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
-
-static char rcs_id[] = "$Id$";
+#include "mb_status.h"
 
 /*--------------------------------------------------------------------*/
 int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], double *time_d, double *navlon, double *navlat,
            double *speed, double *heading, double *distance, double *altitude, double *sonardepth, int *nbath, int *namp,
            int *nss, char *beamflag, double *bath, double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss,
            double *ssacrosstrack, double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mb_get";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	char *store_ptr;
-	int i;
-	int done;
-	int reset_last;
-	double mtodeglon, mtodeglat;
-	double dx, dy;
-	double delta_time;
-	double headingx, headingy;
-	double denom;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	store_ptr = (char *)mb_io_ptr->store_data;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	char *store_ptr = (char *)mb_io_ptr->store_data;
 
 	/* initialize binning values */
 	mb_io_ptr->pings_read = 0;
@@ -75,33 +54,35 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 	mb_io_ptr->lat = 0.0;
 	mb_io_ptr->speed = 0.0;
 	mb_io_ptr->heading = 0.0;
-	headingx = 0.0;
-	headingy = 0.0;
-	for (i = 0; i < mb_io_ptr->beams_bath_max; i++) {
+	for (int i = 0; i < mb_io_ptr->beams_bath_max; i++) {
 		mb_io_ptr->beamflag[i] = MB_FLAG_NULL;
 		mb_io_ptr->bath[i] = 0.0;
 		mb_io_ptr->bath_acrosstrack[i] = 0.0;
 		mb_io_ptr->bath_alongtrack[i] = 0.0;
 		mb_io_ptr->bath_num[i] = 0;
 	}
-	for (i = 0; i < mb_io_ptr->beams_amp_max; i++) {
+	for (int i = 0; i < mb_io_ptr->beams_amp_max; i++) {
 		mb_io_ptr->amp[i] = 0.0;
 		mb_io_ptr->amp_num[i] = 0;
 	}
-	for (i = 0; i < mb_io_ptr->pixels_ss_max; i++) {
+	for (int i = 0; i < mb_io_ptr->pixels_ss_max; i++) {
 		mb_io_ptr->ss[i] = 0.0;
 		mb_io_ptr->ss_acrosstrack[i] = 0.0;
 		mb_io_ptr->ss_alongtrack[i] = 0.0;
 		mb_io_ptr->ss_num[i] = 0;
 	}
 
-	/* read the data */
-	done = MB_NO;
-	while (done == MB_NO) {
+	int status = MB_SUCCESS;
+	bool reset_last;
+	double headingx = 0.0;
+	double headingy = 0.0;
 
-		/* print debug statements */
+	/* read the data */
+	bool done = false;
+	while (!done) {
+
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg2  About to read ping in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  About to read ping in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2       need_new_ping: %d\n", mb_io_ptr->need_new_ping);
 			fprintf(stderr, "dbg2       ping_count:    %d\n", mb_io_ptr->ping_count);
 			fprintf(stderr, "dbg2       pings_read:    %d\n", mb_io_ptr->pings_read);
@@ -121,22 +102,22 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 			    pointers of arrays passed into this function,
 			    as these pointers may have changed */
 			if (status == MB_SUCCESS && mb_io_ptr->new_kind == MB_DATA_DATA) {
-				if (mb_io_ptr->bath_arrays_reallocated == MB_YES) {
-					status = mb_update_arrayptr(verbose, mbio_ptr, (void **)&beamflag, error);
-					status = mb_update_arrayptr(verbose, mbio_ptr, (void **)&bath, error);
-					status = mb_update_arrayptr(verbose, mbio_ptr, (void **)&bathacrosstrack, error);
-					status = mb_update_arrayptr(verbose, mbio_ptr, (void **)&bathalongtrack, error);
-					mb_io_ptr->bath_arrays_reallocated = MB_NO;
+				if (mb_io_ptr->bath_arrays_reallocated == true) {
+					status &= mb_update_arrayptr(verbose, mbio_ptr, (void **)&beamflag, error);
+					status &= mb_update_arrayptr(verbose, mbio_ptr, (void **)&bath, error);
+					status &= mb_update_arrayptr(verbose, mbio_ptr, (void **)&bathacrosstrack, error);
+					status &= mb_update_arrayptr(verbose, mbio_ptr, (void **)&bathalongtrack, error);
+					mb_io_ptr->bath_arrays_reallocated = false;
 				}
-				if (mb_io_ptr->amp_arrays_reallocated == MB_YES) {
-					status = mb_update_arrayptr(verbose, mbio_ptr, (void **)&amp, error);
-					mb_io_ptr->amp_arrays_reallocated = MB_NO;
+				if (mb_io_ptr->amp_arrays_reallocated == true) {
+					status &= mb_update_arrayptr(verbose, mbio_ptr, (void **)&amp, error);
+					mb_io_ptr->amp_arrays_reallocated = false;
 				}
-				if (mb_io_ptr->ss_arrays_reallocated == MB_YES) {
-					status = mb_update_arrayptr(verbose, mbio_ptr, (void **)&ss, error);
-					status = mb_update_arrayptr(verbose, mbio_ptr, (void **)&ssacrosstrack, error);
-					status = mb_update_arrayptr(verbose, mbio_ptr, (void **)&ssalongtrack, error);
-					mb_io_ptr->ss_arrays_reallocated = MB_NO;
+				if (mb_io_ptr->ss_arrays_reallocated == true) {
+					status &= mb_update_arrayptr(verbose, mbio_ptr, (void **)&ss, error);
+					status &= mb_update_arrayptr(verbose, mbio_ptr, (void **)&ssacrosstrack, error);
+					status &= mb_update_arrayptr(verbose, mbio_ptr, (void **)&ssalongtrack, error);
+					mb_io_ptr->ss_arrays_reallocated = false;
 				}
 			}
 
@@ -155,7 +136,7 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 
 			/* set errors if not survey data */
 			if (status == MB_SUCCESS) {
-				mb_io_ptr->need_new_ping = MB_NO;
+				mb_io_ptr->need_new_ping = false;
 				if (mb_io_ptr->new_kind == MB_DATA_DATA)
 					mb_io_ptr->ping_count++;
 				else if (mb_io_ptr->new_kind == MB_DATA_COMMENT) {
@@ -199,9 +180,8 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 			mb_io_ptr->old_lat = mb_io_ptr->new_lat;
 		}
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg2  New ping read in function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg2  New ping read in function <%s>\n", __func__);
 			fprintf(stderr, "dbg2       need_new_ping: %d\n", mb_io_ptr->need_new_ping);
 			fprintf(stderr, "dbg2       ping_count:    %d\n", mb_io_ptr->ping_count);
 			fprintf(stderr, "dbg2       comment_count: %d\n", mb_io_ptr->comment_count);
@@ -247,9 +227,8 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 		if (*error < MB_ERROR_NO_ERROR)
 			mb_notice_log_error(verbose, mbio_ptr, *error);
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg4  New ping checked by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  New ping checked by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  New ping values:\n");
 			fprintf(stderr, "dbg4       ping_count:    %d\n", mb_io_ptr->ping_count);
 			fprintf(stderr, "dbg4       comment_count: %d\n", mb_io_ptr->comment_count);
@@ -278,21 +257,21 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 			fprintf(stderr, "dbg4       beams_bath:    %d\n", mb_io_ptr->new_beams_bath);
 			if (mb_io_ptr->new_beams_bath > 0) {
 				fprintf(stderr, "dbg4       beam   flag   bath  crosstrack alongtrack\n");
-				for (i = 0; i < mb_io_ptr->new_beams_bath; i++)
+				for (int i = 0; i < mb_io_ptr->new_beams_bath; i++)
 					fprintf(stderr, "dbg4       %4d   %3d    %f    %f     %f\n", i, mb_io_ptr->new_beamflag[i],
 					        mb_io_ptr->new_bath[i], mb_io_ptr->new_bath_acrosstrack[i], mb_io_ptr->new_bath_alongtrack[i]);
 			}
 			fprintf(stderr, "dbg4       beams_amp:     %d\n", mb_io_ptr->new_beams_amp);
 			if (mb_io_ptr->new_beams_amp > 0) {
 				fprintf(stderr, "dbg4       beam    amp  crosstrack alongtrack\n");
-				for (i = 0; i < mb_io_ptr->new_beams_bath; i++)
+				for (int i = 0; i < mb_io_ptr->new_beams_bath; i++)
 					fprintf(stderr, "dbg4       %4d   %f    %f     %f\n", i, mb_io_ptr->new_amp[i],
 					        mb_io_ptr->new_bath_acrosstrack[i], mb_io_ptr->new_bath_alongtrack[i]);
 			}
 			fprintf(stderr, "dbg4       pixels_ss:     %d\n", mb_io_ptr->new_pixels_ss);
 			if (mb_io_ptr->new_pixels_ss > 0) {
 				fprintf(stderr, "dbg4       pixel sidescan crosstrack alongtrack\n");
-				for (i = 0; i < mb_io_ptr->new_pixels_ss; i++)
+				for (int i = 0; i < mb_io_ptr->new_pixels_ss; i++)
 					fprintf(stderr, "dbg4       %4d   %f    %f     %f\n", i, mb_io_ptr->new_ss[i],
 					        mb_io_ptr->new_ss_acrosstrack[i], mb_io_ptr->new_ss_alongtrack[i]);
 			}
@@ -319,18 +298,18 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 			headingx = headingx + sin(DTR * mb_io_ptr->new_heading);
 			headingy = headingy + cos(DTR * mb_io_ptr->new_heading);
 			if (mb_io_ptr->pings == 1) {
-				for (i = 0; i < mb_io_ptr->new_beams_bath; i++) {
+				for (int i = 0; i < mb_io_ptr->new_beams_bath; i++) {
 					mb_io_ptr->beamflag[i] = mb_io_ptr->new_beamflag[i];
 					mb_io_ptr->bath[i] = mb_io_ptr->new_bath[i];
 					mb_io_ptr->bath_acrosstrack[i] = mb_io_ptr->new_bath_acrosstrack[i];
 					mb_io_ptr->bath_alongtrack[i] = mb_io_ptr->new_bath_alongtrack[i];
 					mb_io_ptr->bath_num[i] = 1;
 				}
-				for (i = 0; i < mb_io_ptr->new_beams_amp; i++) {
+				for (int i = 0; i < mb_io_ptr->new_beams_amp; i++) {
 					mb_io_ptr->amp[i] = mb_io_ptr->new_amp[i];
 					mb_io_ptr->amp_num[i] = 1;
 				}
-				for (i = 0; i < mb_io_ptr->new_pixels_ss; i++) {
+				for (int i = 0; i < mb_io_ptr->new_pixels_ss; i++) {
 					mb_io_ptr->ss[i] = mb_io_ptr->new_ss[i];
 					mb_io_ptr->ss_acrosstrack[i] = mb_io_ptr->new_ss_acrosstrack[i];
 					mb_io_ptr->ss_alongtrack[i] = mb_io_ptr->new_ss_alongtrack[i];
@@ -338,7 +317,7 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 				}
 			}
 			else {
-				for (i = 0; i < mb_io_ptr->new_beams_bath; i++) {
+				for (int i = 0; i < mb_io_ptr->new_beams_bath; i++) {
 					if (!mb_beam_check_flag(mb_io_ptr->new_beamflag[i])) {
 						mb_io_ptr->beamflag[i] = MB_FLAG_NONE;
 						mb_io_ptr->bath[i] = mb_io_ptr->bath[i] + mb_io_ptr->new_bath[i];
@@ -347,13 +326,13 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 						mb_io_ptr->bath_num[i]++;
 					}
 				}
-				for (i = 0; i < mb_io_ptr->new_beams_amp; i++) {
+				for (int i = 0; i < mb_io_ptr->new_beams_amp; i++) {
 					if (!mb_beam_check_flag(mb_io_ptr->new_beamflag[i])) {
 						mb_io_ptr->amp[i] = mb_io_ptr->amp[i] + mb_io_ptr->new_amp[i];
 						mb_io_ptr->amp_num[i]++;
 					}
 				}
-				for (i = 0; i < mb_io_ptr->new_pixels_ss; i++) {
+				for (int i = 0; i < mb_io_ptr->new_pixels_ss; i++) {
 					if (mb_io_ptr->new_ss[i] != 0.0) {
 						mb_io_ptr->ss[i] = mb_io_ptr->ss[i] + mb_io_ptr->new_ss[i];
 						mb_io_ptr->ss_acrosstrack[i] = mb_io_ptr->ss_acrosstrack[i] + mb_io_ptr->new_ss_acrosstrack[i];
@@ -364,10 +343,9 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 			}
 		}
 
-		/* print debug statements */
 		if (verbose >= 4 && mb_io_ptr->new_kind == MB_DATA_DATA &&
 		    (status == MB_SUCCESS || (*error<MB_ERROR_NO_ERROR && * error> MB_ERROR_COMMENT && mb_io_ptr->pings_read == 1))) {
-			fprintf(stderr, "\ndbg4  New ping binned by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  New ping binned by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Current binned ping values:\n");
 			fprintf(stderr, "dbg4       pings_binned: %d\n", mb_io_ptr->pings_binned);
 			fprintf(stderr, "dbg4       time_d:       %f\n", mb_io_ptr->time_d);
@@ -378,21 +356,21 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 			fprintf(stderr, "dbg4       beams_bath:    %d\n", mb_io_ptr->beams_bath_max);
 			if (mb_io_ptr->beams_bath_max > 0) {
 				fprintf(stderr, "dbg4       beam   nbath bath  crosstrack alongtrack\n");
-				for (i = 0; i < mb_io_ptr->beams_bath_max; i++)
+				for (int i = 0; i < mb_io_ptr->beams_bath_max; i++)
 					fprintf(stderr, "dbg4       %4d   %4d  %f    %f     %f\n", i, mb_io_ptr->bath_num[i], mb_io_ptr->bath[i],
 					        mb_io_ptr->bath_acrosstrack[i], mb_io_ptr->bath_alongtrack[i]);
 			}
 			fprintf(stderr, "dbg4       beams_amp:    %d\n", mb_io_ptr->beams_amp_max);
 			if (mb_io_ptr->beams_amp_max > 0) {
 				fprintf(stderr, "dbg4       beam    namp  amp  crosstrack alongtrack\n");
-				for (i = 0; i < mb_io_ptr->beams_amp_max; i++)
+				for (int i = 0; i < mb_io_ptr->beams_amp_max; i++)
 					fprintf(stderr, "dbg4       %4d   %4d  %f    %f     %f\n", i, mb_io_ptr->amp_num[i], mb_io_ptr->amp[i],
 					        mb_io_ptr->bath_acrosstrack[i], mb_io_ptr->bath_alongtrack[i]);
 			}
 			fprintf(stderr, "dbg4       pixels_ss:     %d\n", mb_io_ptr->pixels_ss_max);
 			if (mb_io_ptr->pixels_ss_max > 0) {
 				fprintf(stderr, "dbg4       pixel nss  sidescan crosstrack alongtrack\n");
-				for (i = 0; i < mb_io_ptr->pixels_ss_max; i++)
+				for (int i = 0; i < mb_io_ptr->pixels_ss_max; i++)
 					fprintf(stderr, "dbg4       %4d   %4d   %f    %f     %f\n", i, mb_io_ptr->ss_num[i], mb_io_ptr->ss[i],
 					        mb_io_ptr->ss_acrosstrack[i], mb_io_ptr->ss_alongtrack[i]);
 			}
@@ -400,71 +378,70 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 
 		/* if data is ok but more pings needed keep reading */
 		if (status == MB_SUCCESS && mb_io_ptr->new_kind == MB_DATA_DATA && mb_io_ptr->pings_binned < mb_io_ptr->pings_avg) {
-			done = MB_NO;
-			mb_io_ptr->need_new_ping = MB_YES;
-			reset_last = MB_YES;
+			done = false;
+			mb_io_ptr->need_new_ping = true;
+			reset_last = true;
 		}
 
 		/* if data is ok and enough pings binned then done */
 		else if (status == MB_SUCCESS && mb_io_ptr->new_kind == MB_DATA_DATA && mb_io_ptr->pings_binned >= mb_io_ptr->pings_avg) {
-			done = MB_YES;
-			mb_io_ptr->need_new_ping = MB_YES;
-			reset_last = MB_YES;
+			done = true;
+			mb_io_ptr->need_new_ping = true;
+			reset_last = true;
 		}
 
 		/* if data gap and only one ping read and more
 		    pings needed set error save flag and keep reading */
 		else if (*error == MB_ERROR_TIME_GAP && mb_io_ptr->new_kind == MB_DATA_DATA && mb_io_ptr->pings_read == 1 &&
 		         mb_io_ptr->pings_avg > 1) {
-			done = MB_NO;
-			mb_io_ptr->need_new_ping = MB_YES;
+			done = false;
+			mb_io_ptr->need_new_ping = true;
 			mb_io_ptr->error_save = *error;
 			*error = MB_ERROR_NO_ERROR;
 			status = MB_SUCCESS;
-			reset_last = MB_YES;
+			reset_last = true;
 		}
 
 		/* if other kind of data and need more pings
 		    then keep reading */
 		else if ((*error == MB_ERROR_OTHER || *error == MB_ERROR_UNINTELLIGIBLE) &&
 		         mb_io_ptr->pings_binned < mb_io_ptr->pings_avg) {
-			done = MB_NO;
-			mb_io_ptr->need_new_ping = MB_YES;
+			done = false;
+			mb_io_ptr->need_new_ping = true;
 			*error = MB_ERROR_NO_ERROR;
 			status = MB_SUCCESS;
-			reset_last = MB_NO;
+			reset_last = false;
 		}
 
 		/* if error and only one ping read then done */
 		else if (*error != MB_ERROR_NO_ERROR && mb_io_ptr->pings_read <= 1) {
-			done = MB_YES;
-			mb_io_ptr->need_new_ping = MB_YES;
+			done = true;
+			mb_io_ptr->need_new_ping = true;
 			if (*error == MB_ERROR_TIME_GAP || *error == MB_ERROR_OUT_BOUNDS)
-				reset_last = MB_YES;
+				reset_last = true;
 			else
-				reset_last = MB_NO;
+				reset_last = false;
 		}
 
 		/* if error and more than one ping read,
 		    then done but save the ping */
 		else if (*error != MB_ERROR_NO_ERROR) {
-			done = MB_YES;
-			mb_io_ptr->need_new_ping = MB_NO;
+			done = true;
+			mb_io_ptr->need_new_ping = false;
 			*error = MB_ERROR_NO_ERROR;
 			status = MB_SUCCESS;
-			reset_last = MB_NO;
+			reset_last = false;
 		}
 
 		/* if needed reset "last" pings */
-		if (reset_last == MB_YES) {
+		if (reset_last) {
 			mb_io_ptr->last_time_d = mb_io_ptr->new_time_d;
 			mb_io_ptr->last_lon = mb_io_ptr->new_lon;
 			mb_io_ptr->last_lat = mb_io_ptr->new_lat;
 		}
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg4  End of reading loop in MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  End of reading loop in MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Current status values:\n");
 			fprintf(stderr, "dbg4       done:          %d\n", done);
 			fprintf(stderr, "dbg4       need_new_ping: %d\n", mb_io_ptr->need_new_ping);
@@ -488,7 +465,7 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 	/* get output time */
 	if (*error <= MB_ERROR_NO_ERROR && *error > MB_ERROR_COMMENT) {
 		if (mb_io_ptr->pings_binned == 1) {
-			for (i = 0; i < 7; i++)
+			for (int i = 0; i < 7; i++)
 				time_i[i] = mb_io_ptr->new_time_i[i];
 			*time_d = mb_io_ptr->new_time_d;
 		}
@@ -509,7 +486,7 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 		*navlat = mb_io_ptr->lat / mb_io_ptr->pings_binned;
 		headingx = headingx / mb_io_ptr->pings_binned;
 		headingy = headingy / mb_io_ptr->pings_binned;
-		denom = sqrt(headingx * headingx + headingy * headingy);
+		const double denom = sqrt(headingx * headingx + headingy * headingy);
 		if (denom > 0.0) {
 			headingx = headingx / denom;
 			headingy = headingy / denom;
@@ -521,16 +498,20 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 			*heading = *heading + 360.0;
 
 		/* get coordinate scaling */
+		double mtodeglon;
+		double mtodeglat;
 		mb_coor_scale(verbose, *navlat, &mtodeglon, &mtodeglat);
 
 		/* get distance value */
 		if (mb_io_ptr->old_time_d > 0.0) {
-			dx = (*navlon - mb_io_ptr->old_lon) / mtodeglon;
-			dy = (*navlat - mb_io_ptr->old_lat) / mtodeglat;
+			const double dx = (*navlon - mb_io_ptr->old_lon) / mtodeglon;
+			const double dy = (*navlat - mb_io_ptr->old_lat) / mtodeglat;
 			*distance = 0.001 * sqrt(dx * dx + dy * dy); /* km */
 		}
 		else
 			*distance = 0.0;
+
+		double delta_time = 0.0;
 
 		/* get speed value */
 		if (mb_io_ptr->speed > 0.0) {
@@ -556,9 +537,8 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 			}
 		}
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg4  Distance and Speed Calculated in MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Distance and Speed Calculated in MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Speed and Distance Related Values:\n");
 			fprintf(stderr, "dbg4       binned speed: %f\n", mb_io_ptr->speed);
 			fprintf(stderr, "dbg4       pings_binned: %d\n", mb_io_ptr->pings_binned);
@@ -582,7 +562,7 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 		*nbath = 0;
 		*namp = 0;
 		*nss = 0;
-		for (i = 0; i < mb_io_ptr->beams_bath_max; i++) {
+		for (int i = 0; i < mb_io_ptr->beams_bath_max; i++) {
 			beamflag[i] = mb_io_ptr->beamflag[i];
 			if (mb_io_ptr->bath_num[i] > 0) {
 				bath[i] = (mb_io_ptr->bath[i]) / (mb_io_ptr->bath_num[i]);
@@ -597,7 +577,7 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 				bathalongtrack[i] = 0.0;
 			}
 		}
-		for (i = 0; i < mb_io_ptr->beams_amp_max; i++) {
+		for (int i = 0; i < mb_io_ptr->beams_amp_max; i++) {
 			if (mb_io_ptr->amp_num[i] > 0) {
 				amp[i] = (mb_io_ptr->amp[i]) / (mb_io_ptr->amp_num[i]);
 				*namp = i + 1;
@@ -606,7 +586,7 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 				amp[i] = 0.0;
 			}
 		}
-		for (i = 0; i < mb_io_ptr->pixels_ss_max; i++) {
+		for (int i = 0; i < mb_io_ptr->pixels_ss_max; i++) {
 			if (mb_io_ptr->ss_num[i] > 0) {
 				ss[i] = mb_io_ptr->ss[i] / mb_io_ptr->ss_num[i];
 				ssacrosstrack[i] = mb_io_ptr->ss_acrosstrack[i] / mb_io_ptr->ss_num[i];
@@ -619,7 +599,7 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 				ssalongtrack[i] = 0.0;
 			}
 		}
-		if (mb_io_ptr->variable_beams == MB_NO) {
+		if (mb_io_ptr->variable_beams == false) {
 			*nbath = mb_io_ptr->beams_bath_max;
 			*namp = mb_io_ptr->beams_amp_max;
 			*nss = mb_io_ptr->pixels_ss_max;
@@ -645,10 +625,8 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 		mb_io_ptr->error_save = MB_ERROR_NO_ERROR;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -671,21 +649,21 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
 		if (verbose >= 3 && *nbath > 0) {
 			fprintf(stderr, "dbg3       beam   nbath flag bath  crosstrack alongtrack\n");
-			for (i = 0; i < *nbath; i++)
+			for (int i = 0; i < *nbath; i++)
 				fprintf(stderr, "dbg3       %4d   %4d  %3d  %f    %f     %f\n", i, mb_io_ptr->bath_num[i], beamflag[i], bath[i],
 				        bathacrosstrack[i], bathalongtrack[i]);
 		}
 		fprintf(stderr, "dbg2       namp:       %d\n", *namp);
 		if (verbose >= 3 && *namp > 0) {
 			fprintf(stderr, "dbg3       beam    namp  amp  crosstrack alongtrack\n");
-			for (i = 0; i < *namp; i++)
+			for (int i = 0; i < *namp; i++)
 				fprintf(stderr, "dbg3       %4d   %4d  %f    %f     %f\n", i, mb_io_ptr->amp_num[i], amp[i], bathacrosstrack[i],
 				        bathalongtrack[i]);
 		}
 		fprintf(stderr, "dbg2       nss:      %d\n", *nss);
 		if (verbose >= 3 && *nss > 0) {
 			fprintf(stderr, "dbg3       pixel nss  sidescan crosstrack alongtrack\n");
-			for (i = 0; i < *nss; i++)
+			for (int i = 0; i < *nss; i++)
 				fprintf(stderr, "dbg3       %4d   %4d   %f    %f     %f\n", i, mb_io_ptr->ss_num[i], ss[i], ssacrosstrack[i],
 				        ssalongtrack[i]);
 		}
@@ -699,7 +677,6 @@ int mb_get(int verbose, void *mbio_ptr, int *kind, int *pings, int time_i[7], do
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/

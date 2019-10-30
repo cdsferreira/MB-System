@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbbs_memalloc.c	3/3/2014
- *	$Id$
  *
- *    Copyright (c) 2014-2017 by
+ *    Copyright (c) 2014-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -40,12 +39,10 @@ static unsigned long mem_maxallocsz = 0;
 #ifndef WIN32
 static key_t mem_key = (key_t)IPC_PRIVATE;
 #endif
-static int mem_shmflag = 0666;
+static const int mem_shmflag = 0666;
 
 void mbbs_memmaxalloc(unsigned long m) {
 	mem_maxallocsz = m;
-
-	return;
 }
 
 int mbbs_memalloc(MemType **buf, unsigned int *bufsz, unsigned int nobj, size_t objsz) {

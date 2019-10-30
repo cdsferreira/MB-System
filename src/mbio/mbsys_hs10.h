@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_hs10.h	12/4/00
- *	$Id$
  *
- *    Copyright (c) 2000-2017 by
+ *    Copyright (c) 2000-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -136,6 +135,9 @@
  *
  */
 
+#ifndef MBSYS_HS10_H_
+#define MBSYS_HS10_H_
+
 /* number of beams for Furuno HS-10 */
 #define MBSYS_HS10_BEAMS 45
 
@@ -199,3 +201,5 @@ int mbsys_hs10_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time
                           double navlat, double speed, double heading, double draft, double roll, double pitch, double heave,
                           int *error);
 int mbsys_hs10_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
+
+#endif  /* MBSYS_HS10_H_ */

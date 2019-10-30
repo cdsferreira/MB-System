@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbr_edgjstar.c	5/2/2005
- *	$Id$
  *
- *    Copyright (c) 2005-2017 by
+ *    Copyright (c) 2005-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -29,150 +28,17 @@
 /* Debug flag */
 //#define MBF_EDGJSTAR_DEBUG 1
 
-/* standard include files */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
+#include "mb_status.h"
 #include "mb_swap.h"
 #include "mbsys_jstar.h"
-
-/* essential function prototypes */
-int mbr_register_edgjstar(int verbose, void *mbio_ptr, int *error);
-int mbr_info_edgjstar(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
-                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
-                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
-                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
-                      double *beamwidth_ltrack, int *error);
-int mbr_register_edgjstr2(int verbose, void *mbio_ptr, int *error);
-int mbr_info_edgjstr2(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
-                      char *system_name, char *format_description, int *numfile, int *filetype, int *variable_beams,
-                      int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
-                      int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
-                      double *beamwidth_ltrack, int *error);
-int mbr_alm_edgjstar(int verbose, void *mbio_ptr, int *error);
-int mbr_dem_edgjstar(int verbose, void *mbio_ptr, int *error);
-int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error);
-
-static char rcs_id[] = "$Id$";
-
-/*--------------------------------------------------------------------*/
-int mbr_register_edgjstar(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_register_edgjstar";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-	}
-
-	/* get mb_io_ptr */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set format info parameters */
-	status = mbr_info_edgjstar(
-	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
-	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
-	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
-	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
-	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
-
-	/* set format and system specific function pointers */
-	mb_io_ptr->mb_io_format_alloc = &mbr_alm_edgjstar;
-	mb_io_ptr->mb_io_format_free = &mbr_dem_edgjstar;
-	mb_io_ptr->mb_io_store_alloc = &mbsys_jstar_alloc;
-	mb_io_ptr->mb_io_store_free = &mbsys_jstar_deall;
-	mb_io_ptr->mb_io_read_ping = &mbr_rt_edgjstar;
-	mb_io_ptr->mb_io_write_ping = &mbr_wt_edgjstar;
-	mb_io_ptr->mb_io_dimensions = &mbsys_jstar_dimensions;
-	mb_io_ptr->mb_io_pingnumber = &mbsys_jstar_pingnumber;
-	mb_io_ptr->mb_io_preprocess = &mbsys_jstar_preprocess;
-	mb_io_ptr->mb_io_extract = &mbsys_jstar_extract;
-	mb_io_ptr->mb_io_insert = &mbsys_jstar_insert;
-	mb_io_ptr->mb_io_extract_nav = &mbsys_jstar_extract_nav;
-	mb_io_ptr->mb_io_insert_nav = &mbsys_jstar_insert_nav;
-	mb_io_ptr->mb_io_extract_altitude = &mbsys_jstar_extract_altitude;
-	mb_io_ptr->mb_io_insert_altitude = &mbsys_jstar_insert_altitude;
-	mb_io_ptr->mb_io_extract_svp = NULL;
-	mb_io_ptr->mb_io_insert_svp = NULL;
-	mb_io_ptr->mb_io_ttimes = &mbsys_jstar_ttimes;
-	mb_io_ptr->mb_io_detects = &mbsys_jstar_detects;
-	mb_io_ptr->mb_io_extract_rawssdimensions = &mbsys_jstar_extract_rawssdimensions;
-	mb_io_ptr->mb_io_extract_rawss = &mbsys_jstar_extract_rawss;
-	mb_io_ptr->mb_io_insert_rawss = &mbsys_jstar_insert_rawss;
-	mb_io_ptr->mb_io_extract_segytraceheader = &mbsys_jstar_extract_segytraceheader;
-	mb_io_ptr->mb_io_extract_segy = &mbsys_jstar_extract_segy;
-	mb_io_ptr->mb_io_insert_segy = &mbsys_jstar_insert_segy;
-	mb_io_ptr->mb_io_ctd = &mbsys_jstar_ctd;
-	mb_io_ptr->mb_io_copyrecord = &mbsys_jstar_copyrecord;
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
-		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
-		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
-		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
-		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
-		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
-		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
-		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
-		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
-		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
-		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
-		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
-		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
-		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
-		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
-		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
-		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
-		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
-		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
-		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
-		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
-		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
-		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
-		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
-		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
-		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
-		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
-		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
-		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
-		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
-		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
-		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
-		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
-		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
-		fprintf(stderr, "dbg2       extract_rawssdimensions: %p\n", (void *)mb_io_ptr->mb_io_extract_rawssdimensions);
-		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
-		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
-		fprintf(stderr, "dbg2       extract_segytraceheader: %p\n", (void *)mb_io_ptr->mb_io_extract_segytraceheader);
-		fprintf(stderr, "dbg2       extract_segy:       %p\n", (void *)mb_io_ptr->mb_io_extract_segy);
-		fprintf(stderr, "dbg2       insert_segy:        %p\n", (void *)mb_io_ptr->mb_io_insert_segy);
-		fprintf(stderr, "dbg2       ctd:                %p\n", (void *)mb_io_ptr->mb_io_ctd);
-		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
-		fprintf(stderr, "dbg2       error:              %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:         %d\n", status);
-	}
-
-	/* return status */
-	return (status);
-}
 
 /*--------------------------------------------------------------------*/
 int mbr_info_edgjstar(int verbose, int *system, int *beams_bath_max, int *beams_amp_max, int *pixels_ss_max, char *format_name,
@@ -180,19 +46,13 @@ int mbr_info_edgjstar(int verbose, int *system, int *beams_bath_max, int *beams_
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error) {
-	char *function_name = "mbr_info_edgjstar";
-	int status = MB_SUCCESS;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 	}
 
 	/* set format info parameters */
-	status = MB_SUCCESS;
 	*error = MB_ERROR_NO_ERROR;
 	*system = MB_SYS_JSTAR;
 	*beams_bath_max = 1;
@@ -207,9 +67,9 @@ int mbr_info_edgjstar(int verbose, int *system, int *beams_bath_max, int *beams_
 	        MB_DESCRIPTION_LENGTH);
 	*numfile = 1;
 	*filetype = MB_FILETYPE_NORMAL;
-	*variable_beams = MB_NO;
-	*traveltime = MB_NO;
-	*beam_flagging = MB_NO;
+	*variable_beams = false;
+	*traveltime = false;
+	*beam_flagging = false;
 	*platform_source = MB_DATA_NONE;
 	*nav_source = MB_DATA_DATA;
 	*sensordepth_source = MB_DATA_DATA;
@@ -219,9 +79,10 @@ int mbr_info_edgjstar(int verbose, int *system, int *beams_bath_max, int *beams_
 	*beamwidth_xtrack = 0.0;
 	*beamwidth_ltrack = 0.0;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       system:             %d\n", *system);
 		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", *beams_bath_max);
@@ -248,117 +109,6 @@ int mbr_info_edgjstar(int verbose, int *system, int *beams_bath_max, int *beams_
 		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
-	return (status);
-}
-/*--------------------------------------------------------------------*/
-int mbr_register_edgjstr2(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_register_edgjstr2";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-	}
-
-	/* get mb_io_ptr */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set format info parameters */
-	status = mbr_info_edgjstr2(
-	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
-	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
-	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
-	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
-	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
-
-	/* set format and system specific function pointers */
-	mb_io_ptr->mb_io_format_alloc = &mbr_alm_edgjstar;
-	mb_io_ptr->mb_io_format_free = &mbr_dem_edgjstar;
-	mb_io_ptr->mb_io_store_alloc = &mbsys_jstar_alloc;
-	mb_io_ptr->mb_io_store_free = &mbsys_jstar_deall;
-	mb_io_ptr->mb_io_read_ping = &mbr_rt_edgjstar;
-	mb_io_ptr->mb_io_write_ping = &mbr_wt_edgjstar;
-	mb_io_ptr->mb_io_dimensions = &mbsys_jstar_dimensions;
-	mb_io_ptr->mb_io_pingnumber = &mbsys_jstar_pingnumber;
-	mb_io_ptr->mb_io_preprocess = &mbsys_jstar_preprocess;
-	mb_io_ptr->mb_io_extract = &mbsys_jstar_extract;
-	mb_io_ptr->mb_io_insert = &mbsys_jstar_insert;
-	mb_io_ptr->mb_io_extract_nav = &mbsys_jstar_extract_nav;
-	mb_io_ptr->mb_io_insert_nav = &mbsys_jstar_insert_nav;
-	mb_io_ptr->mb_io_extract_altitude = &mbsys_jstar_extract_altitude;
-	mb_io_ptr->mb_io_insert_altitude = NULL;
-	mb_io_ptr->mb_io_extract_svp = NULL;
-	mb_io_ptr->mb_io_insert_svp = NULL;
-	mb_io_ptr->mb_io_ttimes = &mbsys_jstar_ttimes;
-	mb_io_ptr->mb_io_detects = &mbsys_jstar_detects;
-	mb_io_ptr->mb_io_extract_rawssdimensions = &mbsys_jstar_extract_rawssdimensions;
-	mb_io_ptr->mb_io_extract_rawss = &mbsys_jstar_extract_rawss;
-	mb_io_ptr->mb_io_insert_rawss = &mbsys_jstar_insert_rawss;
-	mb_io_ptr->mb_io_extract_segytraceheader = &mbsys_jstar_extract_segytraceheader;
-	mb_io_ptr->mb_io_extract_segy = &mbsys_jstar_extract_segy;
-	mb_io_ptr->mb_io_insert_segy = &mbsys_jstar_insert_segy;
-	mb_io_ptr->mb_io_ctd = &mbsys_jstar_ctd;
-	mb_io_ptr->mb_io_copyrecord = &mbsys_jstar_copyrecord;
-
-	/* print output debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
-		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
-		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
-		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
-		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
-		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
-		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
-		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
-		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
-		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
-		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
-		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
-		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
-		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
-		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
-		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
-		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
-		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
-		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
-		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
-		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
-		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
-		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
-		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
-		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
-		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
-		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
-		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
-		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
-		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
-		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
-		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
-		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
-		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
-		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
-		fprintf(stderr, "dbg2       extract_rawssdimensions: %p\n", (void *)mb_io_ptr->mb_io_extract_rawssdimensions);
-		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
-		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
-		fprintf(stderr, "dbg2       extract_segytraceheader: %p\n", (void *)mb_io_ptr->mb_io_extract_segytraceheader);
-		fprintf(stderr, "dbg2       extract_segy:       %p\n", (void *)mb_io_ptr->mb_io_extract_segy);
-		fprintf(stderr, "dbg2       insert_segy:        %p\n", (void *)mb_io_ptr->mb_io_insert_segy);
-		fprintf(stderr, "dbg2       ctd:                %p\n", (void *)mb_io_ptr->mb_io_ctd);
-		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
-		fprintf(stderr, "dbg2       error:              %d\n", *error);
-		fprintf(stderr, "dbg2  Return status:\n");
-		fprintf(stderr, "dbg2       status:         %d\n", status);
-	}
-
-	/* return status */
 	return (status);
 }
 
@@ -368,19 +118,13 @@ int mbr_info_edgjstr2(int verbose, int *system, int *beams_bath_max, int *beams_
                       int *traveltime, int *beam_flagging, int *platform_source, int *nav_source, int *sensordepth_source,
                       int *heading_source, int *attitude_source, int *svp_source, double *beamwidth_xtrack,
                       double *beamwidth_ltrack, int *error) {
-	char *function_name = "mbr_info_edgjstr2";
-	int status = MB_SUCCESS;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 	}
 
 	/* set format info parameters */
-	status = MB_SUCCESS;
 	*error = MB_ERROR_NO_ERROR;
 	*system = MB_SYS_JSTAR;
 	*beams_bath_max = 1;
@@ -395,9 +139,9 @@ int mbr_info_edgjstr2(int verbose, int *system, int *beams_bath_max, int *beams_
 	        MB_DESCRIPTION_LENGTH);
 	*numfile = 1;
 	*filetype = MB_FILETYPE_NORMAL;
-	*variable_beams = MB_NO;
-	*traveltime = MB_NO;
-	*beam_flagging = MB_NO;
+	*variable_beams = false;
+	*traveltime = false;
+	*beam_flagging = false;
 	*platform_source = MB_DATA_NONE;
 	*nav_source = MB_DATA_DATA;
 	*sensordepth_source = MB_DATA_DATA;
@@ -407,9 +151,10 @@ int mbr_info_edgjstr2(int verbose, int *system, int *beams_bath_max, int *beams_
 	*beamwidth_xtrack = 0.0;
 	*beamwidth_ltrack = 0.0;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       system:             %d\n", *system);
 		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", *beams_bath_max);
@@ -436,86 +181,72 @@ int mbr_info_edgjstr2(int verbose, int *system, int *beams_bath_max, int *beams_
 		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_alm_edgjstar(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_alm_edgjstar";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-
-	/* set initial status */
-	status = MB_SUCCESS;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* allocate memory for data structure */
 	mb_io_ptr->structure_size = 0;
 	mbsys_jstar_alloc(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_dem_edgjstar(int verbose, void *mbio_ptr, int *error) {
-	char *function_name = "mbr_dem_edgjstar";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* deallocate memory for data structure */
-	status = mbsys_jstar_deall(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
+	const int status = mbsys_jstar_deall(verbose, mbio_ptr, &mb_io_ptr->store_data, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_rt_edgjstar";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
+		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
+	}
+
 	struct mbsys_jstar_message_struct message;
-	struct mbsys_jstar_struct *store;
 	struct mbsys_jstar_channel_struct *sbp;
 	struct mbsys_jstar_channel_struct *ss;
 	struct mbsys_jstar_nmea_struct *nmea;
@@ -523,17 +254,14 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	struct mbsys_jstar_dvl_struct *dvl;
 	struct mbsys_jstar_pressure_struct *pressure;
 	struct mbsys_jstar_sysinfo_struct *sysinfo;
-    struct mbsys_jstar_filetimestamp_struct *filetimestamp;
+	struct mbsys_jstar_filetimestamp_struct *filetimestamp;
 	struct mbsys_jstar_comment_struct *comment;
 	struct mbsys_jstar_ssold_struct ssold_tmp;
-	char buffer[MBSYS_JSTAR_SYSINFO_MAX];
-	char nmeastring[MB_COMMENT_MAXLINE];
 	int index;
-	int done;
 	int read_status;
 	int shortspersample;
 	int trace_size;
-    int testx1, testx2, testy1, testy2, obsolete_header;
+	int testx1, testx2, testy1, testy2, obsolete_header;
 	double time_d;
 	double navlon, navlat, heading;
 	double speed, sonardepth, altitude;
@@ -544,23 +272,12 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	double depthofsensor, offset;
 	char **nap, *nargv[25], *string;
 	int nargc;
-	int i;
-
-	/* print input debug statements */
-	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
-		fprintf(stderr, "dbg2  Input arguments:\n");
-		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
-		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
-		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
-	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* have a local struct mbsys_jstar_ss_struct ss_tmp for
 	 * reading old "sidescan" records and translating them
@@ -576,20 +293,23 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	store->ssport.message.subsystem = -1;
 	store->ssstbd.message.subsystem = -1;
 
+	int status = MB_SUCCESS;
+
 	/* loop over reading data until a full record of some sort is read */
-	done = MB_NO;
-	while (done == MB_NO) {
+	bool done = false;
+	while (!done) {
 		/* read message header */
+		char buffer[MBSYS_JSTAR_SYSINFO_MAX];
 		if ((read_status = fread(buffer, MBSYS_JSTAR_MESSAGE_SIZE, 1, mb_io_ptr->mbfp)) == 1) {
 			/* extract the message header values */
 			index = 0;
-			mb_get_binary_short(MB_YES, &buffer[index], &(message.start_marker));
+			mb_get_binary_short(true, &buffer[index], &(message.start_marker));
 			index += 2;
 			message.version = (mb_u_char)buffer[index];
 			index++;
 			message.session = (mb_u_char)buffer[index];
 			index++;
-			mb_get_binary_short(MB_YES, &buffer[index], &(message.type));
+			mb_get_binary_short(true, &buffer[index], &(message.type));
 			index += 2;
 			message.command = (mb_u_char)buffer[index];
 			index++;
@@ -599,9 +319,9 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			index++;
 			message.sequence = (mb_u_char)buffer[index];
 			index++;
-			mb_get_binary_short(MB_YES, &buffer[index], &(message.reserved));
+			mb_get_binary_short(true, &buffer[index], &(message.reserved));
 			index += 2;
-			mb_get_binary_int(MB_YES, &buffer[index], &(message.size));
+			mb_get_binary_int(true, &buffer[index], &(message.size));
 			index += 4;
 
 			store->subsystem = message.subsystem;
@@ -617,7 +337,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		else {
 			status = MB_FAILURE;
 			*error = MB_ERROR_EOF;
-			done = MB_YES;
+			done = true;
 			store->kind = MB_DATA_NONE;
 #ifdef MBF_EDGJSTAR_DEBUG
 			fprintf(stderr, "REACHED END OF FILE: status:%d\n", status);
@@ -633,7 +353,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			/* read the comment */
 			if ((read_status = fread(comment->comment, message.size, 1, mb_io_ptr->mbfp)) == 1) {
 				comment->comment[message.size] = 0;
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_COMMENT;
 			}
 
@@ -641,7 +361,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			else {
 				status = MB_FAILURE;
 				*error = MB_ERROR_EOF;
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_NONE;
 			}
 		}
@@ -658,175 +378,175 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
                 // test if these data were written incorrectly by a prior version of MB-System
                 // - early versions of jsf maintained the segy structure of separate source and
                 //   receiver position, and MB-System wrote jsf files that way up through 5.5.2321
-				mb_get_binary_int(MB_YES, &buffer[72], &testx1);
-				mb_get_binary_int(MB_YES, &buffer[76], &testy1);
-				mb_get_binary_int(MB_YES, &buffer[80], &testx2);
-				mb_get_binary_int(MB_YES, &buffer[84], &testy2);
+				mb_get_binary_int(true, &buffer[72], &testx1);
+				mb_get_binary_int(true, &buffer[76], &testy1);
+				mb_get_binary_int(true, &buffer[80], &testx2);
+				mb_get_binary_int(true, &buffer[84], &testy2);
                 if (testx1 == testx2 && testy1 == testy2) {
-                    obsolete_header = MB_YES;
+                    obsolete_header = true;
                 } else {
-                    obsolete_header = MB_NO;
+                    obsolete_header = false;
                 }
-                
+
 				index = 0;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->pingTime));
+				mb_get_binary_int(true, &buffer[index], &(sbp->pingTime));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->startDepth));
+				mb_get_binary_int(true, &buffer[index], &(sbp->startDepth));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->pingNum));
+				mb_get_binary_int(true, &buffer[index], &(sbp->pingNum));
 				index += 4;
-				for (i = 0; i < 2; i++) {
-					mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved1[i]));
+				for (int i = 0; i < 2; i++) {
+					mb_get_binary_short(true, &buffer[index], &(sbp->reserved1[i]));
 					index += 2;
 				}
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->lsb1));
+				mb_get_binary_short(true, &buffer[index], &(sbp->lsb1));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->lsb2));
+				mb_get_binary_short(true, &buffer[index], &(sbp->lsb2));
 				index += 2;
-				for (i = 0; i < 3; i++) {
-					mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved2[i]));
+				for (int i = 0; i < 3; i++) {
+					mb_get_binary_short(true, &buffer[index], &(sbp->reserved2[i]));
 					index += 2;
 				}
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->traceIDCode));
+				mb_get_binary_short(true, &buffer[index], &(sbp->traceIDCode));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->validityFlag));
+				mb_get_binary_short(true, &buffer[index], &(sbp->validityFlag));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved3));
+				mb_get_binary_short(true, &buffer[index], &(sbp->reserved3));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->dataFormat));
+				mb_get_binary_short(true, &buffer[index], &(sbp->dataFormat));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->NMEAantennaeR));
+				mb_get_binary_short(true, &buffer[index], &(sbp->NMEAantennaeR));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->NMEAantennaeO));
+				mb_get_binary_short(true, &buffer[index], &(sbp->NMEAantennaeO));
 				index += 2;
-				for (i = 0; i < 2; i++) {
-					mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved4[i]));
+				for (int i = 0; i < 2; i++) {
+					mb_get_binary_short(true, &buffer[index], &(sbp->reserved4[i]));
 					index += 2;
 				}
-				mb_get_binary_float(MB_YES, &buffer[index], &(sbp->kmOfPipe));
+				mb_get_binary_float(true, &buffer[index], &(sbp->kmOfPipe));
 				index += 4;
-				for (i = 0; i < 16; i++) {
-					mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved5[i]));
+				for (int i = 0; i < 16; i++) {
+					mb_get_binary_short(true, &buffer[index], &(sbp->reserved5[i]));
 					index += 2;
 				}
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->coordX));
+				mb_get_binary_int(true, &buffer[index], &(sbp->coordX));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->coordY));
+				mb_get_binary_int(true, &buffer[index], &(sbp->coordY));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->coordUnits));
+				mb_get_binary_short(true, &buffer[index], &(sbp->coordUnits));
 				index += 2;
-				for (i = 0; i < 24; i++) {
+				for (int i = 0; i < 24; i++) {
 					sbp->annotation[i] = buffer[index];
 					index++;
 				}
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->samples));
+				mb_get_binary_short(true, &buffer[index], &(sbp->samples));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->sampleInterval));
+				mb_get_binary_int(true, &buffer[index], &(sbp->sampleInterval));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->ADCGain));
+				mb_get_binary_short(true, &buffer[index], &(sbp->ADCGain));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->pulsePower));
+				mb_get_binary_short(true, &buffer[index], &(sbp->pulsePower));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved6));
+				mb_get_binary_short(true, &buffer[index], &(sbp->reserved6));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->startFreq));
+				mb_get_binary_short(true, &buffer[index], &(sbp->startFreq));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->endFreq));
+				mb_get_binary_short(true, &buffer[index], &(sbp->endFreq));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->sweepLength));   
+				mb_get_binary_short(true, &buffer[index], &(sbp->sweepLength));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->pressure));
+				mb_get_binary_int(true, &buffer[index], &(sbp->pressure));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->sonarDepth));
+				mb_get_binary_int(true, &buffer[index], &(sbp->sonarDepth));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->sampleFreq));
+				mb_get_binary_short(true, &buffer[index], &(sbp->sampleFreq));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->pulseID));
+				mb_get_binary_short(true, &buffer[index], &(sbp->pulseID));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->sonarAltitude));
+				mb_get_binary_int(true, &buffer[index], &(sbp->sonarAltitude));
 				index += 4;
-				mb_get_binary_float(MB_YES, &buffer[index], &(sbp->soundspeed));
+				mb_get_binary_float(true, &buffer[index], &(sbp->soundspeed));
 				index += 4;
-				mb_get_binary_float(MB_YES, &buffer[index], &(sbp->mixerFrequency));
+				mb_get_binary_float(true, &buffer[index], &(sbp->mixerFrequency));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->year));
+				mb_get_binary_short(true, &buffer[index], &(sbp->year));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->day));
+				mb_get_binary_short(true, &buffer[index], &(sbp->day));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->hour));
+				mb_get_binary_short(true, &buffer[index], &(sbp->hour));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->minute));
+				mb_get_binary_short(true, &buffer[index], &(sbp->minute));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->second));
+				mb_get_binary_short(true, &buffer[index], &(sbp->second));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->timeBasis));
+				mb_get_binary_short(true, &buffer[index], &(sbp->timeBasis));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->weightingFactor));
+				mb_get_binary_short(true, &buffer[index], &(sbp->weightingFactor));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->numberPulses));
+				mb_get_binary_short(true, &buffer[index], &(sbp->numberPulses));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->heading));
+				mb_get_binary_short(true, &buffer[index], &(sbp->heading));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->pitch));
+				mb_get_binary_short(true, &buffer[index], &(sbp->pitch));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->roll));
+				mb_get_binary_short(true, &buffer[index], &(sbp->roll));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved8));
+				mb_get_binary_short(true, &buffer[index], &(sbp->reserved8));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved9));
+				mb_get_binary_short(true, &buffer[index], &(sbp->reserved9));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->triggerSource));
+				mb_get_binary_short(true, &buffer[index], &(sbp->triggerSource));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->markNumber));
+				mb_get_binary_short(true, &buffer[index], &(sbp->markNumber));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->NMEAHour));
+				mb_get_binary_short(true, &buffer[index], &(sbp->NMEAHour));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->NMEAMinutes));
+				mb_get_binary_short(true, &buffer[index], &(sbp->NMEAMinutes));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->NMEASeconds));
+				mb_get_binary_short(true, &buffer[index], &(sbp->NMEASeconds));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->NMEACourse));
+				mb_get_binary_short(true, &buffer[index], &(sbp->NMEACourse));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->NMEASpeed));
+				mb_get_binary_short(true, &buffer[index], &(sbp->NMEASpeed));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->NMEADay));
+				mb_get_binary_short(true, &buffer[index], &(sbp->NMEADay));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->NMEAYear));
+				mb_get_binary_short(true, &buffer[index], &(sbp->NMEAYear));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->millisecondsToday));
+				mb_get_binary_int(true, &buffer[index], &(sbp->millisecondsToday));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->ADCMax));
+				mb_get_binary_short(true, &buffer[index], &(sbp->ADCMax));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved10));
+				mb_get_binary_short(true, &buffer[index], &(sbp->reserved10));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved11));
+				mb_get_binary_short(true, &buffer[index], &(sbp->reserved11));
 				index += 2;
-				for (i = 0; i < 6; i++) {
+				for (int i = 0; i < 6; i++) {
 					sbp->softwareVersion[i] = buffer[index];
 					index++;
 				}
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->sphericalCorrection));
+				mb_get_binary_int(true, &buffer[index], &(sbp->sphericalCorrection));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->packetNum));
+				mb_get_binary_short(true, &buffer[index], &(sbp->packetNum));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->ADCDecimation));
+				mb_get_binary_short(true, &buffer[index], &(sbp->ADCDecimation));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved12));
+				mb_get_binary_short(true, &buffer[index], &(sbp->reserved12));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->temperature));
+				mb_get_binary_short(true, &buffer[index], &(sbp->temperature));
 				index += 2;
-				mb_get_binary_float(MB_YES, &buffer[index], &(sbp->layback));
+				mb_get_binary_float(true, &buffer[index], &(sbp->layback));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sbp->reserved13));
+				mb_get_binary_int(true, &buffer[index], &(sbp->reserved13));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->cableOut));
+				mb_get_binary_short(true, &buffer[index], &(sbp->cableOut));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(sbp->reserved14));
+				mb_get_binary_short(true, &buffer[index], &(sbp->reserved14));
 				index += 2;
-                
+
                 /* fix problems created by writing obsolete header */
-                if (obsolete_header == MB_YES) {
+                if (obsolete_header == true) {
                     // set first time value
                     // zero extra position values
                     // move seafloor depth, sonar depth, and altitude values if nonzero
@@ -851,7 +571,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				/* read the trace */
 				if (status == MB_SUCCESS && (read_status = fread(sbp->trace, trace_size, 1, mb_io_ptr->mbfp)) == 1) {
 #ifndef BYTESWAPPED
-					for (i = 0; i < shortspersample * sbp->samples; i++) {
+					for (int i = 0; i < shortspersample * sbp->samples; i++) {
 						sbp->trace[i] = mb_swap_short(sbp->trace[i]);
 						;
 					}
@@ -860,7 +580,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				else {
 					status = MB_FAILURE;
 					*error = MB_ERROR_EOF;
-					done = MB_YES;
+					done = true;
 					store->kind = MB_DATA_NONE;
 				}
 
@@ -899,14 +619,14 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 				/* set kind */
 				store->kind = MB_DATA_SUBBOTTOM_SUBBOTTOM;
-				done = MB_YES;
+				done = true;
 			}
 
 			/* end of file */
 			else {
 				status = MB_FAILURE;
 				*error = MB_ERROR_EOF;
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_NONE;
 			}
 		}
@@ -928,171 +648,171 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
                 // test if these data were written incorrectly by a prior version of MB-System
                 // - early versions of jsf maintained the segy structure of separate source and
                 //   receiver position, and MB-System wrote jsf files that way up through 5.5.2321
-				mb_get_binary_int(MB_YES, &buffer[72], &testx1);
-				mb_get_binary_int(MB_YES, &buffer[76], &testy1);
-				mb_get_binary_int(MB_YES, &buffer[80], &testx2);
-				mb_get_binary_int(MB_YES, &buffer[84], &testy2);
+				mb_get_binary_int(true, &buffer[72], &testx1);
+				mb_get_binary_int(true, &buffer[76], &testy1);
+				mb_get_binary_int(true, &buffer[80], &testx2);
+				mb_get_binary_int(true, &buffer[84], &testy2);
                 if (testx1 == testx2 && testy1 == testy2) {
-                    obsolete_header = MB_YES;
+                    obsolete_header = true;
                 } else {
-                    obsolete_header = MB_NO;
+                    obsolete_header = false;
                 }
-                
+
 				index = 0;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->pingTime));
+				mb_get_binary_int(true, &buffer[index], &(ss->pingTime));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->startDepth));
+				mb_get_binary_int(true, &buffer[index], &(ss->startDepth));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->pingNum));
+				mb_get_binary_int(true, &buffer[index], &(ss->pingNum));
 				index += 4;
-				for (i = 0; i < 2; i++) {
-					mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved1[i]));
+				for (int i = 0; i < 2; i++) {
+					mb_get_binary_short(true, &buffer[index], &(ss->reserved1[i]));
 					index += 2;
 				}
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->lsb1));
+				mb_get_binary_short(true, &buffer[index], &(ss->lsb1));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->lsb2));
+				mb_get_binary_short(true, &buffer[index], &(ss->lsb2));
 				index += 2;
-				for (i = 0; i < 3; i++) {
-					mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved2[i]));
+				for (int i = 0; i < 3; i++) {
+					mb_get_binary_short(true, &buffer[index], &(ss->reserved2[i]));
 					index += 2;
 				}
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->traceIDCode));
+				mb_get_binary_short(true, &buffer[index], &(ss->traceIDCode));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->validityFlag));
+				mb_get_binary_short(true, &buffer[index], &(ss->validityFlag));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved3));
+				mb_get_binary_short(true, &buffer[index], &(ss->reserved3));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->dataFormat));
+				mb_get_binary_short(true, &buffer[index], &(ss->dataFormat));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->NMEAantennaeR));
+				mb_get_binary_short(true, &buffer[index], &(ss->NMEAantennaeR));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->NMEAantennaeO));
+				mb_get_binary_short(true, &buffer[index], &(ss->NMEAantennaeO));
 				index += 2;
-				for (i = 0; i < 2; i++) {
-					mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved4[i]));
+				for (int i = 0; i < 2; i++) {
+					mb_get_binary_short(true, &buffer[index], &(ss->reserved4[i]));
 					index += 2;
 				}
-				mb_get_binary_float(MB_YES, &buffer[index], &(ss->kmOfPipe));
+				mb_get_binary_float(true, &buffer[index], &(ss->kmOfPipe));
 				index += 4;
-				for (i = 0; i < 16; i++) {
-					mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved5[i]));
+				for (int i = 0; i < 16; i++) {
+					mb_get_binary_short(true, &buffer[index], &(ss->reserved5[i]));
 					index += 2;
 				}
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->coordX));
+				mb_get_binary_int(true, &buffer[index], &(ss->coordX));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->coordY));
+				mb_get_binary_int(true, &buffer[index], &(ss->coordY));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->coordUnits));
+				mb_get_binary_short(true, &buffer[index], &(ss->coordUnits));
 				index += 2;
-				for (i = 0; i < 24; i++) {
+				for (int i = 0; i < 24; i++) {
 					ss->annotation[i] = buffer[index];
 					index++;
 				}
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->samples));
+				mb_get_binary_short(true, &buffer[index], &(ss->samples));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->sampleInterval));
+				mb_get_binary_int(true, &buffer[index], &(ss->sampleInterval));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->ADCGain));
+				mb_get_binary_short(true, &buffer[index], &(ss->ADCGain));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->pulsePower));
+				mb_get_binary_short(true, &buffer[index], &(ss->pulsePower));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved6));
+				mb_get_binary_short(true, &buffer[index], &(ss->reserved6));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->startFreq));
+				mb_get_binary_short(true, &buffer[index], &(ss->startFreq));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->endFreq));
+				mb_get_binary_short(true, &buffer[index], &(ss->endFreq));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->sweepLength));   
+				mb_get_binary_short(true, &buffer[index], &(ss->sweepLength));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->pressure));
+				mb_get_binary_int(true, &buffer[index], &(ss->pressure));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->sonarDepth));
+				mb_get_binary_int(true, &buffer[index], &(ss->sonarDepth));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->sampleFreq));
+				mb_get_binary_short(true, &buffer[index], &(ss->sampleFreq));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->pulseID));
+				mb_get_binary_short(true, &buffer[index], &(ss->pulseID));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->sonarAltitude));
+				mb_get_binary_int(true, &buffer[index], &(ss->sonarAltitude));
 				index += 4;
-				mb_get_binary_float(MB_YES, &buffer[index], &(ss->soundspeed));
+				mb_get_binary_float(true, &buffer[index], &(ss->soundspeed));
 				index += 4;
-				mb_get_binary_float(MB_YES, &buffer[index], &(ss->mixerFrequency));
+				mb_get_binary_float(true, &buffer[index], &(ss->mixerFrequency));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->year));
+				mb_get_binary_short(true, &buffer[index], &(ss->year));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->day));
+				mb_get_binary_short(true, &buffer[index], &(ss->day));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->hour));
+				mb_get_binary_short(true, &buffer[index], &(ss->hour));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->minute));
+				mb_get_binary_short(true, &buffer[index], &(ss->minute));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->second));
+				mb_get_binary_short(true, &buffer[index], &(ss->second));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->timeBasis));
+				mb_get_binary_short(true, &buffer[index], &(ss->timeBasis));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->weightingFactor));
+				mb_get_binary_short(true, &buffer[index], &(ss->weightingFactor));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->numberPulses));
+				mb_get_binary_short(true, &buffer[index], &(ss->numberPulses));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->heading));
+				mb_get_binary_short(true, &buffer[index], &(ss->heading));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->pitch));
+				mb_get_binary_short(true, &buffer[index], &(ss->pitch));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->roll));
+				mb_get_binary_short(true, &buffer[index], &(ss->roll));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved8));
+				mb_get_binary_short(true, &buffer[index], &(ss->reserved8));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved9));
+				mb_get_binary_short(true, &buffer[index], &(ss->reserved9));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->triggerSource));
+				mb_get_binary_short(true, &buffer[index], &(ss->triggerSource));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->markNumber));
+				mb_get_binary_short(true, &buffer[index], &(ss->markNumber));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->NMEAHour));
+				mb_get_binary_short(true, &buffer[index], &(ss->NMEAHour));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->NMEAMinutes));
+				mb_get_binary_short(true, &buffer[index], &(ss->NMEAMinutes));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->NMEASeconds));
+				mb_get_binary_short(true, &buffer[index], &(ss->NMEASeconds));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->NMEACourse));
+				mb_get_binary_short(true, &buffer[index], &(ss->NMEACourse));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->NMEASpeed));
+				mb_get_binary_short(true, &buffer[index], &(ss->NMEASpeed));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->NMEADay));
+				mb_get_binary_short(true, &buffer[index], &(ss->NMEADay));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->NMEAYear));
+				mb_get_binary_short(true, &buffer[index], &(ss->NMEAYear));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->millisecondsToday));
+				mb_get_binary_int(true, &buffer[index], &(ss->millisecondsToday));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->ADCMax));
+				mb_get_binary_short(true, &buffer[index], &(ss->ADCMax));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved10));
+				mb_get_binary_short(true, &buffer[index], &(ss->reserved10));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved11));
+				mb_get_binary_short(true, &buffer[index], &(ss->reserved11));
 				index += 2;
-				for (i = 0; i < 6; i++) {
+				for (int i = 0; i < 6; i++) {
 					ss->softwareVersion[i] = buffer[index];
 					index++;
 				}
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->sphericalCorrection));
+				mb_get_binary_int(true, &buffer[index], &(ss->sphericalCorrection));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->packetNum));
+				mb_get_binary_short(true, &buffer[index], &(ss->packetNum));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->ADCDecimation));
+				mb_get_binary_short(true, &buffer[index], &(ss->ADCDecimation));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved12));
+				mb_get_binary_short(true, &buffer[index], &(ss->reserved12));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->temperature));
+				mb_get_binary_short(true, &buffer[index], &(ss->temperature));
 				index += 2;
-				mb_get_binary_float(MB_YES, &buffer[index], &(ss->layback));
+				mb_get_binary_float(true, &buffer[index], &(ss->layback));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ss->reserved13));
+				mb_get_binary_int(true, &buffer[index], &(ss->reserved13));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->cableOut));
+				mb_get_binary_short(true, &buffer[index], &(ss->cableOut));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ss->reserved14));
+				mb_get_binary_short(true, &buffer[index], &(ss->reserved14));
 				index += 2;
 
 				/* allocate memory for the trace */
@@ -1113,7 +833,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				/* read the trace */
 				if (status == MB_SUCCESS && (read_status = fread(ss->trace, trace_size, 1, mb_io_ptr->mbfp)) == 1) {
 #ifndef BYTESWAPPED
-					for (i = 0; i < shortspersample * ss->samples; i++) {
+					for (int i = 0; i < shortspersample * ss->samples; i++) {
 						ss->trace[i] = mb_swap_short(ss->trace[i]);
 						;
 					}
@@ -1122,7 +842,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				else {
 					status = MB_FAILURE;
 					*error = MB_ERROR_EOF;
-					done = MB_YES;
+					done = true;
 					store->kind = MB_DATA_NONE;
 				}
 
@@ -1165,7 +885,6 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 						store->kind = MB_DATA_DATA;
 					else if (message.subsystem == MBSYS_JSTAR_SUBSYSTEM_SSHIGH)
 						store->kind = MB_DATA_SIDESCAN2;
-//fprintf(stderr, "READ SIDESCAN format:%d subsystem:%d kind:%d\n", mb_io_ptr->format, message.subsystem, store->kind);
 				}
 				else {
 					if (message.subsystem == MBSYS_JSTAR_SUBSYSTEM_SSHIGH)
@@ -1175,7 +894,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				}
 				if (store->ssport.pingNum == store->ssstbd.pingNum &&
 				    store->ssport.message.subsystem == store->ssstbd.message.subsystem) {
-					done = MB_YES;
+					done = true;
 				}
 #ifdef MBF_EDGJSTAR_DEBUG
 				fprintf(stderr, "Done reading 1: %d  pingNum:%d %d   subsystem:%d %d\n", done, store->ssport.pingNum,
@@ -1187,7 +906,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			else {
 				status = MB_FAILURE;
 				*error = MB_ERROR_EOF;
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_NONE;
 			}
 		}
@@ -1209,65 +928,65 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			/* read the 80 byte trace header */
 			if ((read_status = fread(buffer, MBSYS_JSTAR_SSOLDHEADER_SIZE, 1, mb_io_ptr->mbfp)) == 1) {
 				index = 0;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.subsystem));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.subsystem));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.channelNum));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.channelNum));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.pingNum));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.pingNum));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.packetNum));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.packetNum));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.trigSource));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.trigSource));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.samples));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.samples));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.sampleInterval));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.sampleInterval));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.startDepth));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.startDepth));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.weightingFactor));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.weightingFactor));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.ADCGain));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.ADCGain));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.ADCMax));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.ADCMax));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.rangeSetting));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.rangeSetting));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.pulseID));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.pulseID));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.markNumber));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.markNumber));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.dataFormat));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.dataFormat));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.reserved));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.reserved));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.millisecondsToday));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.millisecondsToday));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.year));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.year));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.day));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.day));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.hour));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.hour));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.minute));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.minute));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.second));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.second));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.heading));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.heading));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.pitch));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.pitch));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.roll));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.roll));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.heave));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.heave));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.yaw));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.yaw));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.depth));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.depth));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.temperature));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.temperature));
 				index += 2;
-				for (i = 0; i < 10; i++) {
+				for (int i = 0; i < 10; i++) {
 					ssold_tmp.reserved2[i] = buffer[index];
 					index++;
 				}
@@ -1281,7 +1000,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
                 sbp->msb = 0;
                 sbp->lsb1 = 0;
                 sbp->lsb2 = 0;
-				for (i = 0; i < 3; i++) {
+				for (int i = 0; i < 3; i++) {
                     sbp->reserved2[0] = 0;
 				}
 				sbp->traceIDCode = 1;
@@ -1290,17 +1009,17 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				sbp->dataFormat = ssold_tmp.dataFormat;
 				sbp->NMEAantennaeR = 0;
 				sbp->NMEAantennaeO = 0;
-				for (i = 0; i < 2; i++) {
+				for (int i = 0; i < 2; i++) {
 					sbp->reserved4[i] = 0;
 				}
                 sbp->kmOfPipe = 0.0;
-				for (i = 0; i < 16; i++) {
+				for (int i = 0; i < 16; i++) {
 					sbp->reserved5[i] = 0;
 				}
 				sbp->coordX = 0;
 				sbp->coordY = 0;
 				sbp->coordUnits = 2;
-				for (i = 0; i < 24; i++) {
+				for (int i = 0; i < 24; i++) {
 					sbp->annotation[i] = 0;
 				}
 				sbp->samples = ssold_tmp.samples;
@@ -1344,7 +1063,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				sbp->ADCMax = ssold_tmp.ADCMax;
 				sbp->reserved10 = 0;
 				sbp->reserved11 = 0;
-				for (i = 0; i < 6; i++) {
+				for (int i = 0; i < 6; i++) {
 					sbp->softwareVersion[i] = 0;
 				}
 				sbp->sphericalCorrection = 0;
@@ -1375,7 +1094,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				/* read the trace */
 				if (status == MB_SUCCESS && (read_status = fread(sbp->trace, trace_size, 1, mb_io_ptr->mbfp)) == 1) {
 #ifndef BYTESWAPPED
-					for (i = 0; i < shortspersample * sbp->samples; i++) {
+					for (int i = 0; i < shortspersample * sbp->samples; i++) {
 						sbp->trace[i] = mb_swap_short(sbp->trace[i]);
 					}
 #endif
@@ -1383,7 +1102,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				else {
 					status = MB_FAILURE;
 					*error = MB_ERROR_EOF;
-					done = MB_YES;
+					done = true;
 					store->kind = MB_DATA_NONE;
 				}
 
@@ -1422,14 +1141,14 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 				/* set kind */
 				store->kind = MB_DATA_SUBBOTTOM_SUBBOTTOM;
-				done = MB_YES;
+				done = true;
 			}
 
 			/* end of file */
 			else {
 				status = MB_FAILURE;
 				*error = MB_ERROR_EOF;
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_NONE;
 			}
 		}
@@ -1454,65 +1173,65 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			/* read the 80 byte trace header */
 			if ((read_status = fread(buffer, MBSYS_JSTAR_SSOLDHEADER_SIZE, 1, mb_io_ptr->mbfp)) == 1) {
 				index = 0;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.subsystem));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.subsystem));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.channelNum));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.channelNum));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.pingNum));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.pingNum));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.packetNum));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.packetNum));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.trigSource));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.trigSource));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.samples));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.samples));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.sampleInterval));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.sampleInterval));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.startDepth));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.startDepth));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.weightingFactor));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.weightingFactor));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.ADCGain));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.ADCGain));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.ADCMax));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.ADCMax));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.rangeSetting));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.rangeSetting));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.pulseID));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.pulseID));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.markNumber));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.markNumber));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.dataFormat));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.dataFormat));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.reserved));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.reserved));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.millisecondsToday));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.millisecondsToday));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.year));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.year));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.day));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.day));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.hour));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.hour));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.minute));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.minute));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.second));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.second));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.heading));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.heading));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.pitch));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.pitch));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.roll));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.roll));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.heave));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.heave));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.yaw));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.yaw));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(ssold_tmp.depth));
+				mb_get_binary_int(true, &buffer[index], &(ssold_tmp.depth));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(ssold_tmp.temperature));
+				mb_get_binary_short(true, &buffer[index], &(ssold_tmp.temperature));
 				index += 2;
-				for (i = 0; i < 10; i++) {
+				for (int i = 0; i < 10; i++) {
 					ssold_tmp.reserved2[i] = buffer[index];
 					index++;
 				}
@@ -1526,7 +1245,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
                 ss->msb = 0;
                 ss->lsb1 = 0;
                 ss->lsb2 = 0;
-				for (i = 0; i < 3; i++) {
+				for (int i = 0; i < 3; i++) {
                     ss->reserved2[0] = 0;
 				}
 				ss->traceIDCode = 1;
@@ -1535,17 +1254,17 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				ss->dataFormat = ssold_tmp.dataFormat;
 				ss->NMEAantennaeR = 0;
 				ss->NMEAantennaeO = 0;
-				for (i = 0; i < 2; i++) {
+				for (int i = 0; i < 2; i++) {
 					ss->reserved4[i] = 0;
 				}
                 ss->kmOfPipe = 0.0;
-				for (i = 0; i < 16; i++) {
+				for (int i = 0; i < 16; i++) {
 					ss->reserved5[i] = 0;
 				}
 				ss->coordX = 0;
 				ss->coordY = 0;
 				ss->coordUnits = 2;
-				for (i = 0; i < 24; i++) {
+				for (int i = 0; i < 24; i++) {
 					ss->annotation[i] = 0;
 				}
 				ss->samples = ssold_tmp.samples;
@@ -1589,7 +1308,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				ss->ADCMax = ssold_tmp.ADCMax;
 				ss->reserved10 = 0;
 				ss->reserved11 = 0;
-				for (i = 0; i < 6; i++) {
+				for (int i = 0; i < 6; i++) {
 					ss->softwareVersion[i] = 0;
 				}
 				ss->sphericalCorrection = 0;
@@ -1620,7 +1339,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				/* read the trace */
 				if (status == MB_SUCCESS && (read_status = fread(ss->trace, trace_size, 1, mb_io_ptr->mbfp)) == 1) {
 #ifndef BYTESWAPPED
-					for (i = 0; i < shortspersample * ss->samples; i++) {
+					for (int i = 0; i < shortspersample * ss->samples; i++) {
 						ss->trace[i] = mb_swap_short(ss->trace[i]);
 						;
 					}
@@ -1629,7 +1348,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				else {
 					status = MB_FAILURE;
 					*error = MB_ERROR_EOF;
-					done = MB_YES;
+					done = true;
 					store->kind = MB_DATA_NONE;
 				}
 
@@ -1681,7 +1400,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				}
 				if (store->ssport.pingNum == store->ssstbd.pingNum &&
 				    store->ssport.message.subsystem == store->ssstbd.message.subsystem) {
-					done = MB_YES;
+					done = true;
 				}
 #ifdef MBF_EDGJSTAR_DEBUG
 				fprintf(stderr, "Done reading 1: %d  pingNum:%d %d   subsystem:%d %d\n", done, store->ssport.pingNum,
@@ -1693,7 +1412,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			else {
 				status = MB_FAILURE;
 				*error = MB_ERROR_EOF;
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_NONE;
 			}
 		}
@@ -1707,18 +1426,18 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			/* read the system info record */
 			if ((read_status = fread(buffer, message.size, 1, mb_io_ptr->mbfp)) == 1) {
 				index = 0;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sysinfo->system_type));
+				mb_get_binary_int(true, &buffer[index], &(sysinfo->system_type));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sysinfo->reserved1));
+				mb_get_binary_int(true, &buffer[index], &(sysinfo->reserved1));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sysinfo->version));
+				mb_get_binary_int(true, &buffer[index], &(sysinfo->version));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sysinfo->reserved2));
+				mb_get_binary_int(true, &buffer[index], &(sysinfo->reserved2));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(sysinfo->platformserialnumber));
+				mb_get_binary_int(true, &buffer[index], &(sysinfo->platformserialnumber));
 				index += 4;
 				sysinfo->sysinfosize = MIN((message.size - index), MBSYS_JSTAR_SYSINFO_MAX - 1);
-				for (i = 0; i < sysinfo->sysinfosize; i++) {
+				for (int i = 0; i < sysinfo->sysinfosize; i++) {
 					sysinfo->sysinfo[i] = buffer[index];
 					index++;
 				}
@@ -1728,7 +1447,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				        sysinfo->system_type, sysinfo->version, sysinfo->platformserialnumber, sysinfo->sysinfosize);
 #endif
 
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_HEADER;
 			}
 		}
@@ -1742,12 +1461,12 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			/* read the file timestamp record */
 			if ((read_status = fread(buffer, message.size, 1, mb_io_ptr->mbfp)) == 1) {
 				index = 0;
-				mb_get_binary_int(MB_YES, &buffer[index], &(filetimestamp->seconds));
+				mb_get_binary_int(true, &buffer[index], &(filetimestamp->seconds));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(filetimestamp->milliseconds));
+				mb_get_binary_int(true, &buffer[index], &(filetimestamp->milliseconds));
 				index += 4;
 
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_TIMESTAMP;
 			}
 		}
@@ -1761,9 +1480,9 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			/* read the NMEA string */
 			if ((read_status = fread(buffer, message.size, 1, mb_io_ptr->mbfp)) == 1) {
 				index = 0;
-				mb_get_binary_int(MB_YES, &buffer[index], &(nmea->seconds));
+				mb_get_binary_int(true, &buffer[index], &(nmea->seconds));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(nmea->milliseconds));
+				mb_get_binary_int(true, &buffer[index], &(nmea->milliseconds));
 				index += 4;
 				nmea->source = buffer[index];
 				index++;
@@ -1773,11 +1492,12 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				index++;
 				nmea->reserve[2] = buffer[index];
 				index++;
-				for (i = 0; i < message.size - 12; i++) {
+				for (int i = 0; i < message.size - 12; i++) {
 					nmea->nmea[i] = buffer[index];
 					index++;
 				}
 				nmea->nmea[message.size - 12] = 0;
+				char nmeastring[MB_COMMENT_MAXLINE];
 				strcpy(nmeastring, nmea->nmea);
 
 				time_d = ((double)nmea->seconds) + 0.001 * ((double)nmea->milliseconds);
@@ -1844,7 +1564,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 					store->kind = MB_DATA_NMEA_DPT;
 				}
 
-				done = MB_YES;
+				done = true;
 			}
 		}
 
@@ -1857,9 +1577,9 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			/* read the pitchroll record */
 			if ((read_status = fread(buffer, message.size, 1, mb_io_ptr->mbfp)) == 1) {
 				index = 0;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pitchroll->seconds));
+				mb_get_binary_int(true, &buffer[index], &(pitchroll->seconds));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pitchroll->milliseconds));
+				mb_get_binary_int(true, &buffer[index], &(pitchroll->milliseconds));
 				index += 4;
 				pitchroll->reserve1[0] = buffer[index];
 				index++;
@@ -1869,36 +1589,36 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				index++;
 				pitchroll->reserve1[3] = buffer[index];
 				index++;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->accelerationx));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->accelerationx));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->accelerationy));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->accelerationy));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->accelerationz));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->accelerationz));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->gyroratex));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->gyroratex));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->gyroratey));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->gyroratey));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->gyroratez));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->gyroratez));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->pitch));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->pitch));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->roll));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->roll));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->temperature));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->temperature));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->deviceinfo));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->deviceinfo));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->heave));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->heave));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(pitchroll->heading));
+				mb_get_binary_short(true, &buffer[index], &(pitchroll->heading));
 				index += 2;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pitchroll->datavalidflags));
+				mb_get_binary_int(true, &buffer[index], &(pitchroll->datavalidflags));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pitchroll->reserve2));
+				mb_get_binary_int(true, &buffer[index], &(pitchroll->reserve2));
 				index += 4;
 
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_ATTITUDE;
 			}
 		}
@@ -1912,9 +1632,9 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			/* read the pressure record */
 			if ((read_status = fread(buffer, message.size, 1, mb_io_ptr->mbfp)) == 1) {
 				index = 0;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pressure->seconds));
+				mb_get_binary_int(true, &buffer[index], &(pressure->seconds));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pressure->milliseconds));
+				mb_get_binary_int(true, &buffer[index], &(pressure->milliseconds));
 				index += 4;
 				pressure->reserve1[0] = buffer[index];
 				index++;
@@ -1924,18 +1644,18 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				index++;
 				pressure->reserve1[3] = buffer[index];
 				index++;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pressure->pressure));
+				mb_get_binary_int(true, &buffer[index], &(pressure->pressure));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pressure->salinity));
+				mb_get_binary_int(true, &buffer[index], &(pressure->salinity));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pressure->datavalidflags));
+				mb_get_binary_int(true, &buffer[index], &(pressure->datavalidflags));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pressure->conductivity));
+				mb_get_binary_int(true, &buffer[index], &(pressure->conductivity));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(pressure->soundspeed));
+				mb_get_binary_int(true, &buffer[index], &(pressure->soundspeed));
 				index += 4;
-				for (i = 0; i < 10; i++) {
-					mb_get_binary_int(MB_YES, &buffer[index], &(pressure->reserve2[i]));
+				for (int i = 0; i < 10; i++) {
+					mb_get_binary_int(true, &buffer[index], &(pressure->reserve2[i]));
 					index += 4;
 				}
 #ifdef MBF_EDGJSTAR_DEBUG
@@ -1944,7 +1664,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				        pressure->soundspeed);
 #endif
 
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_CTD;
 			}
 
@@ -1952,7 +1672,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			else {
 				status = MB_FAILURE;
 				*error = MB_ERROR_EOF;
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_NONE;
 			}
 		}
@@ -1966,9 +1686,9 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			/* read the dvl record */
 			if ((read_status = fread(buffer, message.size, 1, mb_io_ptr->mbfp)) == 1) {
 				index = 0;
-				mb_get_binary_int(MB_YES, &buffer[index], &(dvl->seconds));
+				mb_get_binary_int(true, &buffer[index], &(dvl->seconds));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(dvl->milliseconds));
+				mb_get_binary_int(true, &buffer[index], &(dvl->milliseconds));
 				index += 4;
 				dvl->reserve1[0] = buffer[index];
 				index++;
@@ -1978,48 +1698,48 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 				index++;
 				dvl->reserve1[3] = buffer[index];
 				index++;
-				mb_get_binary_int(MB_YES, &buffer[index], &(dvl->datavalidflags));
+				mb_get_binary_int(true, &buffer[index], &(dvl->datavalidflags));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(dvl->beam1range));
+				mb_get_binary_int(true, &buffer[index], &(dvl->beam1range));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(dvl->beam2range));
+				mb_get_binary_int(true, &buffer[index], &(dvl->beam2range));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(dvl->beam3range));
+				mb_get_binary_int(true, &buffer[index], &(dvl->beam3range));
 				index += 4;
-				mb_get_binary_int(MB_YES, &buffer[index], &(dvl->beam4range));
+				mb_get_binary_int(true, &buffer[index], &(dvl->beam4range));
 				index += 4;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->velocitybottomx));
+				mb_get_binary_short(true, &buffer[index], &(dvl->velocitybottomx));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->velocitybottomy));
+				mb_get_binary_short(true, &buffer[index], &(dvl->velocitybottomy));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->velocitybottomz));
+				mb_get_binary_short(true, &buffer[index], &(dvl->velocitybottomz));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->velocitywaterx));
+				mb_get_binary_short(true, &buffer[index], &(dvl->velocitywaterx));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->velocitywatery));
+				mb_get_binary_short(true, &buffer[index], &(dvl->velocitywatery));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->velocitywaterz));
+				mb_get_binary_short(true, &buffer[index], &(dvl->velocitywaterz));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->depth));
+				mb_get_binary_short(true, &buffer[index], &(dvl->depth));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->pitch));
+				mb_get_binary_short(true, &buffer[index], &(dvl->pitch));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->roll));
+				mb_get_binary_short(true, &buffer[index], &(dvl->roll));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->heading));
+				mb_get_binary_short(true, &buffer[index], &(dvl->heading));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->salinity));
+				mb_get_binary_short(true, &buffer[index], &(dvl->salinity));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->temperature));
+				mb_get_binary_short(true, &buffer[index], &(dvl->temperature));
 				index += 2;
-				mb_get_binary_short(MB_YES, &buffer[index], &(dvl->soundspeed));
+				mb_get_binary_short(true, &buffer[index], &(dvl->soundspeed));
 				index += 2;
-				for (i = 0; i < 7; i++) {
-					mb_get_binary_short(MB_YES, &buffer[index], &(dvl->reserve2[i]));
+				for (int i = 0; i < 7; i++) {
+					mb_get_binary_short(true, &buffer[index], &(dvl->reserve2[i]));
 					index += 2;
 				}
 
-				done = MB_YES;
+				done = true;
 				store->kind = MB_DATA_DVL;
 #ifdef MBF_EDGJSTAR_DEBUG
 				fprintf(stderr,
@@ -2037,10 +1757,10 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 #ifdef MBF_EDGJSTAR_DEBUG
 			fprintf(stderr, "UNKNOWN: throwing away %d bytes\n", message.size);
 #endif
-			for (i = 0; i < message.size; i++) {
+			for (int i = 0; i < message.size; i++) {
 				read_status = fread(buffer, 1, 1, mb_io_ptr->mbfp);
 			}
-			done = MB_YES;
+			done = true;
 			store->kind = MB_DATA_NONE;
 			*error = MB_ERROR_UNINTELLIGIBLE;
 		}
@@ -2049,7 +1769,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		else {
 			status = MB_FAILURE;
 			*error = MB_ERROR_EOF;
-			done = MB_YES;
+			done = true;
 			store->kind = MB_DATA_NONE;
 		}
 	}
@@ -2061,9 +1781,8 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	fprintf(stderr, "kind:%d error:%d status:%d\n", store->kind, *error, status);
 #endif
 
-	/* print debug statements */
 	if (status == MB_SUCCESS && verbose >= 5 && store->kind == MB_DATA_COMMENT) {
-		fprintf(stderr, "\ndbg5  New comment read by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New comment read by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5  Subsystem ID:\n");
 		fprintf(stderr, "dbg5       subsystem:        %d ", store->subsystem);
 		if (store->subsystem == 0)
@@ -2090,7 +1809,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 	else if (status == MB_SUCCESS && verbose >= 5 && store->kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
 		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
-		fprintf(stderr, "\ndbg5  New subbottom data record read by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New subbottom data record read by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5  Subsystem ID:\n");
 		fprintf(stderr, "dbg5       subsystem:        %d (subbottom)\n", store->subsystem);
 		fprintf(stderr, "\ndbg5  Channel:\n");
@@ -2108,22 +1827,22 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     pingTime:                    %d\n", sbp->pingTime);
 		fprintf(stderr, "dbg5     startDepth:                  %d\n", sbp->startDepth);
 		fprintf(stderr, "dbg5     pingNum:                     %d\n", sbp->pingNum);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
             fprintf(stderr, "dbg5     reserved1[%d]:               %d\n", i, sbp->reserved1[i]);
 		fprintf(stderr, "dbg5     msb:                         %d\n", sbp->msb);
 		fprintf(stderr, "dbg5     lsb1:                        %d\n", sbp->lsb1);
 		fprintf(stderr, "dbg5     lsb2:                        %d\n", sbp->lsb2);
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
             fprintf(stderr, "dbg5     reserved2[%d]:               %d\n", i, sbp->reserved2[i]);
 		fprintf(stderr, "dbg5     validityFlag:                %d\n", sbp->validityFlag);
 		fprintf(stderr, "dbg5     reserved3:                   %d\n", sbp->reserved3);
 		fprintf(stderr, "dbg5     dataFormat:                  %d\n", sbp->dataFormat);
 		fprintf(stderr, "dbg5     NMEAantennaeR:               %d\n", sbp->NMEAantennaeR);
 		fprintf(stderr, "dbg5     NMEAantennaeO:               %d\n", sbp->NMEAantennaeO);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
 			fprintf(stderr, "dbg5     reserved4[%d]:               %d\n", i, sbp->reserved4[i]);
 		fprintf(stderr, "dbg5     kmOfPipe:                    %f\n", sbp->kmOfPipe);
-		for (i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++)
 			fprintf(stderr, "dbg5     reserved5[%d]:               %d\n", i, sbp->reserved5[i]);
 		fprintf(stderr, "dbg5     coordX:                      %d\n", sbp->coordX);
 		fprintf(stderr, "dbg5     coordY:                      %d\n", sbp->coordY);
@@ -2181,16 +1900,16 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     cableOut:                    %d\n", sbp->cableOut);
 		fprintf(stderr, "dbg5     reserved14:                  %d\n", sbp->reserved14);
 		if (sbp->dataFormat == 1) {
-			for (i = 0; i < sbp->samples; i++)
+			for (int i = 0; i < sbp->samples; i++)
 				fprintf(stderr, "dbg5     Channel[%d]: %10d %10d\n", i, sbp->trace[2 * i], sbp->trace[2 * i + 1]);
 		}
 		else {
-			for (i = 0; i < sbp->samples; i++)
+			for (int i = 0; i < sbp->samples; i++)
 				fprintf(stderr, "dbg5     Channel[%d]: %10d\n", i, sbp->trace[i]);
 		}
 	}
 	else if (status == MB_SUCCESS && verbose >= 5 && (store->kind == MB_DATA_DATA || store->kind == MB_DATA_SIDESCAN2)) {
-		fprintf(stderr, "\ndbg5  New sidescan data record read by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New sidescan data record read by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5  Subsystem ID:\n");
 		fprintf(stderr, "dbg5       subsystem:        %d ", store->subsystem);
 		if (store->subsystem == MBSYS_JSTAR_SUBSYSTEM_SSLOW)
@@ -2214,22 +1933,22 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     pingTime:                    %d\n", ss->pingTime);
 		fprintf(stderr, "dbg5     startDepth:                  %d\n", ss->startDepth);
 		fprintf(stderr, "dbg5     pingNum:                     %d\n", ss->pingNum);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
             fprintf(stderr, "dbg5     reserved1[%d]:               %d\n", i, ss->reserved1[i]);
 		fprintf(stderr, "dbg5     msb:                         %d\n", ss->msb);
 		fprintf(stderr, "dbg5     lsb1:                        %d\n", ss->lsb1);
 		fprintf(stderr, "dbg5     lsb2:                        %d\n", ss->lsb2);
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
             fprintf(stderr, "dbg5     reserved2[%d]:               %d\n", i, ss->reserved2[i]);
 		fprintf(stderr, "dbg5     validityFlag:                %d\n", ss->validityFlag);
 		fprintf(stderr, "dbg5     reserved3:                   %d\n", ss->reserved3);
 		fprintf(stderr, "dbg5     dataFormat:                  %d\n", ss->dataFormat);
 		fprintf(stderr, "dbg5     NMEAantennaeR:               %d\n", ss->NMEAantennaeR);
 		fprintf(stderr, "dbg5     NMEAantennaeO:               %d\n", ss->NMEAantennaeO);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
 			fprintf(stderr, "dbg5     reserved4[%d]:               %d\n", i, ss->reserved4[i]);
 		fprintf(stderr, "dbg5     kmOfPipe:                    %f\n", ss->kmOfPipe);
-		for (i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++)
 			fprintf(stderr, "dbg5     reserved5[%d]:               %d\n", i, ss->reserved5[i]);
 		fprintf(stderr, "dbg5     coordX:                      %d\n", ss->coordX);
 		fprintf(stderr, "dbg5     coordY:                      %d\n", ss->coordY);
@@ -2287,11 +2006,11 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     cableOut:                    %d\n", ss->cableOut);
 		fprintf(stderr, "dbg5     reserved14:                  %d\n", ss->reserved14);
 		if (ss->dataFormat == 1) {
-			for (i = 0; i < ss->samples; i++)
+			for (int i = 0; i < ss->samples; i++)
 				fprintf(stderr, "dbg5     Channel 0[%d]: %10d %10d\n", i, ss->trace[2 * i], ss->trace[2 * i + 1]);
 		}
 		else {
-			for (i = 0; i < ss->samples; i++)
+			for (int i = 0; i < ss->samples; i++)
 				fprintf(stderr, "dbg5     Channel 0[%d]: %10d\n", i, ss->trace[i]);
 		}
 
@@ -2311,22 +2030,22 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     pingTime:                    %d\n", ss->pingTime);
 		fprintf(stderr, "dbg5     startDepth:                  %d\n", ss->startDepth);
 		fprintf(stderr, "dbg5     pingNum:                     %d\n", ss->pingNum);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
             fprintf(stderr, "dbg5     reserved1[%d]:               %d\n", i, ss->reserved1[i]);
 		fprintf(stderr, "dbg5     msb:                         %d\n", ss->msb);
 		fprintf(stderr, "dbg5     lsb1:                        %d\n", ss->lsb1);
 		fprintf(stderr, "dbg5     lsb2:                        %d\n", ss->lsb2);
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
             fprintf(stderr, "dbg5     reserved2[%d]:               %d\n", i, ss->reserved2[i]);
 		fprintf(stderr, "dbg5     validityFlag:                %d\n", ss->validityFlag);
 		fprintf(stderr, "dbg5     reserved3:                   %d\n", ss->reserved3);
 		fprintf(stderr, "dbg5     dataFormat:                  %d\n", ss->dataFormat);
 		fprintf(stderr, "dbg5     NMEAantennaeR:               %d\n", ss->NMEAantennaeR);
 		fprintf(stderr, "dbg5     NMEAantennaeO:               %d\n", ss->NMEAantennaeO);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
 			fprintf(stderr, "dbg5     reserved4[%d]:               %d\n", i, ss->reserved4[i]);
 		fprintf(stderr, "dbg5     kmOfPipe:                    %f\n", ss->kmOfPipe);
-		for (i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++)
 			fprintf(stderr, "dbg5     reserved5[%d]:               %d\n", i, ss->reserved5[i]);
 		fprintf(stderr, "dbg5     coordX:                      %d\n", ss->coordX);
 		fprintf(stderr, "dbg5     coordY:                      %d\n", ss->coordY);
@@ -2384,16 +2103,16 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     cableOut:                    %d\n", ss->cableOut);
 		fprintf(stderr, "dbg5     reserved14:                  %d\n", ss->reserved14);
 		if (ss->dataFormat == 1) {
-			for (i = 0; i < ss->samples; i++)
+			for (int i = 0; i < ss->samples; i++)
 				fprintf(stderr, "dbg5     Channel 1[%d]: %10d %10d\n", i, ss->trace[2 * i], ss->trace[2 * i + 1]);
 		}
 		else {
-			for (i = 0; i < ss->samples; i++)
+			for (int i = 0; i < ss->samples; i++)
 				fprintf(stderr, "dbg5     Channel 1[%d]: %10d\n", i, ss->trace[i]);
 		}
 	}
 	else if (status == MB_SUCCESS && verbose >= 5 && store->kind == MB_DATA_ATTITUDE) {
-		fprintf(stderr, "\ndbg5  New roll pitch data record read by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New roll pitch data record read by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5  Subsystem ID:\n");
 		fprintf(stderr, "dbg5       subsystem:        %d ", store->subsystem);
 		if (store->subsystem == MBSYS_JSTAR_SUBSYSTEM_SSLOW)
@@ -2436,7 +2155,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     reserve2:                    %d\n", pitchroll->reserve2);
 	}
 	else if (status == MB_SUCCESS && verbose >= 5 && store->kind == MB_DATA_DVL) {
-		fprintf(stderr, "\ndbg5  New dvl data record read by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New dvl data record read by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5  Subsystem ID:\n");
 		fprintf(stderr, "dbg5       subsystem:        %d ", store->subsystem);
 		if (store->subsystem == MBSYS_JSTAR_SUBSYSTEM_SSLOW)
@@ -2481,12 +2200,12 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     salinity:                    %d\n", dvl->salinity);
 		fprintf(stderr, "dbg5     temperature:                 %d\n", dvl->temperature);
 		fprintf(stderr, "dbg5     soundspeed:                  %d\n", dvl->soundspeed);
-		for (i = 0; i < 7; i++)
+		for (int i = 0; i < 7; i++)
 			fprintf(stderr, "dbg5     reserve2[%d]:                %d\n", i, dvl->reserve2[i]);
 	}
 	else if (status == MB_SUCCESS && verbose >= 5 && store->kind == MB_DATA_CTD) {
 		pressure = (struct mbsys_jstar_pressure_struct *)&(store->pressure);
-		fprintf(stderr, "\ndbg5  New pressure data record read by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New pressure data record read by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5     start_marker:                %d\n", pressure->message.start_marker);
 		fprintf(stderr, "dbg5     version:                     %d\n", pressure->message.version);
 		fprintf(stderr, "dbg5     session:                     %d\n", pressure->message.session);
@@ -2509,13 +2228,13 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     datavalidflags:              %d\n", pressure->datavalidflags);
 		fprintf(stderr, "dbg5     conductivity:                %d\n", pressure->conductivity);
 		fprintf(stderr, "dbg5     soundspeed:                  %d\n", pressure->soundspeed);
-		for (i = 0; i < 10; i++)
+		for (int i = 0; i < 10; i++)
 			fprintf(stderr, "dbg5     reserve2[%2d]:                 %d\n", i, pressure->reserve2[i]);
 	}
 	else if (status == MB_SUCCESS && verbose >= 5 &&
 	         (store->kind == MB_DATA_NMEA_RMC || store->kind == MB_DATA_NMEA_DBT || store->kind == MB_DATA_NMEA_DPT)) {
 		nmea = (struct mbsys_jstar_nmea_struct *)&(store->nmea);
-		fprintf(stderr, "\ndbg5  New NMEA data record read by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New NMEA data record read by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5     start_marker:                %d\n", nmea->message.start_marker);
 		fprintf(stderr, "dbg5     version:                     %d\n", nmea->message.version);
 		fprintf(stderr, "dbg5     session:                     %d\n", nmea->message.session);
@@ -2537,7 +2256,7 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 	else if (status == MB_SUCCESS && verbose >= 5 && (store->kind == MB_DATA_HEADER)) {
 		sysinfo = (struct mbsys_jstar_sysinfo_struct *)&(store->sysinfo);
-		fprintf(stderr, "\ndbg5  New sysinfo data record read by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New sysinfo data record read by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5     start_marker:                %d\n", sysinfo->message.start_marker);
 		fprintf(stderr, "dbg5     version:                     %d\n", sysinfo->message.version);
 		fprintf(stderr, "dbg5     session:                     %d\n", sysinfo->message.session);
@@ -2558,24 +2277,18 @@ int mbr_rt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     sysinfo:                     \n%s\n", sysinfo->sysinfo);
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "mbr_wt_edgjstar";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
 	struct mbsys_jstar_channel_struct *sbp;
 	struct mbsys_jstar_channel_struct *ss;
 	struct mbsys_jstar_nmea_struct *nmea;
@@ -2589,12 +2302,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	int write_len;
 	int shortspersample;
 	int trace_size;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 3) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -2602,14 +2312,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
-	/* print debug statements */
-	if (status == MB_SUCCESS && verbose >= 5 && store->kind == MB_DATA_COMMENT) {
-		fprintf(stderr, "\ndbg5  New comment to be written by MBIO function <%s>\n", function_name);
+	if (verbose >= 5 && store->kind == MB_DATA_COMMENT) {
+		fprintf(stderr, "\ndbg5  New comment to be written by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5  Subsystem ID:\n");
 		fprintf(stderr, "dbg5       subsystem:        %d ", store->subsystem);
 		if (store->subsystem == 0)
@@ -2634,9 +2343,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 		fprintf(stderr, "dbg5     comment:                     %s\n", store->comment.comment);
 	}
-	else if (status == MB_SUCCESS && verbose >= 5 && store->kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
+	else if (verbose >= 5 && store->kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
 		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
-		fprintf(stderr, "\ndbg5  New subbottom data record to be written by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New subbottom data record to be written by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5  Subsystem ID:\n");
 		fprintf(stderr, "dbg5       subsystem:        %d (subbottom)\n", store->subsystem);
 		fprintf(stderr, "\ndbg5  Channel:\n");
@@ -2654,22 +2363,22 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     pingTime:                    %d\n", sbp->pingTime);
 		fprintf(stderr, "dbg5     startDepth:                  %d\n", sbp->startDepth);
 		fprintf(stderr, "dbg5     pingNum:                     %d\n", sbp->pingNum);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
             fprintf(stderr, "dbg5     reserved1[%d]:               %d\n", i, sbp->reserved1[i]);
 		fprintf(stderr, "dbg5     msb:                         %d\n", sbp->msb);
 		fprintf(stderr, "dbg5     lsb1:                        %d\n", sbp->lsb1);
 		fprintf(stderr, "dbg5     lsb2:                        %d\n", sbp->lsb2);
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
             fprintf(stderr, "dbg5     reserved2[%d]:               %d\n", i, sbp->reserved2[i]);
 		fprintf(stderr, "dbg5     validityFlag:                %d\n", sbp->validityFlag);
 		fprintf(stderr, "dbg5     reserved3:                   %d\n", sbp->reserved3);
 		fprintf(stderr, "dbg5     dataFormat:                  %d\n", sbp->dataFormat);
 		fprintf(stderr, "dbg5     NMEAantennaeR:               %d\n", sbp->NMEAantennaeR);
 		fprintf(stderr, "dbg5     NMEAantennaeO:               %d\n", sbp->NMEAantennaeO);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
 			fprintf(stderr, "dbg5     reserved4[%d]:               %d\n", i, sbp->reserved4[i]);
 		fprintf(stderr, "dbg5     kmOfPipe:                    %f\n", sbp->kmOfPipe);
-		for (i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++)
 			fprintf(stderr, "dbg5     reserved5[%d]:               %d\n", i, sbp->reserved5[i]);
 		fprintf(stderr, "dbg5     coordX:                      %d\n", sbp->coordX);
 		fprintf(stderr, "dbg5     coordY:                      %d\n", sbp->coordY);
@@ -2727,16 +2436,16 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     cableOut:                    %d\n", sbp->cableOut);
 		fprintf(stderr, "dbg5     reserved14:                  %d\n", sbp->reserved14);
 		if (sbp->dataFormat == 1) {
-			for (i = 0; i < sbp->samples; i++)
+			for (int i = 0; i < sbp->samples; i++)
 				fprintf(stderr, "dbg5     Channel[%d]: %10d %10d\n", i, sbp->trace[2 * i], sbp->trace[2 * i + 1]);
 		}
 		else {
-			for (i = 0; i < sbp->samples; i++)
+			for (int i = 0; i < sbp->samples; i++)
 				fprintf(stderr, "dbg5     Channel[%d]: %10d\n", i, sbp->trace[i]);
 		}
 	}
-	else if (status == MB_SUCCESS && verbose >= 5 && (store->kind == MB_DATA_DATA || store->kind == MB_DATA_SIDESCAN2)) {
-		fprintf(stderr, "\ndbg5  New sidescan data record to be written by MBIO function <%s>\n", function_name);
+	else if (verbose >= 5 && (store->kind == MB_DATA_DATA || store->kind == MB_DATA_SIDESCAN2)) {
+		fprintf(stderr, "\ndbg5  New sidescan data record to be written by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5  Subsystem ID:\n");
 		fprintf(stderr, "dbg5       subsystem:        %d ", store->subsystem);
 		if (store->subsystem == MBSYS_JSTAR_SUBSYSTEM_SSLOW)
@@ -2760,22 +2469,22 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     pingTime:                    %d\n", ss->pingTime);
 		fprintf(stderr, "dbg5     startDepth:                  %d\n", ss->startDepth);
 		fprintf(stderr, "dbg5     pingNum:                     %d\n", ss->pingNum);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
             fprintf(stderr, "dbg5     reserved1[%d]:               %d\n", i, ss->reserved1[i]);
 		fprintf(stderr, "dbg5     msb:                         %d\n", ss->msb);
 		fprintf(stderr, "dbg5     lsb1:                        %d\n", ss->lsb1);
 		fprintf(stderr, "dbg5     lsb2:                        %d\n", ss->lsb2);
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
             fprintf(stderr, "dbg5     reserved2[%d]:               %d\n", i, ss->reserved2[i]);
 		fprintf(stderr, "dbg5     validityFlag:                %d\n", ss->validityFlag);
 		fprintf(stderr, "dbg5     reserved3:                   %d\n", ss->reserved3);
 		fprintf(stderr, "dbg5     dataFormat:                  %d\n", ss->dataFormat);
 		fprintf(stderr, "dbg5     NMEAantennaeR:               %d\n", ss->NMEAantennaeR);
 		fprintf(stderr, "dbg5     NMEAantennaeO:               %d\n", ss->NMEAantennaeO);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
 			fprintf(stderr, "dbg5     reserved4[%d]:               %d\n", i, ss->reserved4[i]);
 		fprintf(stderr, "dbg5     kmOfPipe:                    %f\n", ss->kmOfPipe);
-		for (i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++)
 			fprintf(stderr, "dbg5     reserved5[%d]:               %d\n", i, ss->reserved5[i]);
 		fprintf(stderr, "dbg5     coordX:                      %d\n", ss->coordX);
 		fprintf(stderr, "dbg5     coordY:                      %d\n", ss->coordY);
@@ -2833,11 +2542,11 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     cableOut:                    %d\n", ss->cableOut);
 		fprintf(stderr, "dbg5     reserved14:                  %d\n", ss->reserved14);
 		if (ss->dataFormat == 1) {
-			for (i = 0; i < ss->samples; i++)
+			for (int i = 0; i < ss->samples; i++)
 				fprintf(stderr, "dbg5     Channel 0[%d]: %10d %10d\n", i, ss->trace[2 * i], ss->trace[2 * i + 1]);
 		}
 		else {
-			for (i = 0; i < ss->samples; i++)
+			for (int i = 0; i < ss->samples; i++)
 				fprintf(stderr, "dbg5     Channel 0[%d]: %10d\n", i, ss->trace[i]);
 		}
 
@@ -2857,22 +2566,22 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     pingTime:                    %d\n", ss->pingTime);
 		fprintf(stderr, "dbg5     startDepth:                  %d\n", ss->startDepth);
 		fprintf(stderr, "dbg5     pingNum:                     %d\n", ss->pingNum);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
             fprintf(stderr, "dbg5     reserved1[%d]:               %d\n", i, ss->reserved1[i]);
 		fprintf(stderr, "dbg5     msb:                         %d\n", ss->msb);
 		fprintf(stderr, "dbg5     lsb1:                        %d\n", ss->lsb1);
 		fprintf(stderr, "dbg5     lsb2:                        %d\n", ss->lsb2);
-		for (i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
             fprintf(stderr, "dbg5     reserved2[%d]:               %d\n", i, ss->reserved2[i]);
 		fprintf(stderr, "dbg5     validityFlag:                %d\n", ss->validityFlag);
 		fprintf(stderr, "dbg5     reserved3:                   %d\n", ss->reserved3);
 		fprintf(stderr, "dbg5     dataFormat:                  %d\n", ss->dataFormat);
 		fprintf(stderr, "dbg5     NMEAantennaeR:               %d\n", ss->NMEAantennaeR);
 		fprintf(stderr, "dbg5     NMEAantennaeO:               %d\n", ss->NMEAantennaeO);
-		for (i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
 			fprintf(stderr, "dbg5     reserved4[%d]:               %d\n", i, ss->reserved4[i]);
 		fprintf(stderr, "dbg5     kmOfPipe:                    %f\n", ss->kmOfPipe);
-		for (i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++)
 			fprintf(stderr, "dbg5     reserved5[%d]:               %d\n", i, ss->reserved5[i]);
 		fprintf(stderr, "dbg5     coordX:                      %d\n", ss->coordX);
 		fprintf(stderr, "dbg5     coordY:                      %d\n", ss->coordY);
@@ -2930,16 +2639,16 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     cableOut:                    %d\n", ss->cableOut);
 		fprintf(stderr, "dbg5     reserved14:                  %d\n", ss->reserved14);
 		if (ss->dataFormat == 1) {
-			for (i = 0; i < ss->samples; i++)
+			for (int i = 0; i < ss->samples; i++)
 				fprintf(stderr, "dbg5     Channel 1[%d]: %10d %10d\n", i, ss->trace[2 * i], ss->trace[2 * i + 1]);
 		}
 		else {
-			for (i = 0; i < ss->samples; i++)
+			for (int i = 0; i < ss->samples; i++)
 				fprintf(stderr, "dbg5     Channel 1[%d]: %10d\n", i, ss->trace[i]);
 		}
 	}
-	else if (status == MB_SUCCESS && verbose >= 5 && store->kind == MB_DATA_ATTITUDE) {
-		fprintf(stderr, "\ndbg5  New roll pitch data record to be written by MBIO function <%s>\n", function_name);
+	else if (verbose >= 5 && store->kind == MB_DATA_ATTITUDE) {
+		fprintf(stderr, "\ndbg5  New roll pitch data record to be written by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5  Subsystem ID:\n");
 		fprintf(stderr, "dbg5       subsystem:        %d ", store->subsystem);
 		if (store->subsystem == MBSYS_JSTAR_SUBSYSTEM_SSLOW)
@@ -2981,8 +2690,8 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     datavalidflags:              %d\n", pitchroll->datavalidflags);
 		fprintf(stderr, "dbg5     reserve2:                    %d\n", pitchroll->reserve2);
 	}
-	else if (status == MB_SUCCESS && verbose >= 5 && store->kind == MB_DATA_DVL) {
-		fprintf(stderr, "\ndbg5  New dvl data record to be written by MBIO function <%s>\n", function_name);
+	else if (verbose >= 5 && store->kind == MB_DATA_DVL) {
+		fprintf(stderr, "\ndbg5  New dvl data record to be written by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5  Subsystem ID:\n");
 		fprintf(stderr, "dbg5       subsystem:        %d ", store->subsystem);
 		if (store->subsystem == MBSYS_JSTAR_SUBSYSTEM_SSLOW)
@@ -3027,12 +2736,12 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     salinity:                    %d\n", dvl->salinity);
 		fprintf(stderr, "dbg5     temperature:                 %d\n", dvl->temperature);
 		fprintf(stderr, "dbg5     soundspeed:                  %d\n", dvl->soundspeed);
-		for (i = 0; i < 7; i++)
+		for (int i = 0; i < 7; i++)
 			fprintf(stderr, "dbg5     reserve2[%d]:                %d\n", i, dvl->reserve2[i]);
 	}
-	else if (status == MB_SUCCESS && verbose >= 5 && store->kind == MB_DATA_CTD) {
+	else if (verbose >= 5 && store->kind == MB_DATA_CTD) {
 		pressure = (struct mbsys_jstar_pressure_struct *)&(store->pressure);
-		fprintf(stderr, "\ndbg5  New pressure data record to be written by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New pressure data record to be written by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5     start_marker:                %d\n", pressure->message.start_marker);
 		fprintf(stderr, "dbg5     version:                     %d\n", pressure->message.version);
 		fprintf(stderr, "dbg5     session:                     %d\n", pressure->message.session);
@@ -3055,13 +2764,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     datavalidflags:              %d\n", pressure->datavalidflags);
 		fprintf(stderr, "dbg5     conductivity:                %d\n", pressure->conductivity);
 		fprintf(stderr, "dbg5     soundspeed:                  %d\n", pressure->soundspeed);
-		for (i = 0; i < 10; i++)
+		for (int i = 0; i < 10; i++)
 			fprintf(stderr, "dbg5     reserve2[%2d]:                 %d\n", i, pressure->reserve2[i]);
 	}
-	else if (status == MB_SUCCESS && verbose >= 5 &&
+	else if (verbose >= 5 &&
 	         (store->kind == MB_DATA_NMEA_RMC || store->kind == MB_DATA_NMEA_DBT || store->kind == MB_DATA_NMEA_DPT)) {
 		nmea = (struct mbsys_jstar_nmea_struct *)&(store->nmea);
-		fprintf(stderr, "\ndbg5  New NMEA data record to be written by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New NMEA data record to be written by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5     start_marker:                %d\n", nmea->message.start_marker);
 		fprintf(stderr, "dbg5     version:                     %d\n", nmea->message.version);
 		fprintf(stderr, "dbg5     session:                     %d\n", nmea->message.session);
@@ -3081,9 +2790,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     reserve[2]:                  %d\n", nmea->reserve[2]);
 		fprintf(stderr, "dbg5     nmea:                        %s\n", nmea->nmea);
 	}
-	else if (status == MB_SUCCESS && verbose >= 5 && (store->kind == MB_DATA_HEADER)) {
+	else if (verbose >= 5 && (store->kind == MB_DATA_HEADER)) {
 		sysinfo = (struct mbsys_jstar_sysinfo_struct *)&(store->sysinfo);
-		fprintf(stderr, "\ndbg5  New sysinfo data record to be written by MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  New sysinfo data record to be written by MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5     start_marker:                %d\n", sysinfo->message.start_marker);
 		fprintf(stderr, "dbg5     version:                     %d\n", sysinfo->message.version);
 		fprintf(stderr, "dbg5     session:                     %d\n", sysinfo->message.session);
@@ -3103,6 +2812,8 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg5     sysinfosize:                 %d\n", sysinfo->sysinfosize);
 		fprintf(stderr, "dbg5     sysinfo:                     \n%s\n", sysinfo->sysinfo);
 	}
+
+	int status = MB_SUCCESS;
 
 	/* write out comment */
 	if (store->kind == MB_DATA_COMMENT) {
@@ -3118,13 +2829,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		comment->message.sequence = 0;
 		comment->message.reserved = 0;
 		comment->message.size = strlen(comment->comment) + 1;
-		mb_put_binary_short(MB_YES, comment->message.start_marker, &buffer[index]);
+		mb_put_binary_short(true, comment->message.start_marker, &buffer[index]);
 		index += 2;
 		buffer[index] = comment->message.version;
 		index++;
 		buffer[index] = comment->message.session;
 		index++;
-		mb_put_binary_short(MB_YES, comment->message.type, &buffer[index]);
+		mb_put_binary_short(true, comment->message.type, &buffer[index]);
 		index += 2;
 		buffer[index] = comment->message.command;
 		index++;
@@ -3134,9 +2845,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = comment->message.sequence;
 		index++;
-		mb_put_binary_short(MB_YES, comment->message.reserved, &buffer[index]);
+		mb_put_binary_short(true, comment->message.reserved, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, comment->message.size, &buffer[index]);
+		mb_put_binary_int(true, comment->message.size, &buffer[index]);
 		index += 4;
 
 		/* write the message header */
@@ -3164,13 +2875,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		else
 			shortspersample = 1;
 		sbp->message.size = shortspersample * sbp->samples * sizeof(short) + MBSYS_JSTAR_SBPHEADER_SIZE;
-		mb_put_binary_short(MB_YES, sbp->message.start_marker, &buffer[index]);
+		mb_put_binary_short(true, sbp->message.start_marker, &buffer[index]);
 		index += 2;
 		buffer[index] = sbp->message.version;
 		index++;
 		buffer[index] = sbp->message.session;
 		index++;
-		mb_put_binary_short(MB_YES, sbp->message.type, &buffer[index]);
+		mb_put_binary_short(true, sbp->message.type, &buffer[index]);
 		index += 2;
 		buffer[index] = sbp->message.command;
 		index++;
@@ -3180,9 +2891,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = sbp->message.sequence;
 		index++;
-		mb_put_binary_short(MB_YES, sbp->message.reserved, &buffer[index]);
+		mb_put_binary_short(true, sbp->message.reserved, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, sbp->message.size, &buffer[index]);
+		mb_put_binary_int(true, sbp->message.size, &buffer[index]);
 		index += 4;
 
 		/* write the messsage header */
@@ -3193,161 +2904,161 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 		/* insert the trace header values */
 		index = 0;
-		mb_put_binary_int(MB_YES, sbp->pingTime, &buffer[index]);
+		mb_put_binary_int(true, sbp->pingTime, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, sbp->startDepth, &buffer[index]);
+		mb_put_binary_int(true, sbp->startDepth, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, sbp->pingNum, &buffer[index]);
+		mb_put_binary_int(true, sbp->pingNum, &buffer[index]);
 		index += 4;
-		for (i = 0; i < 2; i++) {
-			mb_put_binary_short(MB_YES, sbp->reserved1[i], &buffer[index]);
+		for (int i = 0; i < 2; i++) {
+			mb_put_binary_short(true, sbp->reserved1[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_short(MB_YES, sbp->msb, &buffer[index]);
+		mb_put_binary_short(true, sbp->msb, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->lsb1, &buffer[index]);
+		mb_put_binary_short(true, sbp->lsb1, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->lsb2, &buffer[index]);
+		mb_put_binary_short(true, sbp->lsb2, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 3; i++) {
-			mb_put_binary_short(MB_YES, sbp->reserved2[i], &buffer[index]);
+		for (int i = 0; i < 3; i++) {
+			mb_put_binary_short(true, sbp->reserved2[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_short(MB_YES, sbp->traceIDCode, &buffer[index]);
+		mb_put_binary_short(true, sbp->traceIDCode, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->validityFlag, &buffer[index]);
+		mb_put_binary_short(true, sbp->validityFlag, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->reserved3, &buffer[index]);
+		mb_put_binary_short(true, sbp->reserved3, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->dataFormat, &buffer[index]);
+		mb_put_binary_short(true, sbp->dataFormat, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->NMEAantennaeR, &buffer[index]);
+		mb_put_binary_short(true, sbp->NMEAantennaeR, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->NMEAantennaeO, &buffer[index]);
+		mb_put_binary_short(true, sbp->NMEAantennaeO, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 2; i++) {
-			mb_put_binary_short(MB_YES, sbp->reserved4[i], &buffer[index]);
+		for (int i = 0; i < 2; i++) {
+			mb_put_binary_short(true, sbp->reserved4[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_float(MB_YES, sbp->kmOfPipe, &buffer[index]);
+		mb_put_binary_float(true, sbp->kmOfPipe, &buffer[index]);
 		index += 4;
-		for (i = 0; i < 16; i++) {
-			mb_put_binary_short(MB_YES, sbp->reserved5[i], &buffer[index]);
+		for (int i = 0; i < 16; i++) {
+			mb_put_binary_short(true, sbp->reserved5[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_int(MB_YES, sbp->coordX, &buffer[index]);
+		mb_put_binary_int(true, sbp->coordX, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, sbp->coordY, &buffer[index]);
+		mb_put_binary_int(true, sbp->coordY, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, sbp->coordUnits, &buffer[index]);
+		mb_put_binary_short(true, sbp->coordUnits, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 24; i++) {
+		for (int i = 0; i < 24; i++) {
 			buffer[index] = sbp->annotation[i];
 			index++;
 		}
-		mb_put_binary_short(MB_YES, sbp->samples, &buffer[index]);
+		mb_put_binary_short(true, sbp->samples, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, sbp->sampleInterval, &buffer[index]);
+		mb_put_binary_int(true, sbp->sampleInterval, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, sbp->ADCGain, &buffer[index]);
+		mb_put_binary_short(true, sbp->ADCGain, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->pulsePower, &buffer[index]);
+		mb_put_binary_short(true, sbp->pulsePower, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->reserved6, &buffer[index]);
+		mb_put_binary_short(true, sbp->reserved6, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->startFreq, &buffer[index]);
+		mb_put_binary_short(true, sbp->startFreq, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->endFreq, &buffer[index]);
+		mb_put_binary_short(true, sbp->endFreq, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->sweepLength, &buffer[index]);
+		mb_put_binary_short(true, sbp->sweepLength, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, sbp->pressure, &buffer[index]);
+		mb_put_binary_int(true, sbp->pressure, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, sbp->sonarDepth, &buffer[index]);
+		mb_put_binary_int(true, sbp->sonarDepth, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, sbp->sampleFreq, &buffer[index]);
+		mb_put_binary_short(true, sbp->sampleFreq, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->pulseID, &buffer[index]);
+		mb_put_binary_short(true, sbp->pulseID, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, sbp->sonarAltitude, &buffer[index]);
+		mb_put_binary_int(true, sbp->sonarAltitude, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, sbp->soundspeed, &buffer[index]);
+		mb_put_binary_float(true, sbp->soundspeed, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, sbp->mixerFrequency, &buffer[index]);
+		mb_put_binary_float(true, sbp->mixerFrequency, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, sbp->year, &buffer[index]);
+		mb_put_binary_short(true, sbp->year, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->day, &buffer[index]);
+		mb_put_binary_short(true, sbp->day, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->hour, &buffer[index]);
+		mb_put_binary_short(true, sbp->hour, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->minute, &buffer[index]);
+		mb_put_binary_short(true, sbp->minute, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->second, &buffer[index]);
+		mb_put_binary_short(true, sbp->second, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->timeBasis, &buffer[index]);
+		mb_put_binary_short(true, sbp->timeBasis, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->weightingFactor, &buffer[index]);
+		mb_put_binary_short(true, sbp->weightingFactor, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->numberPulses, &buffer[index]);
+		mb_put_binary_short(true, sbp->numberPulses, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->heading, &buffer[index]);
+		mb_put_binary_short(true, sbp->heading, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->pitch, &buffer[index]);
+		mb_put_binary_short(true, sbp->pitch, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->roll, &buffer[index]);
+		mb_put_binary_short(true, sbp->roll, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->reserved8, &buffer[index]);
+		mb_put_binary_short(true, sbp->reserved8, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->reserved9, &buffer[index]);
+		mb_put_binary_short(true, sbp->reserved9, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->triggerSource, &buffer[index]);
+		mb_put_binary_short(true, sbp->triggerSource, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->markNumber, &buffer[index]);
+		mb_put_binary_short(true, sbp->markNumber, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->NMEAHour, &buffer[index]);
+		mb_put_binary_short(true, sbp->NMEAHour, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->NMEAMinutes, &buffer[index]);
+		mb_put_binary_short(true, sbp->NMEAMinutes, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->NMEASeconds, &buffer[index]);
+		mb_put_binary_short(true, sbp->NMEASeconds, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->NMEACourse, &buffer[index]);
+		mb_put_binary_short(true, sbp->NMEACourse, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->NMEASpeed, &buffer[index]);
+		mb_put_binary_short(true, sbp->NMEASpeed, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->NMEADay, &buffer[index]);
+		mb_put_binary_short(true, sbp->NMEADay, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->NMEAYear, &buffer[index]);
+		mb_put_binary_short(true, sbp->NMEAYear, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, sbp->millisecondsToday, &buffer[index]);
+		mb_put_binary_int(true, sbp->millisecondsToday, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, sbp->ADCMax, &buffer[index]);
+		mb_put_binary_short(true, sbp->ADCMax, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->reserved10, &buffer[index]);
+		mb_put_binary_short(true, sbp->reserved10, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->reserved11, &buffer[index]);
+		mb_put_binary_short(true, sbp->reserved11, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 6; i++) {
+		for (int i = 0; i < 6; i++) {
 			buffer[index] = sbp->softwareVersion[i];
 			index++;
 		}
-		mb_put_binary_int(MB_YES, sbp->sphericalCorrection, &buffer[index]);
+		mb_put_binary_int(true, sbp->sphericalCorrection, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, sbp->packetNum, &buffer[index]);
+		mb_put_binary_short(true, sbp->packetNum, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->ADCDecimation, &buffer[index]);
+		mb_put_binary_short(true, sbp->ADCDecimation, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->reserved12, &buffer[index]);
+		mb_put_binary_short(true, sbp->reserved12, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->temperature, &buffer[index]);
+		mb_put_binary_short(true, sbp->temperature, &buffer[index]);
 		index += 2;
-		mb_put_binary_float(MB_YES, sbp->layback, &buffer[index]);
+		mb_put_binary_float(true, sbp->layback, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, sbp->reserved13, &buffer[index]);
+		mb_put_binary_int(true, sbp->reserved13, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, sbp->cableOut, &buffer[index]);
+		mb_put_binary_short(true, sbp->cableOut, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, sbp->reserved14, &buffer[index]);
+		mb_put_binary_short(true, sbp->reserved14, &buffer[index]);
 		index += 2;
 
 		/* write the trace header */
@@ -3362,7 +3073,7 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			shortspersample = 2;
 		else
 			shortspersample = 1;
-		for (i = 0; i < shortspersample * sbp->samples; i++) {
+		for (int i = 0; i < shortspersample * sbp->samples; i++) {
 			sbp->trace[i] = mb_swap_short(sbp->trace[i]);
 			;
 		}
@@ -3388,13 +3099,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		else
 			shortspersample = 1;
 		ss->message.size = shortspersample * ss->samples * sizeof(short) + MBSYS_JSTAR_SSHEADER_SIZE;
-		mb_put_binary_short(MB_YES, ss->message.start_marker, &buffer[index]);
+		mb_put_binary_short(true, ss->message.start_marker, &buffer[index]);
 		index += 2;
 		buffer[index] = ss->message.version;
 		index++;
 		buffer[index] = ss->message.session;
 		index++;
-		mb_put_binary_short(MB_YES, ss->message.type, &buffer[index]);
+		mb_put_binary_short(true, ss->message.type, &buffer[index]);
 		index += 2;
 		buffer[index] = ss->message.command;
 		index++;
@@ -3404,9 +3115,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = ss->message.sequence;
 		index++;
-		mb_put_binary_short(MB_YES, ss->message.reserved, &buffer[index]);
+		mb_put_binary_short(true, ss->message.reserved, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, ss->message.size, &buffer[index]);
+		mb_put_binary_int(true, ss->message.size, &buffer[index]);
 		index += 4;
 
 		/* write the messsage header */
@@ -3417,161 +3128,161 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 		/* insert the trace header values */
 		index = 0;
-		mb_put_binary_int(MB_YES, ss->pingTime, &buffer[index]);
+		mb_put_binary_int(true, ss->pingTime, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ss->startDepth, &buffer[index]);
+		mb_put_binary_int(true, ss->startDepth, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ss->pingNum, &buffer[index]);
+		mb_put_binary_int(true, ss->pingNum, &buffer[index]);
 		index += 4;
-		for (i = 0; i < 2; i++) {
-			mb_put_binary_short(MB_YES, ss->reserved1[i], &buffer[index]);
+		for (int i = 0; i < 2; i++) {
+			mb_put_binary_short(true, ss->reserved1[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_short(MB_YES, ss->msb, &buffer[index]);
+		mb_put_binary_short(true, ss->msb, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->lsb1, &buffer[index]);
+		mb_put_binary_short(true, ss->lsb1, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->lsb2, &buffer[index]);
+		mb_put_binary_short(true, ss->lsb2, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 3; i++) {
-			mb_put_binary_short(MB_YES, ss->reserved2[i], &buffer[index]);
+		for (int i = 0; i < 3; i++) {
+			mb_put_binary_short(true, ss->reserved2[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_short(MB_YES, ss->traceIDCode, &buffer[index]);
+		mb_put_binary_short(true, ss->traceIDCode, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->validityFlag, &buffer[index]);
+		mb_put_binary_short(true, ss->validityFlag, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved3, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved3, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->dataFormat, &buffer[index]);
+		mb_put_binary_short(true, ss->dataFormat, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEAantennaeR, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEAantennaeR, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEAantennaeO, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEAantennaeO, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 2; i++) {
-			mb_put_binary_short(MB_YES, ss->reserved4[i], &buffer[index]);
+		for (int i = 0; i < 2; i++) {
+			mb_put_binary_short(true, ss->reserved4[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_float(MB_YES, ss->kmOfPipe, &buffer[index]);
+		mb_put_binary_float(true, ss->kmOfPipe, &buffer[index]);
 		index += 4;
-		for (i = 0; i < 16; i++) {
-			mb_put_binary_short(MB_YES, ss->reserved5[i], &buffer[index]);
+		for (int i = 0; i < 16; i++) {
+			mb_put_binary_short(true, ss->reserved5[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_int(MB_YES, ss->coordX, &buffer[index]);
+		mb_put_binary_int(true, ss->coordX, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ss->coordY, &buffer[index]);
+		mb_put_binary_int(true, ss->coordY, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->coordUnits, &buffer[index]);
+		mb_put_binary_short(true, ss->coordUnits, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 24; i++) {
+		for (int i = 0; i < 24; i++) {
 			buffer[index] = ss->annotation[i];
 			index++;
 		}
-		mb_put_binary_short(MB_YES, ss->samples, &buffer[index]);
+		mb_put_binary_short(true, ss->samples, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, ss->sampleInterval, &buffer[index]);
+		mb_put_binary_int(true, ss->sampleInterval, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->ADCGain, &buffer[index]);
+		mb_put_binary_short(true, ss->ADCGain, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->pulsePower, &buffer[index]);
+		mb_put_binary_short(true, ss->pulsePower, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved6, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved6, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->startFreq, &buffer[index]);
+		mb_put_binary_short(true, ss->startFreq, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->endFreq, &buffer[index]);
+		mb_put_binary_short(true, ss->endFreq, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->sweepLength, &buffer[index]);
+		mb_put_binary_short(true, ss->sweepLength, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, ss->pressure, &buffer[index]);
+		mb_put_binary_int(true, ss->pressure, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ss->sonarDepth, &buffer[index]);
+		mb_put_binary_int(true, ss->sonarDepth, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->sampleFreq, &buffer[index]);
+		mb_put_binary_short(true, ss->sampleFreq, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->pulseID, &buffer[index]);
+		mb_put_binary_short(true, ss->pulseID, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, ss->sonarAltitude, &buffer[index]);
+		mb_put_binary_int(true, ss->sonarAltitude, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, ss->soundspeed, &buffer[index]);
+		mb_put_binary_float(true, ss->soundspeed, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, ss->mixerFrequency, &buffer[index]);
+		mb_put_binary_float(true, ss->mixerFrequency, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->year, &buffer[index]);
+		mb_put_binary_short(true, ss->year, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->day, &buffer[index]);
+		mb_put_binary_short(true, ss->day, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->hour, &buffer[index]);
+		mb_put_binary_short(true, ss->hour, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->minute, &buffer[index]);
+		mb_put_binary_short(true, ss->minute, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->second, &buffer[index]);
+		mb_put_binary_short(true, ss->second, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->timeBasis, &buffer[index]);
+		mb_put_binary_short(true, ss->timeBasis, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->weightingFactor, &buffer[index]);
+		mb_put_binary_short(true, ss->weightingFactor, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->numberPulses, &buffer[index]);
+		mb_put_binary_short(true, ss->numberPulses, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->heading, &buffer[index]);
+		mb_put_binary_short(true, ss->heading, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->pitch, &buffer[index]);
+		mb_put_binary_short(true, ss->pitch, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->roll, &buffer[index]);
+		mb_put_binary_short(true, ss->roll, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved8, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved8, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved9, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved9, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->triggerSource, &buffer[index]);
+		mb_put_binary_short(true, ss->triggerSource, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->markNumber, &buffer[index]);
+		mb_put_binary_short(true, ss->markNumber, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEAHour, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEAHour, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEAMinutes, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEAMinutes, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEASeconds, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEASeconds, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEACourse, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEACourse, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEASpeed, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEASpeed, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEADay, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEADay, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEAYear, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEAYear, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, ss->millisecondsToday, &buffer[index]);
+		mb_put_binary_int(true, ss->millisecondsToday, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->ADCMax, &buffer[index]);
+		mb_put_binary_short(true, ss->ADCMax, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved10, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved10, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved11, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved11, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 6; i++) {
+		for (int i = 0; i < 6; i++) {
 			buffer[index] = ss->softwareVersion[i];
 			index++;
 		}
-		mb_put_binary_int(MB_YES, ss->sphericalCorrection, &buffer[index]);
+		mb_put_binary_int(true, ss->sphericalCorrection, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->packetNum, &buffer[index]);
+		mb_put_binary_short(true, ss->packetNum, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->ADCDecimation, &buffer[index]);
+		mb_put_binary_short(true, ss->ADCDecimation, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved12, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved12, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->temperature, &buffer[index]);
+		mb_put_binary_short(true, ss->temperature, &buffer[index]);
 		index += 2;
-		mb_put_binary_float(MB_YES, ss->layback, &buffer[index]);
+		mb_put_binary_float(true, ss->layback, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ss->reserved13, &buffer[index]);
+		mb_put_binary_int(true, ss->reserved13, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->cableOut, &buffer[index]);
+		mb_put_binary_short(true, ss->cableOut, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved14, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved14, &buffer[index]);
 		index += 2;
 
 		/* write the trace header */
@@ -3586,7 +3297,7 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			shortspersample = 2;
 		else
 			shortspersample = 1;
-		for (i = 0; i < shortspersample * ss->samples; i++) {
+		for (int i = 0; i < shortspersample * ss->samples; i++) {
 			ss->trace[i] = mb_swap_short(ss->trace[i]);
 			;
 		}
@@ -3609,13 +3320,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		else
 			shortspersample = 1;
 		ss->message.size = shortspersample * ss->samples * sizeof(short) + MBSYS_JSTAR_SSHEADER_SIZE;
-		mb_put_binary_short(MB_YES, ss->message.start_marker, &buffer[index]);
+		mb_put_binary_short(true, ss->message.start_marker, &buffer[index]);
 		index += 2;
 		buffer[index] = ss->message.version;
 		index++;
 		buffer[index] = ss->message.session;
 		index++;
-		mb_put_binary_short(MB_YES, ss->message.type, &buffer[index]);
+		mb_put_binary_short(true, ss->message.type, &buffer[index]);
 		index += 2;
 		buffer[index] = ss->message.command;
 		index++;
@@ -3625,9 +3336,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = ss->message.sequence;
 		index++;
-		mb_put_binary_short(MB_YES, ss->message.reserved, &buffer[index]);
+		mb_put_binary_short(true, ss->message.reserved, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, ss->message.size, &buffer[index]);
+		mb_put_binary_int(true, ss->message.size, &buffer[index]);
 		index += 4;
 
 		/* write the messsage header */
@@ -3638,161 +3349,161 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 
 		/* insert the trace header values */
 		index = 0;
-		mb_put_binary_int(MB_YES, ss->pingTime, &buffer[index]);
+		mb_put_binary_int(true, ss->pingTime, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ss->startDepth, &buffer[index]);
+		mb_put_binary_int(true, ss->startDepth, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ss->pingNum, &buffer[index]);
+		mb_put_binary_int(true, ss->pingNum, &buffer[index]);
 		index += 4;
-		for (i = 0; i < 2; i++) {
-			mb_put_binary_short(MB_YES, ss->reserved1[i], &buffer[index]);
+		for (int i = 0; i < 2; i++) {
+			mb_put_binary_short(true, ss->reserved1[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_short(MB_YES, ss->msb, &buffer[index]);
+		mb_put_binary_short(true, ss->msb, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->lsb1, &buffer[index]);
+		mb_put_binary_short(true, ss->lsb1, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->lsb2, &buffer[index]);
+		mb_put_binary_short(true, ss->lsb2, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 3; i++) {
-			mb_put_binary_short(MB_YES, ss->reserved2[i], &buffer[index]);
+		for (int i = 0; i < 3; i++) {
+			mb_put_binary_short(true, ss->reserved2[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_short(MB_YES, ss->traceIDCode, &buffer[index]);
+		mb_put_binary_short(true, ss->traceIDCode, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->validityFlag, &buffer[index]);
+		mb_put_binary_short(true, ss->validityFlag, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved3, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved3, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->dataFormat, &buffer[index]);
+		mb_put_binary_short(true, ss->dataFormat, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEAantennaeR, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEAantennaeR, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEAantennaeO, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEAantennaeO, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 2; i++) {
-			mb_put_binary_short(MB_YES, ss->reserved4[i], &buffer[index]);
+		for (int i = 0; i < 2; i++) {
+			mb_put_binary_short(true, ss->reserved4[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_float(MB_YES, ss->kmOfPipe, &buffer[index]);
+		mb_put_binary_float(true, ss->kmOfPipe, &buffer[index]);
 		index += 4;
-		for (i = 0; i < 16; i++) {
-			mb_put_binary_short(MB_YES, ss->reserved5[i], &buffer[index]);
+		for (int i = 0; i < 16; i++) {
+			mb_put_binary_short(true, ss->reserved5[i], &buffer[index]);
 			index += 2;
 		}
-		mb_put_binary_int(MB_YES, ss->coordX, &buffer[index]);
+		mb_put_binary_int(true, ss->coordX, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ss->coordY, &buffer[index]);
+		mb_put_binary_int(true, ss->coordY, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->coordUnits, &buffer[index]);
+		mb_put_binary_short(true, ss->coordUnits, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 24; i++) {
+		for (int i = 0; i < 24; i++) {
 			buffer[index] = ss->annotation[i];
 			index++;
 		}
-		mb_put_binary_short(MB_YES, ss->samples, &buffer[index]);
+		mb_put_binary_short(true, ss->samples, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, ss->sampleInterval, &buffer[index]);
+		mb_put_binary_int(true, ss->sampleInterval, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->ADCGain, &buffer[index]);
+		mb_put_binary_short(true, ss->ADCGain, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->pulsePower, &buffer[index]);
+		mb_put_binary_short(true, ss->pulsePower, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved6, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved6, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->startFreq, &buffer[index]);
+		mb_put_binary_short(true, ss->startFreq, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->endFreq, &buffer[index]);
+		mb_put_binary_short(true, ss->endFreq, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->sweepLength, &buffer[index]);
+		mb_put_binary_short(true, ss->sweepLength, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, ss->pressure, &buffer[index]);
+		mb_put_binary_int(true, ss->pressure, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ss->sonarDepth, &buffer[index]);
+		mb_put_binary_int(true, ss->sonarDepth, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->sampleFreq, &buffer[index]);
+		mb_put_binary_short(true, ss->sampleFreq, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->pulseID, &buffer[index]);
+		mb_put_binary_short(true, ss->pulseID, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, ss->sonarAltitude, &buffer[index]);
+		mb_put_binary_int(true, ss->sonarAltitude, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, ss->soundspeed, &buffer[index]);
+		mb_put_binary_float(true, ss->soundspeed, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, ss->mixerFrequency, &buffer[index]);
+		mb_put_binary_float(true, ss->mixerFrequency, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->year, &buffer[index]);
+		mb_put_binary_short(true, ss->year, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->day, &buffer[index]);
+		mb_put_binary_short(true, ss->day, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->hour, &buffer[index]);
+		mb_put_binary_short(true, ss->hour, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->minute, &buffer[index]);
+		mb_put_binary_short(true, ss->minute, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->second, &buffer[index]);
+		mb_put_binary_short(true, ss->second, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->timeBasis, &buffer[index]);
+		mb_put_binary_short(true, ss->timeBasis, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->weightingFactor, &buffer[index]);
+		mb_put_binary_short(true, ss->weightingFactor, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->numberPulses, &buffer[index]);
+		mb_put_binary_short(true, ss->numberPulses, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->heading, &buffer[index]);
+		mb_put_binary_short(true, ss->heading, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->pitch, &buffer[index]);
+		mb_put_binary_short(true, ss->pitch, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->roll, &buffer[index]);
+		mb_put_binary_short(true, ss->roll, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved8, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved8, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved9, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved9, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->triggerSource, &buffer[index]);
+		mb_put_binary_short(true, ss->triggerSource, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->markNumber, &buffer[index]);
+		mb_put_binary_short(true, ss->markNumber, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEAHour, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEAHour, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEAMinutes, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEAMinutes, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEASeconds, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEASeconds, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEACourse, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEACourse, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEASpeed, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEASpeed, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEADay, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEADay, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->NMEAYear, &buffer[index]);
+		mb_put_binary_short(true, ss->NMEAYear, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, ss->millisecondsToday, &buffer[index]);
+		mb_put_binary_int(true, ss->millisecondsToday, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->ADCMax, &buffer[index]);
+		mb_put_binary_short(true, ss->ADCMax, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved10, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved10, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved11, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved11, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 6; i++) {
+		for (int i = 0; i < 6; i++) {
 			buffer[index] = ss->softwareVersion[i];
 			index++;
 		}
-		mb_put_binary_int(MB_YES, ss->sphericalCorrection, &buffer[index]);
+		mb_put_binary_int(true, ss->sphericalCorrection, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->packetNum, &buffer[index]);
+		mb_put_binary_short(true, ss->packetNum, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->ADCDecimation, &buffer[index]);
+		mb_put_binary_short(true, ss->ADCDecimation, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved12, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved12, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->temperature, &buffer[index]);
+		mb_put_binary_short(true, ss->temperature, &buffer[index]);
 		index += 2;
-		mb_put_binary_float(MB_YES, ss->layback, &buffer[index]);
+		mb_put_binary_float(true, ss->layback, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ss->reserved13, &buffer[index]);
+		mb_put_binary_int(true, ss->reserved13, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ss->cableOut, &buffer[index]);
+		mb_put_binary_short(true, ss->cableOut, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ss->reserved14, &buffer[index]);
+		mb_put_binary_short(true, ss->reserved14, &buffer[index]);
 		index += 2;
 
 		/* write the trace header */
@@ -3807,7 +3518,7 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 			shortspersample = 2;
 		else
 			shortspersample = 1;
-		for (i = 0; i < shortspersample * ss->samples; i++) {
+		for (int i = 0; i < shortspersample * ss->samples; i++) {
 			ss->trace[i] = mb_swap_short(ss->trace[i]);
 			;
 		}
@@ -3826,13 +3537,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		/* insert the message header values */
 		index = 0;
 		pitchroll = (struct mbsys_jstar_pitchroll_struct *)&(store->pitchroll);
-		mb_put_binary_short(MB_YES, pitchroll->message.start_marker, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->message.start_marker, &buffer[index]);
 		index += 2;
 		buffer[index] = pitchroll->message.version;
 		index++;
 		buffer[index] = pitchroll->message.session;
 		index++;
-		mb_put_binary_short(MB_YES, pitchroll->message.type, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->message.type, &buffer[index]);
 		index += 2;
 		buffer[index] = pitchroll->message.command;
 		index++;
@@ -3842,9 +3553,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = pitchroll->message.sequence;
 		index++;
-		mb_put_binary_short(MB_YES, pitchroll->message.reserved, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->message.reserved, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, pitchroll->message.size, &buffer[index]);
+		mb_put_binary_int(true, pitchroll->message.size, &buffer[index]);
 		index += 4;
 
 		/* write the message header */
@@ -3854,9 +3565,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		}
 
 		index = 0;
-		mb_put_binary_int(MB_YES, pitchroll->seconds, &buffer[index]);
+		mb_put_binary_int(true, pitchroll->seconds, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, pitchroll->milliseconds, &buffer[index]);
+		mb_put_binary_int(true, pitchroll->milliseconds, &buffer[index]);
 		index += 4;
 		buffer[index] = pitchroll->reserve1[0];
 		index++;
@@ -3866,33 +3577,33 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = pitchroll->reserve1[3];
 		index++;
-		mb_put_binary_short(MB_YES, pitchroll->accelerationx, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->accelerationx, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->accelerationy, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->accelerationy, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->accelerationz, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->accelerationz, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->gyroratex, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->gyroratex, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->gyroratey, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->gyroratey, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->gyroratez, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->gyroratez, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->pitch, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->pitch, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->roll, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->roll, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->temperature, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->temperature, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->deviceinfo, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->deviceinfo, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->heave, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->heave, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, pitchroll->heading, &buffer[index]);
+		mb_put_binary_short(true, pitchroll->heading, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, pitchroll->datavalidflags, &buffer[index]);
+		mb_put_binary_int(true, pitchroll->datavalidflags, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, pitchroll->reserve2, &buffer[index]);
+		mb_put_binary_int(true, pitchroll->reserve2, &buffer[index]);
 		index += 4;
 
 		/* write the pitchroll data */
@@ -3907,13 +3618,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		/* insert the message header values */
 		index = 0;
 		dvl = (struct mbsys_jstar_dvl_struct *)&(store->dvl);
-		mb_put_binary_short(MB_YES, dvl->message.start_marker, &buffer[index]);
+		mb_put_binary_short(true, dvl->message.start_marker, &buffer[index]);
 		index += 2;
 		buffer[index] = dvl->message.version;
 		index++;
 		buffer[index] = dvl->message.session;
 		index++;
-		mb_put_binary_short(MB_YES, dvl->message.type, &buffer[index]);
+		mb_put_binary_short(true, dvl->message.type, &buffer[index]);
 		index += 2;
 		buffer[index] = dvl->message.command;
 		index++;
@@ -3923,9 +3634,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = dvl->message.sequence;
 		index++;
-		mb_put_binary_short(MB_YES, dvl->message.reserved, &buffer[index]);
+		mb_put_binary_short(true, dvl->message.reserved, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, dvl->message.size, &buffer[index]);
+		mb_put_binary_int(true, dvl->message.size, &buffer[index]);
 		index += 4;
 
 		/* write the message header */
@@ -3935,9 +3646,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		}
 
 		index = 0;
-		mb_put_binary_int(MB_YES, dvl->seconds, &buffer[index]);
+		mb_put_binary_int(true, dvl->seconds, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, dvl->milliseconds, &buffer[index]);
+		mb_put_binary_int(true, dvl->milliseconds, &buffer[index]);
 		index += 4;
 		buffer[index] = dvl->reserve1[0];
 		index++;
@@ -3947,44 +3658,44 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = dvl->reserve1[3];
 		index++;
-		mb_put_binary_int(MB_YES, dvl->datavalidflags, &buffer[index]);
+		mb_put_binary_int(true, dvl->datavalidflags, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, dvl->beam1range, &buffer[index]);
+		mb_put_binary_int(true, dvl->beam1range, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, dvl->beam2range, &buffer[index]);
+		mb_put_binary_int(true, dvl->beam2range, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, dvl->beam3range, &buffer[index]);
+		mb_put_binary_int(true, dvl->beam3range, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, dvl->beam4range, &buffer[index]);
+		mb_put_binary_int(true, dvl->beam4range, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, dvl->velocitybottomx, &buffer[index]);
+		mb_put_binary_short(true, dvl->velocitybottomx, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->velocitybottomy, &buffer[index]);
+		mb_put_binary_short(true, dvl->velocitybottomy, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->velocitybottomz, &buffer[index]);
+		mb_put_binary_short(true, dvl->velocitybottomz, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->velocitywaterx, &buffer[index]);
+		mb_put_binary_short(true, dvl->velocitywaterx, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->velocitywatery, &buffer[index]);
+		mb_put_binary_short(true, dvl->velocitywatery, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->velocitywaterz, &buffer[index]);
+		mb_put_binary_short(true, dvl->velocitywaterz, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->depth, &buffer[index]);
+		mb_put_binary_short(true, dvl->depth, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->pitch, &buffer[index]);
+		mb_put_binary_short(true, dvl->pitch, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->roll, &buffer[index]);
+		mb_put_binary_short(true, dvl->roll, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->heading, &buffer[index]);
+		mb_put_binary_short(true, dvl->heading, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->salinity, &buffer[index]);
+		mb_put_binary_short(true, dvl->salinity, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->temperature, &buffer[index]);
+		mb_put_binary_short(true, dvl->temperature, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, dvl->soundspeed, &buffer[index]);
+		mb_put_binary_short(true, dvl->soundspeed, &buffer[index]);
 		index += 2;
-		for (i = 0; i < 7; i++) {
-			mb_put_binary_short(MB_YES, dvl->reserve2[i], &buffer[index]);
+		for (int i = 0; i < 7; i++) {
+			mb_put_binary_short(true, dvl->reserve2[i], &buffer[index]);
 			index += 2;
 		}
 
@@ -4000,13 +3711,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		/* insert the message header values */
 		index = 0;
 		nmea = (struct mbsys_jstar_nmea_struct *)&(store->nmea);
-		mb_put_binary_short(MB_YES, nmea->message.start_marker, &buffer[index]);
+		mb_put_binary_short(true, nmea->message.start_marker, &buffer[index]);
 		index += 2;
 		buffer[index] = nmea->message.version;
 		index++;
 		buffer[index] = nmea->message.session;
 		index++;
-		mb_put_binary_short(MB_YES, nmea->message.type, &buffer[index]);
+		mb_put_binary_short(true, nmea->message.type, &buffer[index]);
 		index += 2;
 		buffer[index] = nmea->message.command;
 		index++;
@@ -4016,9 +3727,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = nmea->message.sequence;
 		index++;
-		mb_put_binary_short(MB_YES, nmea->message.reserved, &buffer[index]);
+		mb_put_binary_short(true, nmea->message.reserved, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, nmea->message.size, &buffer[index]);
+		mb_put_binary_int(true, nmea->message.size, &buffer[index]);
 		index += 4;
 
 		/* write the message header */
@@ -4028,9 +3739,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		}
 
 		index = 0;
-		mb_put_binary_int(MB_YES, nmea->seconds, &buffer[index]);
+		mb_put_binary_int(true, nmea->seconds, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, nmea->milliseconds, &buffer[index]);
+		mb_put_binary_int(true, nmea->milliseconds, &buffer[index]);
 		index += 4;
 		buffer[index] = nmea->source;
 		index++;
@@ -4040,7 +3751,7 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = nmea->reserve[2];
 		index++;
-		for (i = 0; i < (nmea->message.size - 12); i++) {
+		for (int i = 0; i < (nmea->message.size - 12); i++) {
 			buffer[index] = nmea->nmea[i];
 			index++;
 		}
@@ -4057,13 +3768,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		/* insert the message header values */
 		index = 0;
 		pressure = (struct mbsys_jstar_pressure_struct *)&(store->pressure);
-		mb_put_binary_short(MB_YES, pressure->message.start_marker, &buffer[index]);
+		mb_put_binary_short(true, pressure->message.start_marker, &buffer[index]);
 		index += 2;
 		buffer[index] = pressure->message.version;
 		index++;
 		buffer[index] = pressure->message.session;
 		index++;
-		mb_put_binary_short(MB_YES, pressure->message.type, &buffer[index]);
+		mb_put_binary_short(true, pressure->message.type, &buffer[index]);
 		index += 2;
 		buffer[index] = pressure->message.command;
 		index++;
@@ -4073,9 +3784,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = pressure->message.sequence;
 		index++;
-		mb_put_binary_short(MB_YES, pressure->message.reserved, &buffer[index]);
+		mb_put_binary_short(true, pressure->message.reserved, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, pressure->message.size, &buffer[index]);
+		mb_put_binary_int(true, pressure->message.size, &buffer[index]);
 		index += 4;
 
 		/* write the message header */
@@ -4085,9 +3796,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		}
 
 		index = 0;
-		mb_put_binary_int(MB_YES, pressure->seconds, &buffer[index]);
+		mb_put_binary_int(true, pressure->seconds, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, pressure->milliseconds, &buffer[index]);
+		mb_put_binary_int(true, pressure->milliseconds, &buffer[index]);
 		index += 4;
 		buffer[index] = pressure->reserve1[0];
 		index++;
@@ -4097,18 +3808,18 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = pressure->reserve1[3];
 		index++;
-		mb_put_binary_int(MB_YES, pressure->pressure, &buffer[index]);
+		mb_put_binary_int(true, pressure->pressure, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, pressure->salinity, &buffer[index]);
+		mb_put_binary_int(true, pressure->salinity, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, pressure->datavalidflags, &buffer[index]);
+		mb_put_binary_int(true, pressure->datavalidflags, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, pressure->conductivity, &buffer[index]);
+		mb_put_binary_int(true, pressure->conductivity, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, pressure->soundspeed, &buffer[index]);
+		mb_put_binary_int(true, pressure->soundspeed, &buffer[index]);
 		index += 4;
-		for (i = 0; i < 10; i++) {
-			mb_put_binary_int(MB_YES, pressure->reserve2[i], &buffer[index]);
+		for (int i = 0; i < 10; i++) {
+			mb_put_binary_int(true, pressure->reserve2[i], &buffer[index]);
 			index += 4;
 		}
 
@@ -4124,13 +3835,13 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		/* insert the message header values */
 		index = 0;
 		sysinfo = (struct mbsys_jstar_sysinfo_struct *)&(store->sysinfo);
-		mb_put_binary_short(MB_YES, sysinfo->message.start_marker, &buffer[index]);
+		mb_put_binary_short(true, sysinfo->message.start_marker, &buffer[index]);
 		index += 2;
 		buffer[index] = sysinfo->message.version;
 		index++;
 		buffer[index] = sysinfo->message.session;
 		index++;
-		mb_put_binary_short(MB_YES, sysinfo->message.type, &buffer[index]);
+		mb_put_binary_short(true, sysinfo->message.type, &buffer[index]);
 		index += 2;
 		buffer[index] = sysinfo->message.command;
 		index++;
@@ -4140,9 +3851,9 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		index++;
 		buffer[index] = sysinfo->message.sequence;
 		index++;
-		mb_put_binary_short(MB_YES, sysinfo->message.reserved, &buffer[index]);
+		mb_put_binary_short(true, sysinfo->message.reserved, &buffer[index]);
 		index += 2;
-		mb_put_binary_int(MB_YES, sysinfo->message.size, &buffer[index]);
+		mb_put_binary_int(true, sysinfo->message.size, &buffer[index]);
 		index += 4;
 
 		/* write the message header */
@@ -4152,17 +3863,17 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		}
 
 		index = 0;
-		mb_put_binary_int(MB_YES, sysinfo->system_type, &buffer[index]);
+		mb_put_binary_int(true, sysinfo->system_type, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, sysinfo->reserved1, &buffer[index]);
+		mb_put_binary_int(true, sysinfo->reserved1, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, sysinfo->version, &buffer[index]);
+		mb_put_binary_int(true, sysinfo->version, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, sysinfo->reserved2, &buffer[index]);
+		mb_put_binary_int(true, sysinfo->reserved2, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, sysinfo->platformserialnumber, &buffer[index]);
+		mb_put_binary_int(true, sysinfo->platformserialnumber, &buffer[index]);
 		index += 4;
-		for (i = 0; i < sysinfo->sysinfosize; i++) {
+		for (int i = 0; i < sysinfo->sysinfosize; i++) {
 			buffer[index] = sysinfo->sysinfo[i];
 		}
 
@@ -4173,16 +3884,221 @@ int mbr_wt_edgjstar(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
+	return (status);
+}
+
+/*--------------------------------------------------------------------*/
+int mbr_register_edgjstar(int verbose, void *mbio_ptr, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+	}
+
+	/* get mb_io_ptr */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* set format info parameters */
+	const int status = mbr_info_edgjstar(
+	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
+	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
+	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
+	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
+	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
+
+	/* set format and system specific function pointers */
+	mb_io_ptr->mb_io_format_alloc = &mbr_alm_edgjstar;
+	mb_io_ptr->mb_io_format_free = &mbr_dem_edgjstar;
+	mb_io_ptr->mb_io_store_alloc = &mbsys_jstar_alloc;
+	mb_io_ptr->mb_io_store_free = &mbsys_jstar_deall;
+	mb_io_ptr->mb_io_read_ping = &mbr_rt_edgjstar;
+	mb_io_ptr->mb_io_write_ping = &mbr_wt_edgjstar;
+	mb_io_ptr->mb_io_dimensions = &mbsys_jstar_dimensions;
+	mb_io_ptr->mb_io_pingnumber = &mbsys_jstar_pingnumber;
+	mb_io_ptr->mb_io_preprocess = &mbsys_jstar_preprocess;
+	mb_io_ptr->mb_io_extract = &mbsys_jstar_extract;
+	mb_io_ptr->mb_io_insert = &mbsys_jstar_insert;
+	mb_io_ptr->mb_io_extract_nav = &mbsys_jstar_extract_nav;
+	mb_io_ptr->mb_io_insert_nav = &mbsys_jstar_insert_nav;
+	mb_io_ptr->mb_io_extract_altitude = &mbsys_jstar_extract_altitude;
+	mb_io_ptr->mb_io_insert_altitude = &mbsys_jstar_insert_altitude;
+	mb_io_ptr->mb_io_extract_svp = NULL;
+	mb_io_ptr->mb_io_insert_svp = NULL;
+	mb_io_ptr->mb_io_ttimes = &mbsys_jstar_ttimes;
+	mb_io_ptr->mb_io_detects = &mbsys_jstar_detects;
+	mb_io_ptr->mb_io_extract_rawssdimensions = &mbsys_jstar_extract_rawssdimensions;
+	mb_io_ptr->mb_io_extract_rawss = &mbsys_jstar_extract_rawss;
+	mb_io_ptr->mb_io_insert_rawss = &mbsys_jstar_insert_rawss;
+	mb_io_ptr->mb_io_extract_segytraceheader = &mbsys_jstar_extract_segytraceheader;
+	mb_io_ptr->mb_io_extract_segy = &mbsys_jstar_extract_segy;
+	mb_io_ptr->mb_io_insert_segy = &mbsys_jstar_insert_segy;
+	mb_io_ptr->mb_io_ctd = &mbsys_jstar_ctd;
+	mb_io_ptr->mb_io_copyrecord = &mbsys_jstar_copyrecord;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
+		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
+		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
+		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
+		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
+		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
+		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
+		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
+		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
+		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
+		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
+		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
+		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
+		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
+		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
+		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
+		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
+		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
+		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
+		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
+		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
+		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
+		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
+		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
+		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
+		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
+		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
+		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
+		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
+		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
+		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
+		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
+		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
+		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
+		fprintf(stderr, "dbg2       extract_rawssdimensions: %p\n", (void *)mb_io_ptr->mb_io_extract_rawssdimensions);
+		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
+		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
+		fprintf(stderr, "dbg2       extract_segytraceheader: %p\n", (void *)mb_io_ptr->mb_io_extract_segytraceheader);
+		fprintf(stderr, "dbg2       extract_segy:       %p\n", (void *)mb_io_ptr->mb_io_extract_segy);
+		fprintf(stderr, "dbg2       insert_segy:        %p\n", (void *)mb_io_ptr->mb_io_insert_segy);
+		fprintf(stderr, "dbg2       ctd:                %p\n", (void *)mb_io_ptr->mb_io_ctd);
+		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
+		fprintf(stderr, "dbg2       error:              %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:         %d\n", status);
+	}
+
+	return (status);
+}
+/*--------------------------------------------------------------------*/
+int mbr_register_edgjstr2(int verbose, void *mbio_ptr, int *error) {
+	int status = MB_SUCCESS;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
+	}
+
+	/* get mb_io_ptr */
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* set format info parameters */
+	status = mbr_info_edgjstr2(
+	    verbose, &mb_io_ptr->system, &mb_io_ptr->beams_bath_max, &mb_io_ptr->beams_amp_max, &mb_io_ptr->pixels_ss_max,
+	    mb_io_ptr->format_name, mb_io_ptr->system_name, mb_io_ptr->format_description, &mb_io_ptr->numfile, &mb_io_ptr->filetype,
+	    &mb_io_ptr->variable_beams, &mb_io_ptr->traveltime, &mb_io_ptr->beam_flagging, &mb_io_ptr->platform_source,
+	    &mb_io_ptr->nav_source, &mb_io_ptr->sensordepth_source, &mb_io_ptr->heading_source, &mb_io_ptr->attitude_source,
+	    &mb_io_ptr->svp_source, &mb_io_ptr->beamwidth_xtrack, &mb_io_ptr->beamwidth_ltrack, error);
+
+	/* set format and system specific function pointers */
+	mb_io_ptr->mb_io_format_alloc = &mbr_alm_edgjstar;
+	mb_io_ptr->mb_io_format_free = &mbr_dem_edgjstar;
+	mb_io_ptr->mb_io_store_alloc = &mbsys_jstar_alloc;
+	mb_io_ptr->mb_io_store_free = &mbsys_jstar_deall;
+	mb_io_ptr->mb_io_read_ping = &mbr_rt_edgjstar;
+	mb_io_ptr->mb_io_write_ping = &mbr_wt_edgjstar;
+	mb_io_ptr->mb_io_dimensions = &mbsys_jstar_dimensions;
+	mb_io_ptr->mb_io_pingnumber = &mbsys_jstar_pingnumber;
+	mb_io_ptr->mb_io_preprocess = &mbsys_jstar_preprocess;
+	mb_io_ptr->mb_io_extract = &mbsys_jstar_extract;
+	mb_io_ptr->mb_io_insert = &mbsys_jstar_insert;
+	mb_io_ptr->mb_io_extract_nav = &mbsys_jstar_extract_nav;
+	mb_io_ptr->mb_io_insert_nav = &mbsys_jstar_insert_nav;
+	mb_io_ptr->mb_io_extract_altitude = &mbsys_jstar_extract_altitude;
+	mb_io_ptr->mb_io_insert_altitude = NULL;
+	mb_io_ptr->mb_io_extract_svp = NULL;
+	mb_io_ptr->mb_io_insert_svp = NULL;
+	mb_io_ptr->mb_io_ttimes = &mbsys_jstar_ttimes;
+	mb_io_ptr->mb_io_detects = &mbsys_jstar_detects;
+	mb_io_ptr->mb_io_extract_rawssdimensions = &mbsys_jstar_extract_rawssdimensions;
+	mb_io_ptr->mb_io_extract_rawss = &mbsys_jstar_extract_rawss;
+	mb_io_ptr->mb_io_insert_rawss = &mbsys_jstar_insert_rawss;
+	mb_io_ptr->mb_io_extract_segytraceheader = &mbsys_jstar_extract_segytraceheader;
+	mb_io_ptr->mb_io_extract_segy = &mbsys_jstar_extract_segy;
+	mb_io_ptr->mb_io_insert_segy = &mbsys_jstar_insert_segy;
+	mb_io_ptr->mb_io_ctd = &mbsys_jstar_ctd;
+	mb_io_ptr->mb_io_copyrecord = &mbsys_jstar_copyrecord;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return values:\n");
+		fprintf(stderr, "dbg2       system:             %d\n", mb_io_ptr->system);
+		fprintf(stderr, "dbg2       beams_bath_max:     %d\n", mb_io_ptr->beams_bath_max);
+		fprintf(stderr, "dbg2       beams_amp_max:      %d\n", mb_io_ptr->beams_amp_max);
+		fprintf(stderr, "dbg2       pixels_ss_max:      %d\n", mb_io_ptr->pixels_ss_max);
+		fprintf(stderr, "dbg2       format_name:        %s\n", mb_io_ptr->format_name);
+		fprintf(stderr, "dbg2       system_name:        %s\n", mb_io_ptr->system_name);
+		fprintf(stderr, "dbg2       format_description: %s\n", mb_io_ptr->format_description);
+		fprintf(stderr, "dbg2       numfile:            %d\n", mb_io_ptr->numfile);
+		fprintf(stderr, "dbg2       filetype:           %d\n", mb_io_ptr->filetype);
+		fprintf(stderr, "dbg2       variable_beams:     %d\n", mb_io_ptr->variable_beams);
+		fprintf(stderr, "dbg2       traveltime:         %d\n", mb_io_ptr->traveltime);
+		fprintf(stderr, "dbg2       beam_flagging:      %d\n", mb_io_ptr->beam_flagging);
+		fprintf(stderr, "dbg2       platform_source:    %d\n", mb_io_ptr->platform_source);
+		fprintf(stderr, "dbg2       nav_source:         %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       sensordepth_source: %d\n", mb_io_ptr->nav_source);
+		fprintf(stderr, "dbg2       heading_source:     %d\n", mb_io_ptr->heading_source);
+		fprintf(stderr, "dbg2       attitude_source:    %d\n", mb_io_ptr->attitude_source);
+		fprintf(stderr, "dbg2       svp_source:         %d\n", mb_io_ptr->svp_source);
+		fprintf(stderr, "dbg2       beamwidth_xtrack:   %f\n", mb_io_ptr->beamwidth_xtrack);
+		fprintf(stderr, "dbg2       beamwidth_ltrack:   %f\n", mb_io_ptr->beamwidth_ltrack);
+		fprintf(stderr, "dbg2       format_alloc:       %p\n", (void *)mb_io_ptr->mb_io_format_alloc);
+		fprintf(stderr, "dbg2       format_free:        %p\n", (void *)mb_io_ptr->mb_io_format_free);
+		fprintf(stderr, "dbg2       store_alloc:        %p\n", (void *)mb_io_ptr->mb_io_store_alloc);
+		fprintf(stderr, "dbg2       store_free:         %p\n", (void *)mb_io_ptr->mb_io_store_free);
+		fprintf(stderr, "dbg2       read_ping:          %p\n", (void *)mb_io_ptr->mb_io_read_ping);
+		fprintf(stderr, "dbg2       write_ping:         %p\n", (void *)mb_io_ptr->mb_io_write_ping);
+		fprintf(stderr, "dbg2       extract:            %p\n", (void *)mb_io_ptr->mb_io_extract);
+		fprintf(stderr, "dbg2       insert:             %p\n", (void *)mb_io_ptr->mb_io_insert);
+		fprintf(stderr, "dbg2       extract_nav:        %p\n", (void *)mb_io_ptr->mb_io_extract_nav);
+		fprintf(stderr, "dbg2       insert_nav:         %p\n", (void *)mb_io_ptr->mb_io_insert_nav);
+		fprintf(stderr, "dbg2       extract_altitude:   %p\n", (void *)mb_io_ptr->mb_io_extract_altitude);
+		fprintf(stderr, "dbg2       insert_altitude:    %p\n", (void *)mb_io_ptr->mb_io_insert_altitude);
+		fprintf(stderr, "dbg2       extract_svp:        %p\n", (void *)mb_io_ptr->mb_io_extract_svp);
+		fprintf(stderr, "dbg2       insert_svp:         %p\n", (void *)mb_io_ptr->mb_io_insert_svp);
+		fprintf(stderr, "dbg2       ttimes:             %p\n", (void *)mb_io_ptr->mb_io_ttimes);
+		fprintf(stderr, "dbg2       detects:            %p\n", (void *)mb_io_ptr->mb_io_detects);
+		fprintf(stderr, "dbg2       extract_rawssdimensions: %p\n", (void *)mb_io_ptr->mb_io_extract_rawssdimensions);
+		fprintf(stderr, "dbg2       extract_rawss:      %p\n", (void *)mb_io_ptr->mb_io_extract_rawss);
+		fprintf(stderr, "dbg2       insert_rawss:       %p\n", (void *)mb_io_ptr->mb_io_insert_rawss);
+		fprintf(stderr, "dbg2       extract_segytraceheader: %p\n", (void *)mb_io_ptr->mb_io_extract_segytraceheader);
+		fprintf(stderr, "dbg2       extract_segy:       %p\n", (void *)mb_io_ptr->mb_io_extract_segy);
+		fprintf(stderr, "dbg2       insert_segy:        %p\n", (void *)mb_io_ptr->mb_io_insert_segy);
+		fprintf(stderr, "dbg2       ctd:                %p\n", (void *)mb_io_ptr->mb_io_ctd);
+		fprintf(stderr, "dbg2       copyrecord:         %p\n", (void *)mb_io_ptr->mb_io_copyrecord);
+		fprintf(stderr, "dbg2       error:              %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:         %d\n", status);
+	}
+
 	return (status);
 }
 /*--------------------------------------------------------------------*/

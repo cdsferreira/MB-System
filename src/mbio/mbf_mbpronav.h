@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_mbpronav.h	5/20/99
- *	$Id$
  *
- *    Copyright (c) 1999-2017 by
+ *    Copyright (c) 1999-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -31,6 +30,9 @@
  *      mblist with the -OtMXYHS option.
  *
  */
+
+#ifndef MBF_MBPRONAV_H_
+#define MBF_MBPRONAV_H_
 
 #define MBF_MBPRONAV_MAXLINE 256
 
@@ -61,3 +63,5 @@ struct mbf_mbpronav_struct {
 	/* comment */
 	char comment[MBF_MBPRONAV_MAXLINE];
 };
+
+#endif  /* MBF_MBPRONAV_H_ */

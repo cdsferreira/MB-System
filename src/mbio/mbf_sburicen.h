@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_sburicen.h	1/20/93
- *	$Id$
  *
- *    Copyright (c) 1993-2017 by
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -46,6 +45,9 @@
  * of the binary data structure used in the MBF_SBURICEN format.
  */
 
+#ifndef MBF_SBURICEN_H_
+#define MBF_SBURICEN_H_
+
 struct mbf_sburicen_data_struct {
 	short deph[19];       /* 16 depths from Sea Beam in meters
 	                  assuming 1500 m/s water velocity */
@@ -76,3 +78,5 @@ struct mbf_sburicen_struct {
 	int kind;
 	struct mbf_sburicen_data_struct data;
 };
+
+#endif  /* MBF_SBURICEN_H_ */

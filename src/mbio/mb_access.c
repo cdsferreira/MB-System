@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mb_access.c	11/1/00
- *    $Id$
- *
- *    Copyright (c) 2000-2018 by
+  *
+ *    Copyright (c) 2000-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -18,43 +17,35 @@
  *
  * Author:	D. W. Caress
  * Date:	October 1, 2000
- *
  */
 
-/* standard include files */
+#include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <math.h>
 #include <string.h>
+#include <unistd.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
 #include "mb_segy.h"
+#include "mb_status.h"
 
-static char version_id[] = "$Id$";
 /*--------------------------------------------------------------------*/
 int mb_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mb_alloc";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call appropriate memory allocation routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_store_alloc != NULL) {
 		status = (*mb_io_ptr->mb_io_store_alloc)(verbose, mbio_ptr, store_ptr, error);
 	}
@@ -63,10 +54,8 @@ int mb_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)*store_ptr);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -74,29 +63,22 @@ int mb_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mb_deall";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)*store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call appropriate memory deallocation routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_store_free != NULL) {
 		status = (*mb_io_ptr->mb_io_store_free)(verbose, mbio_ptr, store_ptr, error);
 	}
@@ -105,44 +87,33 @@ int mb_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_get_store(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mb_get_store";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
-	/* get store pointer */
 	*store_ptr = (void *)mb_io_ptr->store_data;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)*store_ptr);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -150,29 +121,22 @@ int mb_get_store(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss, int *error) {
-	char *function_name = "mb_dimensions";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract != NULL) {
 		status = (*mb_io_ptr->mb_io_dimensions)(verbose, mbio_ptr, store_ptr, kind, nbath, namp, nss, error);
 	}
@@ -181,10 +145,8 @@ int mb_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
@@ -195,28 +157,21 @@ int mb_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
-int mb_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error) {
-	char *function_name = "mb_pingnumber";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
+int mb_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error) {
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_pingnumber != NULL) {
 		status = (*mb_io_ptr->mb_io_pingnumber)(verbose, mbio_ptr, pingnumber, error);
 	}
@@ -226,39 +181,30 @@ int mb_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error) {
 		*error = MB_ERROR_NO_ERROR;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       pingnumber: %d\n", *pingnumber);
+		fprintf(stderr, "dbg2       pingnumber: %u\n", *pingnumber);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_segynumber(int verbose, void *mbio_ptr, int *line, int *shot, int *cdp, int *error) {
-	char *function_name = "mb_segynumber";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_segynumber != NULL) {
 		status = (*mb_io_ptr->mb_io_segynumber)(verbose, mbio_ptr, line, shot, cdp, error);
 	}
@@ -270,10 +216,8 @@ int mb_segynumber(int verbose, void *mbio_ptr, int *line, int *shot, int *cdp, i
 		*error = MB_ERROR_NO_ERROR;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       line:       %d\n", *line);
 		fprintf(stderr, "dbg2       shot:       %d\n", *shot);
@@ -283,37 +227,28 @@ int mb_segynumber(int verbose, void *mbio_ptr, int *line, int *shot, int *cdp, i
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_beamwidths(int verbose, void *mbio_ptr, double *beamwidth_xtrack, double *beamwidth_ltrack, int *error) {
-	char *function_name = "mb_beamwidths";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:           %p\n", (void *)mbio_ptr);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* extract the values from the mb_io structure */
 	*beamwidth_xtrack = mb_io_ptr->beamwidth_xtrack;
 	*beamwidth_ltrack = mb_io_ptr->beamwidth_ltrack;
-	status = MB_SUCCESS;
+	const int status = MB_SUCCESS;
 	*error = MB_ERROR_NO_ERROR;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       beamwidth_xtrack: %f\n", *beamwidth_xtrack);
 		fprintf(stderr, "dbg2       beamwidth_ltrack: %f\n", *beamwidth_ltrack);
@@ -322,19 +257,12 @@ int mb_beamwidths(int verbose, void *mbio_ptr, double *beamwidth_xtrack, double 
 		fprintf(stderr, "dbg2       status:           %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, int *error) {
-	char *function_name = "mb_sonartype";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -342,10 +270,10 @@ int mb_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, i
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-    
-    /* reset error value */
-    *error = MB_ERROR_NO_ERROR;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* reset error value */
+	*error = MB_ERROR_NO_ERROR;
 
 	/* start off with sonartype unknown */
 	*sonartype = MB_TOPOGRAPHY_TYPE_UNKNOWN;
@@ -355,6 +283,7 @@ int mb_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, i
 	        mb_io_ptr->system == MB_SYS_GSF
 	        mb_io_ptr->system == MB_SYS_HDCS
 	        mb_io_ptr->system == MB_SYS_HYSWEEP */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_sonartype != NULL) {
 		if (store_ptr == NULL)
 			store_ptr = (void *)mb_io_ptr->store_data;
@@ -405,10 +334,8 @@ int mb_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, i
 		*sonartype = MB_TOPOGRAPHY_TYPE_CAMERA;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       sonartype:  %d\n", *sonartype);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -416,19 +343,12 @@ int mb_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, i
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, int *error) {
-	char *function_name = "mb_sidescantype";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -436,12 +356,13 @@ int mb_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, 
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-    
-    /* reset error value */
-    *error = MB_ERROR_NO_ERROR;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* reset error value */
+	*error = MB_ERROR_NO_ERROR;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_sidescantype != NULL) {
 		if (store_ptr == NULL)
 			store_ptr = (void *)mb_io_ptr->store_data;
@@ -452,10 +373,8 @@ int mb_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, 
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       ss_type:    %d\n", *ss_type);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -463,19 +382,12 @@ int mb_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, 
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_preprocess(int verbose, void *mbio_ptr, void *store_ptr, void *platform_ptr, void *preprocess_pars_ptr, int *error) {
-	char *function_name = "mb_preprocess";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:                   %p\n", (void *)mbio_ptr);
@@ -485,9 +397,10 @@ int mb_preprocess(int verbose, void *mbio_ptr, void *store_ptr, void *platform_p
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_preprocess != NULL) {
 		status = (*mb_io_ptr->mb_io_preprocess)(verbose, mbio_ptr, store_ptr, platform_ptr, preprocess_pars_ptr, error);
 	}
@@ -497,31 +410,20 @@ int mb_preprocess(int verbose, void *mbio_ptr, void *store_ptr, void *platform_p
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:         %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:        %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_extract_platform(int verbose, void *mbio_ptr, void *store_ptr, int *kind, void **platform_ptr, int *error) {
-	char *function_name = "mb_extract_platform";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	struct mb_platform_struct *platform;
-	int i, j;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:        %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:         %p\n", (void *)mbio_ptr);
@@ -531,9 +433,11 @@ int mb_extract_platform(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	struct mb_platform_struct *platform = NULL;
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract_platform != NULL) {
 		status = (*mb_io_ptr->mb_io_extract_platform)(verbose, mbio_ptr, store_ptr, kind, platform_ptr, error);
 
@@ -547,10 +451,8 @@ int mb_extract_platform(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -582,7 +484,7 @@ int mb_extract_platform(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		fprintf(stderr, "dbg2       platform->source_heave2:  		%d\n", platform->source_heave2);
 		fprintf(stderr, "dbg2       platform->source_heave3:  		%d\n", platform->source_heave3);
 		fprintf(stderr, "dbg2       platform->num_sensors:	     	%d\n", platform->num_sensors);
-		for (i = 0; i < platform->num_sensors; i++) {
+		for (int i = 0; i < platform->num_sensors; i++) {
 			fprintf(stderr, "dbg2       platform->sensors[%2d].type:                 %d\n", i, platform->sensors[i].type);
 			fprintf(stderr, "dbg2       platform->sensors[%2d].model:                %s\n", i, platform->sensors[i].model);
 			fprintf(stderr, "dbg2       platform->sensors[%2d].manufacturer:         %s\n", i, platform->sensors[i].manufacturer);
@@ -590,7 +492,7 @@ int mb_extract_platform(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 			fprintf(stderr, "dbg2       platform->sensors[%2d].capability1:          %d\n", i, platform->sensors[i].capability1);
 			fprintf(stderr, "dbg2       platform->sensors[%2d].capability2:          %d\n", i, platform->sensors[i].capability2);
 			fprintf(stderr, "dbg2       platform->sensors[%2d].num_offsets:          %d\n", i, platform->sensors[i].num_offsets);
-			for (j = 0; j < platform->sensors[i].num_offsets; j++) {
+			for (int j = 0; j < platform->sensors[i].num_offsets; j++) {
 				fprintf(stderr, "dbg2       platform->sensors[%2d].offsets[%d].position_offset_mode:	        %d\n", i, j,
 				        platform->sensors[i].offsets[j].position_offset_mode);
 				fprintf(stderr, "dbg2       platform->sensors[%2d].offsets[%d].position_offset_x:	        %f\n", i, j,
@@ -614,7 +516,7 @@ int mb_extract_platform(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 			        platform->sensors[i].time_latency_static);
 			fprintf(stderr, "dbg2       platform->sensors[%2d].num_time_latency:		%d\n", i,
 			        platform->sensors[i].num_time_latency);
-			for (j = 0; j < platform->sensors[i].num_time_latency; j++) {
+			for (int j = 0; j < platform->sensors[i].num_time_latency; j++) {
 				fprintf(stderr, "dbg2       platform->sensors[%2d].time_latency[%2d]:		%16.6f %8.6f\n", i, j,
 				        platform->sensors[i].time_latency_time_d[j], platform->sensors[i].time_latency_value[j]);
 			}
@@ -629,19 +531,12 @@ int mb_extract_platform(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_sensorhead(int verbose, void *mbio_ptr, void *store_ptr, int *sensorhead, int *error) {
-	char *function_name = "mb_sensorhead";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -649,14 +544,15 @@ int mb_sensorhead(int verbose, void *mbio_ptr, void *store_ptr, int *sensorhead,
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-    
-    /* reset error value */
-    *error = MB_ERROR_NO_ERROR;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+
+	/* reset error value */
+	*error = MB_ERROR_NO_ERROR;
 
 	/* call the appropriate mbsys_ sensorhead routine
 	        defined for:
 	          mb_io_ptr->system == MB_SYS_WISSL */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_sensorhead != NULL) {
 		if (store_ptr == NULL)
 			store_ptr = (void *)mb_io_ptr->store_data;
@@ -672,10 +568,8 @@ int mb_sensorhead(int verbose, void *mbio_ptr, void *store_ptr, int *sensorhead,
 		*error = MB_ERROR_BAD_FORMAT;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       sensorhead: %d\n", *sensorhead);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -683,7 +577,6 @@ int mb_sensorhead(int verbose, void *mbio_ptr, void *store_ptr, int *sensorhead,
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -691,16 +584,8 @@ int mb_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time
                double *navlat, double *speed, double *heading, int *nbath, int *namp, int *nss, char *beamflag, double *bath,
                double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss, double *ssacrosstrack,
                double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mb_extract";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	double easting, northing;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -708,9 +593,10 @@ int mb_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract != NULL) {
 		status = (*mb_io_ptr->mb_io_extract)(verbose, mbio_ptr, store_ptr, kind, time_i, time_d, navlon, navlat, speed, heading,
 		                                     nbath, namp, nss, beamflag, bath, amp, bathacrosstrack, bathalongtrack, ss,
@@ -724,9 +610,9 @@ int mb_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time
 	/* apply projection and lonflip if necessary */
 	if (status == MB_SUCCESS) {
 		/* apply inverse projection if required */
-		if (mb_io_ptr->projection_initialized == MB_YES) {
-			easting = *navlon;
-			northing = *navlat;
+		if (mb_io_ptr->projection_initialized == true) {
+			const double easting = *navlon;
+			const double northing = *navlat;
 			mb_proj_inverse(verbose, mb_io_ptr->pjptr, easting, northing, navlon, navlat, error);
 		}
 
@@ -751,10 +637,8 @@ int mb_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -777,15 +661,15 @@ int mb_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time
 	}
 	if (verbose >= 2 && *error <= MB_ERROR_NO_ERROR && *kind == MB_DATA_DATA) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
-		for (i = 0; i < *nbath; i++)
+		for (int i = 0; i < *nbath; i++)
 			fprintf(stderr, "dbg2       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 			        bathacrosstrack[i], bathalongtrack[i]);
 		fprintf(stderr, "dbg2        namp:     %d\n", *namp);
-		for (i = 0; i < *namp; i++)
+		for (int i = 0; i < *namp; i++)
 			fprintf(stderr, "dbg2       beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 			        bathalongtrack[i]);
 		fprintf(stderr, "dbg2        nss:      %d\n", *nss);
-		for (i = 0; i < *nss; i++)
+		for (int i = 0; i < *nss; i++)
 			fprintf(stderr, "dbg2        pixel:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 			        ssalongtrack[i]);
 	}
@@ -795,7 +679,6 @@ int mb_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -803,16 +686,8 @@ int mb_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int time_i
               double speed, double heading, int nbath, int namp, int nss, char *beamflag, double *bath, double *amp,
               double *bathacrosstrack, double *bathalongtrack, double *ss, double *ssacrosstrack, double *ssalongtrack,
               char *comment, int *error) {
-	char *function_name = "mb_insert";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	double easting, northing;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -836,17 +711,17 @@ int mb_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int time_i
 	if (verbose >= 2 && kind == MB_DATA_DATA) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", nbath);
 		if (verbose >= 3)
-			for (i = 0; i < nbath; i++)
+			for (int i = 0; i < nbath; i++)
 				fprintf(stderr, "dbg3       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i], bathalongtrack[i]);
 		fprintf(stderr, "dbg2       namp:       %d\n", namp);
 		if (verbose >= 3)
-			for (i = 0; i < namp; i++)
+			for (int i = 0; i < namp; i++)
 				fprintf(stderr, "dbg3        beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 				        bathalongtrack[i]);
 		fprintf(stderr, "dbg2        nss:       %d\n", nss);
 		if (verbose >= 3)
-			for (i = 0; i < nss; i++)
+			for (int i = 0; i < nss; i++)
 				fprintf(stderr, "dbg3        pixel:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 				        ssalongtrack[i]);
 	}
@@ -855,18 +730,21 @@ int mb_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int time_i
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* check that io arrays are large enough, allocate larger arrays if necessary */
+	int status = MB_SUCCESS;
 	if (nbath > mb_io_ptr->beams_bath_alloc || namp > mb_io_ptr->beams_amp_alloc || nss > mb_io_ptr->pixels_ss_alloc) {
-		status = mb_update_arrays(verbose, mbio_ptr, nbath, namp, nss, error);
+		status &= mb_update_arrays(verbose, mbio_ptr, nbath, namp, nss, error);
 	}
 	mb_io_ptr->beams_bath_max = MAX(mb_io_ptr->beams_bath_max, nbath);
 	mb_io_ptr->beams_amp_max = MAX(mb_io_ptr->beams_amp_max, namp);
 	mb_io_ptr->pixels_ss_max = MAX(mb_io_ptr->pixels_ss_max, nss);
 
 	/* apply inverse projection if required */
-	if (mb_io_ptr->projection_initialized == MB_YES) {
+	if (mb_io_ptr->projection_initialized == true) {
+		double easting;
+		double northing;
 		mb_proj_forward(verbose, mb_io_ptr->pjptr, navlon, navlat, &easting, &northing, error);
 		navlon = easting;
 		navlat = northing;
@@ -874,7 +752,7 @@ int mb_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int time_i
 
 	/* call the appropriate mbsys_ insertion routine */
 	if (mb_io_ptr->mb_io_insert != NULL) {
-		status = (*mb_io_ptr->mb_io_insert)(verbose, mbio_ptr, store_ptr, kind, time_i, time_d, navlon, navlat, speed, heading,
+		status &= (*mb_io_ptr->mb_io_insert)(verbose, mbio_ptr, store_ptr, kind, time_i, time_d, navlon, navlat, speed, heading,
 		                                    nbath, namp, nss, beamflag, bath, amp, bathacrosstrack, bathalongtrack, ss,
 		                                    ssacrosstrack, ssalongtrack, comment, error);
 	}
@@ -883,32 +761,22 @@ int mb_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, int time_i
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time_i[7], double *time_d, double *navlon,
                    double *navlat, double *speed, double *heading, double *draft, double *roll, double *pitch, double *heave,
                    int *error) {
-	char *function_name = "mb_extract_nav";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	double easting, northing;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -916,9 +784,10 @@ int mb_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int 
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract_nav != NULL) {
 		status = (*mb_io_ptr->mb_io_extract_nav)(verbose, mbio_ptr, store_ptr, kind, time_i, time_d, navlon, navlat, speed,
 		                                         heading, draft, roll, pitch, heave, error);
@@ -931,9 +800,9 @@ int mb_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int 
 	/* apply projection and lonflip if necessary */
 	if (status == MB_SUCCESS) {
 		/* apply inverse projection if required */
-		if (mb_io_ptr->projection_initialized == MB_YES) {
-			easting = *navlon;
-			northing = *navlat;
+		if (mb_io_ptr->projection_initialized == true) {
+			const double easting = *navlon;
+			const double northing = *navlat;
 			mb_proj_inverse(verbose, mb_io_ptr->pjptr, easting, northing, navlon, navlat, error);
 		}
 
@@ -958,10 +827,8 @@ int mb_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int 
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 		fprintf(stderr, "dbg2       time_i[0]:     %d\n", time_i[0]);
@@ -985,23 +852,14 @@ int mb_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int 
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_extract_nnav(int verbose, void *mbio_ptr, void *store_ptr, int nmax, int *kind, int *n, int *time_i, double *time_d,
                     double *navlon, double *navlat, double *speed, double *heading, double *draft, double *roll, double *pitch,
                     double *heave, int *error) {
-	char *function_name = "mb_extract_nnav";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	double easting, northing;
-	int i, inav;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1009,9 +867,10 @@ int mb_extract_nnav(int verbose, void *mbio_ptr, void *store_ptr, int nmax, int 
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract_nnav != NULL) {
 		status = (*mb_io_ptr->mb_io_extract_nnav)(verbose, mbio_ptr, store_ptr, nmax, kind, n, time_i, time_d, navlon, navlat,
 		                                          speed, heading, draft, roll, pitch, heave, error);
@@ -1034,10 +893,6 @@ int mb_extract_nnav(int verbose, void *mbio_ptr, void *store_ptr, int nmax, int 
 	    values out of the asynchronous data interpolation buffers
 	    The time stamp must be sensible for this to work. */
 	if (status == MB_FAILURE && *error == MB_ERROR_OTHER && *time_d > 0.0) {
-		/* reset status */
-		status = MB_SUCCESS;
-		*error = MB_ERROR_NO_ERROR;
-
 		/* get number of available navigation values */
 		*n = 1;
 
@@ -1064,9 +919,11 @@ int mb_extract_nnav(int verbose, void *mbio_ptr, void *store_ptr, int nmax, int 
 
 	/* apply projection and lonflip if necessary */
 	if (status == MB_SUCCESS) {
-		for (inav = 0; inav < *n; inav++) {
+		for (int inav = 0; inav < *n; inav++) {
 			/* apply inverse projection if required */
-			if (mb_io_ptr->projection_initialized == MB_YES) {
+			if (mb_io_ptr->projection_initialized == true) {
+				double easting;
+				double northing;
 				easting = navlon[inav];
 				northing = navlat[inav];
 				mb_proj_inverse(verbose, mb_io_ptr->pjptr, easting, northing, &(navlon[inav]), &(navlat[inav]), error);
@@ -1094,15 +951,13 @@ int mb_extract_nnav(int verbose, void *mbio_ptr, void *store_ptr, int nmax, int 
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 		fprintf(stderr, "dbg2       n:          %d\n", *n);
-		for (inav = 0; inav < *n; inav++) {
-			for (i = 0; i < 7; i++)
+		for (int inav = 0; inav < *n; inav++) {
+			for (int i = 0; i < 7; i++)
 				fprintf(stderr, "dbg2       %d time_i[%d]:     %d\n", inav, i, time_i[inav * 7 + i]);
 			fprintf(stderr, "dbg2       %d time_d:        %f\n", inav, time_d[inav]);
 			fprintf(stderr, "dbg2       %d longitude:     %f\n", inav, navlon[inav]);
@@ -1119,21 +974,13 @@ int mb_extract_nnav(int verbose, void *mbio_ptr, void *store_ptr, int nmax, int 
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_i[7], double time_d, double navlon, double navlat,
                   double speed, double heading, double draft, double roll, double pitch, double heave, int *error) {
-	char *function_name = "mb_insert_nav";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	double easting, northing;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:       %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:        %p\n", (void *)mbio_ptr);
@@ -1156,17 +1003,19 @@ int mb_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_i[7], d
 		fprintf(stderr, "dbg2       heave:         %f\n", heave);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* apply inverse projection if required */
-	if (mb_io_ptr->projection_initialized == MB_YES) {
+	if (mb_io_ptr->projection_initialized == true) {
+		double easting;
+		double northing;
 		mb_proj_forward(verbose, mb_io_ptr->pjptr, navlon, navlat, &easting, &northing, error);
 		navlon = easting;
 		navlat = northing;
 	}
 
 	/* call the appropriate mbsys_ insertion routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_insert_nav != NULL) {
 		status = (*mb_io_ptr->mb_io_insert_nav)(verbose, mbio_ptr, store_ptr, time_i, time_d, navlon, navlat, speed, heading,
 		                                        draft, roll, pitch, heave, error);
@@ -1176,40 +1025,31 @@ int mb_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_i[7], d
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *transducer_depth, double *altitude,
                         int *error) {
-	char *function_name = "mb_extract_altitude";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract_altitude != NULL) {
 		status = (*mb_io_ptr->mb_io_extract_altitude)(verbose, mbio_ptr, store_ptr, kind, transducer_depth, altitude, error);
 	}
@@ -1218,10 +1058,8 @@ int mb_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       transducer_depth:  %f\n", *transducer_depth);
@@ -1231,19 +1069,12 @@ int mb_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, double transducer_depth, double altitude, int *error) {
-	char *function_name = "mb_insert_altitude";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:           %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:            %p\n", (void *)mbio_ptr);
@@ -1252,10 +1083,10 @@ int mb_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, double tran
 		fprintf(stderr, "dbg2       altitude:          %f\n", altitude);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ insertion routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_insert_altitude != NULL) {
 		status = (*mb_io_ptr->mb_io_insert_altitude)(verbose, mbio_ptr, store_ptr, transducer_depth, altitude, error);
 	}
@@ -1264,41 +1095,31 @@ int mb_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, double tran
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nsvp, double *depth, double *velocity,
                    int *error) {
-	char *function_name = "mb_extract_svp";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract_svp != NULL) {
 		status = (*mb_io_ptr->mb_io_extract_svp)(verbose, mbio_ptr, store_ptr, kind, nsvp, depth, velocity, error);
 	}
@@ -1307,47 +1128,37 @@ int mb_extract_svp(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int 
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       nsvp:              %d\n", *nsvp);
-		for (i = 0; i < *nsvp; i++)
+		for (int i = 0; i < *nsvp; i++)
 			fprintf(stderr, "dbg2       depth[%d]: %f   velocity[%d]: %f\n", i, depth[i], i, velocity[i]);
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp, double *depth, double *velocity, int *error) {
-	char *function_name = "mb_insert_svp";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:           %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:            %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:         %p\n", (void *)store_ptr);
 		fprintf(stderr, "dbg2       nsvp:              %d\n", nsvp);
-		for (i = 0; i < nsvp; i++)
+		for (int i = 0; i < nsvp; i++)
 			fprintf(stderr, "dbg2       depth[%d]: %f   velocity[%d]: %f\n", i, depth[i], i, velocity[i]);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ insertion routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_insert_svp != NULL) {
 		status = (*mb_io_ptr->mb_io_insert_svp)(verbose, mbio_ptr, store_ptr, nsvp, depth, velocity, error);
 	}
@@ -1356,17 +1167,14 @@ int mb_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp, double
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -1542,25 +1350,18 @@ int mb_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int nsvp, double
 int mb_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, double *ttimes, double *angles,
               double *angles_forward, double *angles_null, double *heave, double *alongtrack_offset, double *draft, double *ssv,
               int *error) {
-	char *function_name = "mb_ttimes";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_ttimes != NULL) {
 		status = (*mb_io_ptr->mb_io_ttimes)(verbose, mbio_ptr, store_ptr, kind, nbeams, ttimes, angles, angles_forward,
 		                                    angles_null, heave, alongtrack_offset, draft, ssv, error);
@@ -1570,10 +1371,8 @@ int mb_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbea
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -1581,7 +1380,7 @@ int mb_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbea
 		fprintf(stderr, "dbg2       draft:      %f\n", *draft);
 		fprintf(stderr, "dbg2       ssv:        %f\n", *ssv);
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: tt:%f  angle_xtrk:%f  angle_ltrk:%f  angle_null:%f  heave:%f  ltrk_off:%f\n", i,
 			        ttimes[i], angles[i], angles_forward[i], angles_null[i], heave[i], alongtrack_offset[i]);
 	}
@@ -1591,48 +1390,38 @@ int mb_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbea
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, int *detects, int *error) {
-	char *function_name = "mb_detects";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_detects != NULL) {
 		status = (*mb_io_ptr->mb_io_detects)(verbose, mbio_ptr, store_ptr, kind, nbeams, detects, error);
 	}
 	else {
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			detects[i] = MB_DETECT_UNKNOWN;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
 	if (verbose >= 2 && *error == MB_ERROR_NO_ERROR) {
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: detects:%d\n", i, detects[i]);
 	}
 	if (verbose >= 2) {
@@ -1641,30 +1430,22 @@ int mb_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbe
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_pulses(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, int *pulses, int *error) {
-	char *function_name = "mb_pulses";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_pulses != NULL) {
 		status = (*mb_io_ptr->mb_io_pulses)(verbose, mbio_ptr, store_ptr, kind, nbeams, pulses, error);
 	}
@@ -1673,16 +1454,14 @@ int mb_pulses(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbea
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
 	if (verbose >= 2 && *error == MB_ERROR_NO_ERROR) {
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: pulses:%d\n", i, pulses[i]);
 	}
 	if (verbose >= 2) {
@@ -1691,30 +1470,23 @@ int mb_pulses(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbea
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_gains(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *transmit_gain, double *pulse_length,
              double *receive_gain, int *error) {
-	char *function_name = "mb_gains";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_gains != NULL) {
 		status = (*mb_io_ptr->mb_io_gains)(verbose, mbio_ptr, store_ptr, kind, transmit_gain, pulse_length, receive_gain, error);
 	}
@@ -1723,10 +1495,8 @@ int mb_gains(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *tr
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -1741,30 +1511,23 @@ int mb_gains(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *tr
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_extract_rawssdimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *sample_interval,
                                int *num_samples_port, int *num_samples_stbd, int *error) {
-	char *function_name = "mb_io_extract_rawsssdimensions";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract_rawssdimensions != NULL) {
 		status = (*mb_io_ptr->mb_io_extract_rawssdimensions)(verbose, mbio_ptr, store_ptr, kind, sample_interval,
 		                                                     num_samples_port, num_samples_stbd, error);
@@ -1774,10 +1537,8 @@ int mb_extract_rawssdimensions(int verbose, void *mbio_ptr, void *store_ptr, int
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       sample_interval:   %lf\n", *sample_interval);
@@ -1788,32 +1549,24 @@ int mb_extract_rawssdimensions(int verbose, void *mbio_ptr, void *store_ptr, int
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_extract_rawss(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *sidescan_type, double *sample_interval,
                      double *beamwidth_xtrack, double *beamwidth_ltrack, int *num_samples_port, double *rawss_port,
                      int *num_samples_stbd, double *rawss_stbd, int *error) {
-	char *function_name = "mb_extract_rawss";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract_rawss != NULL) {
 		status = (*mb_io_ptr->mb_io_extract_rawss)(verbose, mbio_ptr, store_ptr, kind, sidescan_type, sample_interval,
 		                                           beamwidth_xtrack, beamwidth_ltrack, num_samples_port, rawss_port,
@@ -1824,10 +1577,8 @@ int mb_extract_rawss(int verbose, void *mbio_ptr, void *store_ptr, int *kind, in
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       sidescan_type:     %d\n", *sidescan_type);
@@ -1835,32 +1586,24 @@ int mb_extract_rawss(int verbose, void *mbio_ptr, void *store_ptr, int *kind, in
 		fprintf(stderr, "dbg2       beamwidth_xtrack:  %lf\n", *beamwidth_xtrack);
 		fprintf(stderr, "dbg2       beamwidth_ltrack:  %lf\n", *beamwidth_ltrack);
 		fprintf(stderr, "dbg2       num_samples_port:  %d\n", *num_samples_port);
-		for (i = 0; i < *num_samples_port; i++)
+		for (int i = 0; i < *num_samples_port; i++)
 			fprintf(stderr, "dbg2       sample: %d  rawss_port:%f\n", i, rawss_port[i]);
 		fprintf(stderr, "dbg2       num_samples_stbd:  %d\n", *num_samples_stbd);
-		for (i = 0; i < *num_samples_stbd; i++)
+		for (int i = 0; i < *num_samples_stbd; i++)
 			fprintf(stderr, "dbg2       sample: %d  rawss_stbd:%f\n", i, rawss_stbd[i]);
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_insert_rawss(int verbose, void *mbio_ptr, void *store_ptr, int kind, int sidescan_type, double sample_interval,
                     double beamwidth_xtrack, double beamwidth_ltrack, int num_samples_port, double *rawss_port,
                     int num_samples_stbd, double *rawss_stbd, int *error) {
-	char *function_name = "mb_insert_rawss";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:           %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:            %p\n", (void *)mbio_ptr);
@@ -1871,17 +1614,17 @@ int mb_insert_rawss(int verbose, void *mbio_ptr, void *store_ptr, int kind, int 
 		fprintf(stderr, "dbg2       beamwidth_xtrack:  %lf\n", beamwidth_xtrack);
 		fprintf(stderr, "dbg2       beamwidth_ltrack:  %lf\n", beamwidth_ltrack);
 		fprintf(stderr, "dbg2       num_samples_port:  %d\n", num_samples_port);
-		for (i = 0; i < num_samples_port; i++)
+		for (int i = 0; i < num_samples_port; i++)
 			fprintf(stderr, "dbg2       sample: %d  rawss_port:%f\n", i, rawss_port[i]);
 		fprintf(stderr, "dbg2       num_samples_stbd:  %d\n", num_samples_stbd);
-		for (i = 0; i < num_samples_stbd; i++)
+		for (int i = 0; i < num_samples_stbd; i++)
 			fprintf(stderr, "dbg2       sample: %d  rawss_stbd:%f\n", i, rawss_stbd[i]);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ insertion routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_insert_rawss != NULL) {
 		status =
 		    (*mb_io_ptr->mb_io_insert_rawss)(verbose, mbio_ptr, store_ptr, kind, sidescan_type, sample_interval, beamwidth_xtrack,
@@ -1892,31 +1635,20 @@ int mb_insert_rawss(int verbose, void *mbio_ptr, void *store_ptr, int kind, int 
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_extract_segytraceheader(int verbose, void *mbio_ptr, void *store_ptr, int *kind, void *segytraceheader_ptr, int *error) {
-	char *function_name = "mb_extract_segytraceheader";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	struct mb_segytraceheader_struct *mb_segytraceheader_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:        %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:         %p\n", (void *)mbio_ptr);
@@ -1925,11 +1657,11 @@ int mb_extract_segytraceheader(int verbose, void *mbio_ptr, void *store_ptr, int
 		fprintf(stderr, "dbg2       segytraceheader_ptr: %p\n", (void *)segytraceheader_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segytraceheader_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_segytraceheader_struct *mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segytraceheader_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract_segy != NULL) {
 		status = (*mb_io_ptr->mb_io_extract_segytraceheader)(verbose, mbio_ptr, store_ptr, kind, segytraceheader_ptr, error);
 	}
@@ -1938,10 +1670,8 @@ int mb_extract_segytraceheader(int verbose, void *mbio_ptr, void *store_ptr, int
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       seq_num:           %d\n", mb_segytraceheader_ptr->seq_num);
@@ -1983,7 +1713,7 @@ int mb_extract_segytraceheader(int verbose, void *mbio_ptr, void *store_ptr, int
 		fprintf(stderr, "dbg2       emute_mils:        %d\n", mb_segytraceheader_ptr->emute_mils);
 		fprintf(stderr, "dbg2       nsamps:            %d\n", mb_segytraceheader_ptr->nsamps);
 		fprintf(stderr, "dbg2       si_micros:         %d\n", mb_segytraceheader_ptr->si_micros);
-		for (i = 0; i < 19; i++)
+		for (int i = 0; i < 19; i++)
 			fprintf(stderr, "dbg2       other_1[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_1[i]);
 		fprintf(stderr, "dbg2       year:              %d\n", mb_segytraceheader_ptr->year);
 		fprintf(stderr, "dbg2       day_of_yr:         %d\n", mb_segytraceheader_ptr->day_of_yr);
@@ -1992,7 +1722,7 @@ int mb_extract_segytraceheader(int verbose, void *mbio_ptr, void *store_ptr, int
 		fprintf(stderr, "dbg2       sec:               %d\n", mb_segytraceheader_ptr->sec);
 		fprintf(stderr, "dbg2       mils:              %d\n", mb_segytraceheader_ptr->mils);
 		fprintf(stderr, "dbg2       tr_weight:         %d\n", mb_segytraceheader_ptr->tr_weight);
-		for (i = 0; i < 5; i++)
+		for (int i = 0; i < 5; i++)
 			fprintf(stderr, "dbg2       other_2[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_2[i]);
 		fprintf(stderr, "dbg2       delay:             %f\n", mb_segytraceheader_ptr->delay);
 		fprintf(stderr, "dbg2       smute_sec:         %f\n", mb_segytraceheader_ptr->smute_sec);
@@ -2014,22 +1744,13 @@ int mb_extract_segytraceheader(int verbose, void *mbio_ptr, void *store_ptr, int
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *sampleformat, int *kind, void *segytraceheader_ptr,
                     float *segydata, int *error) {
-	char *function_name = "mb_extract_segy";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	struct mb_segytraceheader_struct *mb_segytraceheader_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:        %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:         %p\n", (void *)mbio_ptr);
@@ -2039,11 +1760,11 @@ int mb_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *samplefor
 		fprintf(stderr, "dbg2       segydata:       %p\n", (void *)segydata);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segytraceheader_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_segytraceheader_struct *mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segytraceheader_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_extract_segy != NULL) {
 		status = (*mb_io_ptr->mb_io_extract_segy)(verbose, mbio_ptr, store_ptr, sampleformat, kind, segytraceheader_ptr, segydata,
 		                                          error);
@@ -2053,10 +1774,8 @@ int mb_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *samplefor
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       sampleformat:   %d\n", *sampleformat);
 		fprintf(stderr, "dbg2       kind:           %d\n", *kind);
@@ -2099,7 +1818,7 @@ int mb_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *samplefor
 		fprintf(stderr, "dbg2       emute_mils:     %d\n", mb_segytraceheader_ptr->emute_mils);
 		fprintf(stderr, "dbg2       nsamps:         %d\n", mb_segytraceheader_ptr->nsamps);
 		fprintf(stderr, "dbg2       si_micros:      %d\n", mb_segytraceheader_ptr->si_micros);
-		for (i = 0; i < 19; i++)
+		for (int i = 0; i < 19; i++)
 			fprintf(stderr, "dbg2       other_1[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_1[i]);
 		fprintf(stderr, "dbg2       year:           %d\n", mb_segytraceheader_ptr->year);
 		fprintf(stderr, "dbg2       day_of_yr:      %d\n", mb_segytraceheader_ptr->day_of_yr);
@@ -2108,7 +1827,7 @@ int mb_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *samplefor
 		fprintf(stderr, "dbg2       sec:            %d\n", mb_segytraceheader_ptr->sec);
 		fprintf(stderr, "dbg2       mils:           %d\n", mb_segytraceheader_ptr->mils);
 		fprintf(stderr, "dbg2       tr_weight:      %d\n", mb_segytraceheader_ptr->tr_weight);
-		for (i = 0; i < 5; i++)
+		for (int i = 0; i < 5; i++)
 			fprintf(stderr, "dbg2       other_2[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_2[i]);
 		fprintf(stderr, "dbg2       delay:          %f\n", mb_segytraceheader_ptr->delay);
 		fprintf(stderr, "dbg2       smute_sec:      %f\n", mb_segytraceheader_ptr->smute_sec);
@@ -2125,33 +1844,23 @@ int mb_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *samplefor
 		fprintf(stderr, "dbg2       dummy7:         %f\n", mb_segytraceheader_ptr->roll);
 		fprintf(stderr, "dbg2       dummy8:         %f\n", mb_segytraceheader_ptr->pitch);
 		fprintf(stderr, "dbg2       heading:        %f\n", mb_segytraceheader_ptr->heading);
-		for (i = 0; i < mb_segytraceheader_ptr->nsamps; i++)
+		for (int i = 0; i < mb_segytraceheader_ptr->nsamps; i++)
 			fprintf(stderr, "dbg2       sample:%d  data:%f\n", i, segydata[i]);
 		fprintf(stderr, "dbg2       error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int kind, void *segytraceheader_ptr, float *segydata,
                    int *error) {
-	char *function_name = "mb_insert_segy";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	struct mb_segytraceheader_struct *mb_segytraceheader_ptr;
-	int i;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_segytraceheader_struct *mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segytraceheader_ptr;
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
-	mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segytraceheader_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:        %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:         %p\n", (void *)mbio_ptr);
@@ -2198,7 +1907,7 @@ int mb_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int kind, void 
 		fprintf(stderr, "dbg2       emute_mils:     %d\n", mb_segytraceheader_ptr->emute_mils);
 		fprintf(stderr, "dbg2       nsamps:         %d\n", mb_segytraceheader_ptr->nsamps);
 		fprintf(stderr, "dbg2       si_micros:      %d\n", mb_segytraceheader_ptr->si_micros);
-		for (i = 0; i < 19; i++)
+		for (int i = 0; i < 19; i++)
 			fprintf(stderr, "dbg2       other_1[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_1[i]);
 		fprintf(stderr, "dbg2       year:           %d\n", mb_segytraceheader_ptr->year);
 		fprintf(stderr, "dbg2       day_of_yr:      %d\n", mb_segytraceheader_ptr->day_of_yr);
@@ -2207,7 +1916,7 @@ int mb_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int kind, void 
 		fprintf(stderr, "dbg2       sec:            %d\n", mb_segytraceheader_ptr->sec);
 		fprintf(stderr, "dbg2       mils:           %d\n", mb_segytraceheader_ptr->mils);
 		fprintf(stderr, "dbg2       tr_weight:      %d\n", mb_segytraceheader_ptr->tr_weight);
-		for (i = 0; i < 5; i++)
+		for (int i = 0; i < 5; i++)
 			fprintf(stderr, "dbg2       other_2[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_2[i]);
 		fprintf(stderr, "dbg2       delay:          %f\n", mb_segytraceheader_ptr->delay);
 		fprintf(stderr, "dbg2       smute_sec:      %f\n", mb_segytraceheader_ptr->smute_sec);
@@ -2224,11 +1933,12 @@ int mb_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int kind, void 
 		fprintf(stderr, "dbg2       roll:           %f\n", mb_segytraceheader_ptr->roll);
 		fprintf(stderr, "dbg2       pitch:          %f\n", mb_segytraceheader_ptr->pitch);
 		fprintf(stderr, "dbg2       heading:        %f\n", mb_segytraceheader_ptr->heading);
-		for (i = 0; i < mb_segytraceheader_ptr->nsamps; i++)
+		for (int i = 0; i < mb_segytraceheader_ptr->nsamps; i++)
 			fprintf(stderr, "dbg2       sample:%d  data:%f\n", i, segydata[i]);
 	}
 
 	/* call the appropriate mbsys_ insertion routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_insert_segy != NULL) {
 		status = (*mb_io_ptr->mb_io_insert_segy)(verbose, mbio_ptr, store_ptr, kind, segytraceheader_ptr, segydata, error);
 	}
@@ -2237,42 +1947,32 @@ int mb_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int kind, void 
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_ctd(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nctd, double *time_d, double *conductivity,
            double *temperature, double *depth, double *salinity, double *soundspeed, int *error) {
-	char *function_name = "mb_ctd";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
 	/* note: the arrays should be allocated to MB_CTD_MAX length */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_ctd != NULL) {
 		status = (*mb_io_ptr->mb_io_ctd)(verbose, mbio_ptr, store_ptr, kind, nctd, time_d, conductivity, temperature, depth,
 		                                 salinity, soundspeed, error);
@@ -2282,16 +1982,14 @@ int mb_ctd(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nctd, d
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
 	if (verbose >= 2 && *error == MB_ERROR_NO_ERROR) {
 		fprintf(stderr, "dbg2       nctd:          %d\n", *nctd);
-		for (i = 0; i < *nctd; i++) {
+		for (int i = 0; i < *nctd; i++) {
 			fprintf(stderr, "dbg2       time_d:        %f\n", time_d[i]);
 			fprintf(stderr, "dbg2       conductivity:  %f\n", conductivity[i]);
 			fprintf(stderr, "dbg2       temperature:   %f\n", temperature[i]);
@@ -2306,33 +2004,25 @@ int mb_ctd(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nctd, d
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_ancilliarysensor(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nsensor, double *time_d, double *sensor1,
                         double *sensor2, double *sensor3, double *sensor4, double *sensor5, double *sensor6, double *sensor7,
                         double *sensor8, int *error) {
-	char *function_name = "mb_ancilliarysensor";
-	int status;
-	struct mb_io_struct *mb_io_ptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)store_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call the appropriate mbsys_ extraction routine */
 	/* note: the arrays should be allocated to MB_CTD_MAX length */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_ancilliarysensor != NULL) {
 		status = (*mb_io_ptr->mb_io_ancilliarysensor)(verbose, mbio_ptr, store_ptr, kind, nsensor, time_d, sensor1, sensor2,
 		                                              sensor3, sensor4, sensor5, sensor6, sensor7, sensor8, error);
@@ -2341,16 +2031,14 @@ int mb_ancilliarysensor(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		*nsensor = 0;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
 	if (verbose >= 2 && *error == MB_ERROR_NO_ERROR) {
 		fprintf(stderr, "dbg2       nsensor:       %d\n", *nsensor);
-		for (i = 0; i < *nsensor; i++) {
+		for (int i = 0; i < *nsensor; i++) {
 			fprintf(stderr, "dbg2       time_d:        %f\n", time_d[i]);
 			fprintf(stderr, "dbg2       sensor1:       %f\n", sensor1[i]);
 			fprintf(stderr, "dbg2       sensor2:       %f\n", sensor2[i]);
@@ -2369,19 +2057,12 @@ int mb_ancilliarysensor(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_copyrecord(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error) {
-	char *function_name = "mb_copy_record";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -2389,10 +2070,10 @@ int mb_copyrecord(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, 
 		fprintf(stderr, "dbg2       copy_ptr:   %p\n", (void *)copy_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call appropriate memory copy routine */
+	int status = MB_SUCCESS;
 	if (mb_io_ptr->mb_io_copyrecord != NULL) {
 		status = (*mb_io_ptr->mb_io_copyrecord)(verbose, mbio_ptr, store_ptr, copy_ptr, error);
 	}
@@ -2401,49 +2082,37 @@ int mb_copyrecord(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, 
 		*error = MB_ERROR_BAD_SYSTEM;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_indextable(int verbose, void *mbio_ptr, int *num_indextable, void **indextable_ptr, int *error) {
-	char *function_name = "mb_indextable";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:           %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:          %p\n", (void *)mbio_ptr);
 	}
 
-	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* return index table */
 	*num_indextable = mb_io_ptr->num_indextable;
 	*indextable_ptr = (void *) mb_io_ptr->indextable;
-    
-    /* return no error */
-    *error = MB_ERROR_NO_ERROR;
-    status = MB_SUCCESS;
 
-	/* print output debug statements */
+	/* return no error */
+	*error = MB_ERROR_NO_ERROR;
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       num_indextable:    %d\n", *num_indextable);
 		fprintf(stderr, "dbg2       indextable_ptr:    %p\n", *indextable_ptr);
@@ -2452,19 +2121,12 @@ int mb_indextable(int verbose, void *mbio_ptr, int *num_indextable, void **index
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_indextablefix(int verbose, void *mbio_ptr, int num_indextable, void *indextable_ptr, int *error) {
-	char *function_name = "mb_indextablefix";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:           %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:          %p\n", (void *)mbio_ptr);
@@ -2473,44 +2135,32 @@ int mb_indextablefix(int verbose, void *mbio_ptr, int num_indextable, void *inde
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call appropriate index table fix routine */
+	/* TODO(schwehr): Do we care about any error cases? */
 	if (mb_io_ptr->mb_io_indextablefix != NULL) {
-		status = (*mb_io_ptr->mb_io_indextablefix)(verbose, mbio_ptr, num_indextable, indextable_ptr, error);
+		/* status = */ (*mb_io_ptr->mb_io_indextablefix)(verbose, mbio_ptr, num_indextable, indextable_ptr, error);
 	}
-	else {
-		status = MB_FAILURE;
-		*error = MB_ERROR_BAD_SYSTEM;
-	}
-    
-    /* return no error */
-    *error = MB_ERROR_NO_ERROR;
-    status = MB_SUCCESS;
 
-	/* print output debug statements */
+	/* return no error */
+	*error = MB_ERROR_NO_ERROR;
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mb_indextableapply(int verbose, void *mbio_ptr, int num_indextable, void *indextable_ptr, int n_file, int *error) {
-	char *function_name = "mb_indextableapply";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:           %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:          %p\n", (void *)mbio_ptr);
@@ -2520,32 +2170,26 @@ int mb_indextableapply(int verbose, void *mbio_ptr, int num_indextable, void *in
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* call appropriate index table fix routine */
+	/* TODO(schwehr): Do we care about any error cases? */
 	if (mb_io_ptr->mb_io_indextableapply != NULL) {
-		status = (*mb_io_ptr->mb_io_indextableapply)(verbose, mbio_ptr, num_indextable, indextable_ptr, n_file, error);
+		/* status = */ (*mb_io_ptr->mb_io_indextableapply)(verbose, mbio_ptr, num_indextable, indextable_ptr, n_file, error);
 	}
-	else {
-		status = MB_FAILURE;
-		*error = MB_ERROR_BAD_SYSTEM;
-	}
-    
-    /* return no error */
-    *error = MB_ERROR_NO_ERROR;
-    status = MB_SUCCESS;
 
-	/* print output debug statements */
+	/* return no error */
+	*error = MB_ERROR_NO_ERROR;
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", version_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/

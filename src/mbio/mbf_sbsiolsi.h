@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_sbsiolsi.h	1/20/93
- *	$Id$
  *
- *    Copyright (c) 1993-2017 by
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -47,6 +46,9 @@
  * of the binary data structure used in the MBF_SBSIOLSI format.
  */
 
+#ifndef MBF_SBSIOLSI_H_
+#define MBF_SBSIOLSI_H_
+
 struct mbf_sbsiolsi_data_struct {
 	short deph[19];       /* 16 depths from Sea Beam in meters
 	                  assuming 1500 m/s water velocity */
@@ -75,3 +77,5 @@ struct mbf_sbsiolsi_struct {
 	int kind;
 	struct mbf_sbsiolsi_data_struct data;
 };
+
+#endif  /* MBF_SBSIOLSI_H_ */

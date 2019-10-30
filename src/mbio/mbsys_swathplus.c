@@ -1,8 +1,7 @@
 /*-------------------------------------------------------------------
  *    The MB-system:	mbsys_swathplus.c	3.00	1/27/2014
- *	$Id$
  *
- *    Copyright (c) 2014-2017 by
+ *    Copyright (c) 2014-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -21,21 +20,20 @@
  *
  * Author:	David Finlayson and D. W. Caress
  * Date:	Aug 29, 2013
- *
- *
  */
 
-/* standard include files */
+#include <assert.h>
+#include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
+#include <time.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
+#include "mb_status.h"
 #include "mbsys_swathplus.h"
 
 static int set_identity(int verbose, swpls_matrix *m, int *error);
@@ -47,30 +45,21 @@ int swpls_quat_to_angles(int verbose, const swpls_quaternion *q, swpls_angles *o
 int swpls_slerp(int verbose, const swpls_quaternion *q0, const swpls_quaternion *q1, double t, swpls_quaternion *q, int *error);
 static double wrap_pi(double theta);
 
-static char rcs_id[] = "$Id$";
 
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mbsys_swathplus_alloc";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* allocate memory for data structure */
-	status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_swathplus_struct), (void **)store_ptr, error);
+	const int status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_swathplus_struct), (void **)store_ptr, error);
 
 	/* initialize allocated structure to zero */
 	if (status == MB_SUCCESS) {
@@ -78,7 +67,7 @@ int mbsys_swathplus_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *er
 	}
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)*store_ptr;
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)*store_ptr;
 
 	/* initialize everything */
 
@@ -88,12 +77,12 @@ int mbsys_swathplus_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *er
 
 	/* initialize MB-System time stamp */
 	store->time_d = 0;
-	for (i = 0; i < 7; i++) {
+	for (int i = 0; i < 7; i++) {
 		store->time_i[i] = 0;
 	}
 
 	/* initialize projection set */
-	store->projection_set = MB_NO;
+	store->projection_set = false;
 	store->projection.projection_alloc = 0;
 	store->projection.projection_id = NULL;
 
@@ -102,21 +91,20 @@ int mbsys_swathplus_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *er
 	store->comment.message = NULL;
 
 	/* initialize sxp structs */
-	store->sxp_header_set = MB_NO;
+	store->sxp_header_set = false;
 	store->sxp_ping.points_alloc = 0;
 	store->sxp_ping.points = NULL;
 
 	/* initialize sxi structs */
-	store->sxi_header_set = MB_NO;
+	store->sxi_header_set = false;
 	store->sxi_ping.samps_alloc = 0;
 	store->sxi_ping.sampnum = NULL;
 	store->sxi_ping.angle = NULL;
 	store->sxi_ping.amplitude = NULL;
 	store->sxi_ping.quality = NULL;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)*store_ptr);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -124,23 +112,12 @@ int mbsys_swathplus_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *er
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_alloc */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mbsys_swathplus_deall";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *sxp_ping;
-	swpls_sxiping *sxi_ping;
-	swpls_projection *projection;
-	swpls_comment *comment;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -148,11 +125,11 @@ int mbsys_swathplus_deall(int verbose, void *mbio_ptr, void **store_ptr, int *er
 	}
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)*store_ptr;
-	sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
-	sxi_ping = (swpls_sxiping *)&(store->sxi_ping);
-	projection = (swpls_projection *)&(store->projection);
-	comment = (swpls_comment *)&(store->comment);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)*store_ptr;
+	swpls_sxpping *sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
+	swpls_sxiping *sxi_ping = (swpls_sxiping *)&(store->sxi_ping);
+	swpls_projection *projection = (swpls_projection *)&(store->projection);
+	swpls_comment *comment = (swpls_comment *)&(store->comment);
 
 	/* deallocate any arrays or structures contained within the store data
 	   structure */
@@ -177,35 +154,23 @@ int mbsys_swathplus_deall(int verbose, void *mbio_ptr, void **store_ptr, int *er
 	}
 
 	/* deallocate memory for data structure */
-	status = mb_freed(verbose, __FILE__, __LINE__, (void **)store_ptr, error);
+	const int status = mb_freed(verbose, __FILE__, __LINE__, (void **)store_ptr, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_deall */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss,
                                int *error) {
-	char *function_name = "mbsys_swathplus_dimensions";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *sxp_ping;
-	swpls_sxiping *sxi_ping;
-	int type;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -213,16 +178,16 @@ int mbsys_swathplus_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
-	sxi_ping = (swpls_sxiping *)&(store->sxi_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxpping *sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
+	swpls_sxiping *sxi_ping = (swpls_sxiping *)&(store->sxi_ping);
 
 	/* get data kind */
 	*kind = store->kind;
-	type = store->type;
+	const int type = store->type;
 
 	/* extract data from structure */
 	if ((*kind == MB_DATA_DATA) && ((type == SWPLS_ID_PROCESSED_PING) || (type == SWPLS_ID_PROCESSED_PING2))) {
@@ -244,9 +209,10 @@ int mbsys_swathplus_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int
 		*nss = 0;
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
@@ -257,39 +223,28 @@ int mbsys_swathplus_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_dimensions */
 /*--------------------------------------------------------------------*/
-int mbsys_swathplus_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error) {
-	char *function_name = "mbsys_swathplus_pingnumber";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *sxp_ping;
-	swpls_sxiping *sxi_ping;
-	int kind, type;
-
-	/* print input debug statements */
+int mbsys_swathplus_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error) {
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)mb_io_ptr->store_data;
-	sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
-	sxi_ping = (swpls_sxiping *)&(store->sxi_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)mb_io_ptr->store_data;
+	swpls_sxpping *sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
+	swpls_sxiping *sxi_ping = (swpls_sxiping *)&(store->sxi_ping);
 
 	/* get data kind */
-	kind = store->kind;
-	type = store->type;
+	const int kind = store->kind;
+	const int type = store->type;
 
 	/* extract data from structure */
 	if ((kind == MB_DATA_DATA) && ((type == SWPLS_ID_PROCESSED_PING) || (type == SWPLS_ID_PROCESSED_PING2))) {
@@ -302,30 +257,23 @@ int mbsys_swathplus_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int
 		*pingnumber = -1;
 	}
 
-	/* print output debug statements */
+	int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       pingnumber: %d\n", *pingnumber);
+		fprintf(stderr, "dbg2       pingnumber: %u\n", *pingnumber);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_pingnumber */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, int *error) {
-	char *function_name = "mbsys_swathplus_sonartype";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -333,17 +281,18 @@ int mbsys_swathplus_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int 
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
 
 	/* get sonar type */
 	*sonartype = MB_TOPOGRAPHY_TYPE_INTERFEROMETRIC;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       sonartype:  %d\n", *sonartype);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -351,20 +300,12 @@ int mbsys_swathplus_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int 
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_sonartype */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, int *error) {
-	char *function_name = "mbsys_swathplus_sidescantype";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -372,17 +313,18 @@ int mbsys_swathplus_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, i
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
 
 	/* get sidescan type */
 	*ss_type = MB_SIDESCAN_LOGARITHMIC;
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       ss_type:    %d\n", *ss_type);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -390,7 +332,6 @@ int mbsys_swathplus_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, i
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_sidescantype */
 /*--------------------------------------------------------------------*/
@@ -398,21 +339,11 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
                             double *navlon, double *navlat, double *speed, double *heading, int *nbath, int *namp, int *nss,
                             char *beamflag, double *bath, double *amp, double *bathacrosstrack, double *bathalongtrack,
                             double *ss, double *ssacrosstrack, double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mbsys_swathplus_extract";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *sxp_ping;
-	swpls_sxiping *sxi_ping;
 	swpls_point *points;
 	swpls_matrix wtov;
-	int type;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -420,21 +351,23 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
-	sxi_ping = (swpls_sxiping *)&(store->sxi_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxpping *sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
+	swpls_sxiping *sxi_ping = (swpls_sxiping *)&(store->sxi_ping);
 
 	/* get data kind */
 	*kind = store->kind;
-	type = store->type;
+	const int type = store->type;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if ((*kind == MB_DATA_DATA) && ((type == SWPLS_ID_PROCESSED_PING) || (type == SWPLS_ID_PROCESSED_PING2))) {
 		/* get time */
-		for (i = 0; i < 7; i++) {
+		for (int i = 0; i < 7; i++) {
 			time_i[i] = store->time_i[i];
 		}
 		*time_d = store->time_d;
@@ -476,7 +409,7 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		swpls_concat_rotate_y(verbose, &wtov, -(sxp_ping->heading) * DTR, error);
 
 		points = sxp_ping->points;
-		for (i = 0; i < *nbath; i++) {
+		for (int i = 0; i < *nbath; i++) {
 			swpls_vector ppos;
 
 			ppos.x = points[i].x;
@@ -501,9 +434,8 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		/* extract sidescan */
 		*nss = 0;
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -520,17 +452,17 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
 			fprintf(stderr, "dbg4       speed:      %f\n", *speed);
 			fprintf(stderr, "dbg4       heading:    %f\n", *heading);
 			fprintf(stderr, "dbg4       nbath:      %d\n", *nbath);
-			for (i = 0; i < *nbath; i++) {
+			for (int i = 0; i < *nbath; i++) {
 				fprintf(stderr, "dbg4       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i], bathalongtrack[i]);
 			}
 			fprintf(stderr, "dbg4        namp:     %d\n", *namp);
-			for (i = 0; i < *namp; i++) {
+			for (int i = 0; i < *namp; i++) {
 				fprintf(stderr, "dbg4        beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 				        bathalongtrack[i]);
 			}
 			fprintf(stderr, "dbg4        nss:      %d\n", *nss);
-			for (i = 0; i < *nss; i++) {
+			for (int i = 0; i < *nss; i++) {
 				fprintf(stderr, "dbg4        pixel:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 				        ssalongtrack[i]);
 			}
@@ -541,7 +473,7 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
 	/* extract comment from structure */
 	else if (*kind == MB_DATA_COMMENT) {
 		/* get time */
-		for (i = 0; i < 7; i++) {
+		for (int i = 0; i < 7; i++) {
 			time_i[i] = store->time_i[i];
 		}
 		*time_d = store->time_d;
@@ -554,9 +486,8 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
 			comment[0] = '\0';
 		}
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg4  Comment extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Comment extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  New ping values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -574,14 +505,13 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
 	/* set time for other data records */
 	else {
 		/* get time */
-		for (i = 0; i < 7; i++) {
+		for (int i = 0; i < 7; i++) {
 			time_i[i] = store->time_i[i];
 		}
 		*time_d = store->time_d;
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -597,9 +527,8 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -624,17 +553,17 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
 	}
 	if ((verbose >= 2) && (*error <= MB_ERROR_NO_ERROR) && (*kind == MB_DATA_DATA)) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
-		for (i = 0; i < *nbath; i++) {
+		for (int i = 0; i < *nbath; i++) {
 			fprintf(stderr, "dbg2       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 			        bathacrosstrack[i], bathalongtrack[i]);
 		}
 		fprintf(stderr, "dbg2        namp:     %d\n", *namp);
-		for (i = 0; i < *namp; i++) {
+		for (int i = 0; i < *namp; i++) {
 			fprintf(stderr, "dbg2       beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 			        bathalongtrack[i]);
 		}
 		fprintf(stderr, "dbg2        nss:      %d\n", *nss);
-		for (i = 0; i < *nss; i++) {
+		for (int i = 0; i < *nss; i++) {
 			fprintf(stderr, "dbg2        pixel:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 			        ssalongtrack[i]);
 		}
@@ -645,7 +574,6 @@ int mbsys_swathplus_extract(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_extract */
 /*--------------------------------------------------------------------*/
@@ -653,23 +581,12 @@ int mbsys_swathplus_insert(int verbose, void *mbio_ptr, void *store_ptr, int kin
                            double navlat, double speed, double heading, int nbath, int namp, int nss, char *beamflag,
                            double *bath, double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss,
                            double *ssacrosstrack, double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mbsys_swathplus_insert";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	swpls_header *header;
-	swpls_sxpping *sxp_ping;
-	swpls_point *points;
-	swpls_comment *ocomment;
 	swpls_matrix vtow;
 	char path[MB_PATH_MAXLINE];
-	int i;
 	int nchars;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -698,21 +615,21 @@ int mbsys_swathplus_insert(int verbose, void *mbio_ptr, void *store_ptr, int kin
 	if ((verbose >= 2) && (kind == MB_DATA_DATA)) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", nbath);
 		if (verbose >= 3) {
-			for (i = 0; i < nbath; i++) {
+			for (int i = 0; i < nbath; i++) {
 				fprintf(stderr, "dbg3       beam:%d  flag:%3d  bath:%f  acrosstrack:%f  alongtrack:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i], bathalongtrack[i]);
 			}
 		}
 		fprintf(stderr, "dbg2       namp:       %d\n", namp);
 		if (verbose >= 3) {
-			for (i = 0; i < namp; i++) {
+			for (int i = 0; i < namp; i++) {
 				fprintf(stderr, "dbg3        beam:%d   amp:%f  acrosstrack:%f  alongtrack:%f\n", i, amp[i], bathacrosstrack[i],
 				        bathalongtrack[i]);
 			}
 		}
 		fprintf(stderr, "dbg2        nss:       %d\n", nss);
 		if (verbose >= 3) {
-			for (i = 0; i < nss; i++) {
+			for (int i = 0; i < nss; i++) {
 				fprintf(stderr, "dbg3        beam:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 				        ssalongtrack[i]);
 			}
@@ -720,21 +637,23 @@ int mbsys_swathplus_insert(int verbose, void *mbio_ptr, void *store_ptr, int kin
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	header = (swpls_header *)&(store->sxp_header);
-	sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
-	ocomment = (swpls_comment *)&(store->comment);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_header *header = (swpls_header *)&(store->sxp_header);
+	swpls_sxpping *sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
+	swpls_comment *ocomment = (swpls_comment *)&(store->comment);
 
 	/* set data kind */
 	store->kind = kind;
 
+	int status = MB_SUCCESS;
+
 	/* insert data in structure */
 	if ((store->kind == MB_DATA_DATA) && (mb_io_ptr->format == MBF_SWPLSSXP)) {
 		/* get time */
-		for (i = 0; i < 7; i++) {
+		for (int i = 0; i < 7; i++) {
 			store->time_i[i] = time_i[i];
 		}
 		store->time_d = time_d;
@@ -774,8 +693,8 @@ int mbsys_swathplus_insert(int verbose, void *mbio_ptr, void *store_ptr, int kin
 			swpls_concat_rotate_y(verbose, &vtow, sxp_ping->heading * DTR, error);
 			swpls_concat_translate(verbose, &vtow, sxp_ping->txer_e, 0.0, sxp_ping->txer_n, error);
 
-			points = store->sxp_ping.points;
-			for (i = 0; i < nbath; i++) {
+			swpls_point *points = store->sxp_ping.points;
+			for (int i = 0; i < nbath; i++) {
 				swpls_vector ppos;
 
 				ppos.x = bathacrosstrack[i];
@@ -806,7 +725,7 @@ int mbsys_swathplus_insert(int verbose, void *mbio_ptr, void *store_ptr, int kin
 	else if (store->kind == MB_DATA_COMMENT) {
 		/* get time */
 		if (time_d > 0.0) {
-			for (i = 0; i < 7; i++) {
+			for (int i = 0; i < 7; i++) {
 				store->time_i[i] = time_i[i];
 			}
 			store->time_d = time_d;
@@ -839,37 +758,27 @@ int mbsys_swathplus_insert(int verbose, void *mbio_ptr, void *store_ptr, int kin
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_insert */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, double *ttimes, double *angles,
                            double *angles_forward, double *angles_null, double *heave, double *alongtrack_offset, double *draft,
                            double *ssv, int *error) {
-	char *function_name = "mbsys_swathplus_ttimes";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *sxp_ping;
 	swpls_point *points;
 	int type;
 	double dist;
 	double alpha, beta, theta, phi;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -883,15 +792,17 @@ int mbsys_swathplus_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *ki
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxpping *sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
 
 	/* get data kind */
 	*kind = store->kind;
 	type = store->type;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if ((*kind == MB_DATA_DATA) && ((type == SWPLS_ID_PROCESSED_PING) || (type == SWPLS_ID_PROCESSED_PING2))) {
@@ -914,7 +825,7 @@ int mbsys_swathplus_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *ki
 		swpls_concat_rotate_y(verbose, &wtov, -sxp_ping->heading, error);
 
 		points = sxp_ping->points;
-		for (i = 0; i < sxp_ping->nosampsfile; i++) {
+		for (int i = 0; i < sxp_ping->nosampsfile; i++) {
 			swpls_vector ppos;
 
 			/* point position relative to reference point */
@@ -960,9 +871,8 @@ int mbsys_swathplus_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *ki
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -970,7 +880,7 @@ int mbsys_swathplus_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *ki
 		fprintf(stderr, "dbg2       draft:      %f\n", *draft);
 		fprintf(stderr, "dbg2       ssv:        %f\n", *ssv);
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++) {
+		for (int i = 0; i < *nbeams; i++) {
 			fprintf(stderr, "dbg2       beam %d: tt:%f  angle_xtrk:%f  angle_ltrk:%f  angle_null:%f  depth_off:%f  ltrk_off:%f\n",
 			        i, ttimes[i], angles[i], angles_forward[i], angles_null[i], heave[i], alongtrack_offset[i]);
 		}
@@ -981,23 +891,14 @@ int mbsys_swathplus_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *ki
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_ttimes */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, int *detects, int *error) {
-	char *function_name = "mbsys_swathplus_detects";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *sxp_ping;
-	int i;
 	int type;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1006,15 +907,17 @@ int mbsys_swathplus_detects(int verbose, void *mbio_ptr, void *store_ptr, int *k
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxpping *sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
 
 	/* get data kind */
 	*kind = store->kind;
 	type = store->type;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -1024,7 +927,7 @@ int mbsys_swathplus_detects(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		    MB_DETECT_PHASE
 		    MB_DETECT_UNKNOWN */
 		*nbeams = sxp_ping->nosampsfile;
-		for (i = 0; i < *nbeams; i++) {
+		for (int i = 0; i < *nbeams; i++) {
 			detects[i] = MB_DETECT_PHASE;
 		}
 
@@ -1047,15 +950,14 @@ int mbsys_swathplus_detects(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
 	if ((verbose >= 2) && (*error == MB_ERROR_NO_ERROR)) {
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++) {
+		for (int i = 0; i < *nbeams; i++) {
 			fprintf(stderr, "dbg2       beam %d: detects:%d\n", i, detects[i]);
 		}
 	}
@@ -1065,23 +967,13 @@ int mbsys_swathplus_detects(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_detects */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_gains(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *transmit_gain, double *pulse_length,
                           double *receive_gain, int *error) {
-	char *function_name = "mbsys_swathplus_gains";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *sxp_ping;
-	int type;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1089,15 +981,17 @@ int mbsys_swathplus_gains(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxpping *sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
 
 	/* get data kind */
 	*kind = store->kind;
-	type = store->type;
+	const int type = store->type;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if ((*kind == MB_DATA_DATA) && ((type == SWPLS_ID_PROCESSED_PING) || (type == SWPLS_ID_PROCESSED_PING2))) {
@@ -1129,9 +1023,8 @@ int mbsys_swathplus_gains(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -1146,26 +1039,15 @@ int mbsys_swathplus_gains(int verbose, void *mbio_ptr, void *store_ptr, int *kin
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_gains */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *transducer_depth,
                                      double *altitude, int *error) {
-	char *function_name = "mbsys_swathplus_extract_altitude";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *sxp_ping;
-	int i;
-	int n;
 	double sum, ave;
-	int type;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1173,15 +1055,17 @@ int mbsys_swathplus_extract_altitude(int verbose, void *mbio_ptr, void *store_pt
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	sxp_ping = &(store->sxp_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxpping *sxp_ping = &(store->sxp_ping);
 
 	/* get data kind */
 	*kind = store->kind;
-	type = store->type;
+	const int type = store->type;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if ((*kind == MB_DATA_DATA) && ((type == SWPLS_ID_PROCESSED_PING) || (type == SWPLS_ID_PROCESSED_PING2))) {
@@ -1189,7 +1073,8 @@ int mbsys_swathplus_extract_altitude(int verbose, void *mbio_ptr, void *store_pt
 		*transducer_depth = sxp_ping->txer_waterdepth; /* static draft */
 
 		/* calculate mean depth of first 25 near-nadir samples */
-		i = n = 0;
+		int i = 0;
+		int n = 0;
 		sum = 0.0;
 		while (i < sxp_ping->nosampsfile && n < 25) {
 			if (sxp_ping->points[i].status != SWPLS_POINT_REJECTED) {
@@ -1227,9 +1112,8 @@ int mbsys_swathplus_extract_altitude(int verbose, void *mbio_ptr, void *store_pt
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       transducer_depth:  %f\n", *transducer_depth);
@@ -1239,25 +1123,14 @@ int mbsys_swathplus_extract_altitude(int verbose, void *mbio_ptr, void *store_pt
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_extract_altitude */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time_i[7], double *time_d,
                                 double *navlon, double *navlat, double *speed, double *heading, double *draft, double *roll,
                                 double *pitch, double *heave, int *error) {
-	char *function_name = "mbsys_swathplus_extract_nav";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *sxp_ping;
-	int i;
-	int type;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1265,22 +1138,24 @@ int mbsys_swathplus_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, in
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxpping *sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
 
 	/* get data kind */
 	*kind = store->kind;
-	type = store->type;
+	const int type = store->type;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from survey record */
 	if ((*kind == MB_DATA_DATA) && ((type == SWPLS_ID_PROCESSED_PING) || (type == SWPLS_ID_PROCESSED_PING2))) {
 		double sxpheave;
 
 		/* get time */
-		for (i = 0; i < 7; i++) {
+		for (int i = 0; i < 7; i++) {
 			time_i[i] = store->time_i[i];
 		}
 		*time_d = store->time_d;
@@ -1320,7 +1195,7 @@ int mbsys_swathplus_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, in
 		status = MB_FAILURE;
 
 		/* get time */
-		for (i = 0; i < 7; i++) {
+		for (int i = 0; i < 7; i++) {
 			time_i[i] = store->time_i[i];
 		}
 		*time_d = store->time_d;
@@ -1332,15 +1207,14 @@ int mbsys_swathplus_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, in
 		status = MB_FAILURE;
 
 		/* get time */
-		for (i = 0; i < 7; i++) {
+		for (int i = 0; i < 7; i++) {
 			time_i[i] = store->time_i[i];
 		}
 		*time_d = store->time_d;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:          %d\n", *kind);
 		fprintf(stderr, "dbg2       time_i[0]:     %d\n", time_i[0]);
@@ -1364,25 +1238,14 @@ int mbsys_swathplus_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, in
 		fprintf(stderr, "dbg2       status:        %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_extract_nav */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_i[7], double time_d, double navlon,
                                double navlat, double speed, double heading, double draft, double roll, double pitch, double heave,
                                int *error) {
-	char *function_name = "mbsys_swathplus_insert_nav";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *sxp_ping;
-	int i;
-	int kind, type;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1406,15 +1269,17 @@ int mbsys_swathplus_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxpping *sxp_ping = (swpls_sxpping *)&(store->sxp_ping);
 
 	/* get data kind */
-	kind = store->kind;
-	type = store->type;
+	const int kind = store->kind;
+	const int type = store->type;
+
+	int status = MB_SUCCESS;
 
 	/* insert data in ping structure */
 	if ((kind == MB_DATA_DATA) && ((type == SWPLS_ID_PROCESSED_PING) || (type == SWPLS_ID_PROCESSED_PING2))) {
@@ -1464,7 +1329,7 @@ int mbsys_swathplus_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int
 
 		/* transform points from old to new coordinates */
 		points = sxp_ping->points;
-		for (i = 0; i < sxp_ping->nosampsfile; i++) {
+		for (int i = 0; i < sxp_ping->nosampsfile; i++) {
 			swpls_vector p;
 
 			p.x = points[i].x;
@@ -1477,7 +1342,7 @@ int mbsys_swathplus_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int
 		}
 
 		/* set time */
-		for (i = 0; i < 7; i++) {
+		for (int i = 0; i < 7; i++) {
 			store->time_i[i] = time_i[i];
 		}
 		store->time_d = time_d;
@@ -1497,9 +1362,8 @@ int mbsys_swathplus_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int
 		store->sxp_ping.pitch = pitch;
 		store->sxp_ping.roll = -roll;
 
-		/* print output debug statements */
 		if (verbose >= 2) {
-			fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+			fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 			fprintf(stderr, "dbg2  Return value:\n");
 			fprintf(stderr, "dbg2       error:      %d\n", *error);
 			fprintf(stderr, "dbg2  Return status:\n");
@@ -1511,11 +1375,6 @@ int mbsys_swathplus_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int
 } /* mbsys_swathplus_insert_nav */
 /*--------------------------------------------------------------------*/
 int mbsys_swathplus_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error) {
-	char *function_name = "mbsys_swathplus_copy";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	struct mbsys_swathplus_struct *copy;
 	size_t points_alloc_save;
 	swpls_point *points_save;
 	size_t samps_alloc_save;
@@ -1528,12 +1387,9 @@ int mbsys_swathplus_copy(int verbose, void *mbio_ptr, void *store_ptr, void *cop
 	size_t message_alloc_save;
 	char *message_save;
 	size_t copy_len;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1542,11 +1398,11 @@ int mbsys_swathplus_copy(int verbose, void *mbio_ptr, void *store_ptr, void *cop
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointers */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	copy = (struct mbsys_swathplus_struct *)copy_ptr;
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	struct mbsys_swathplus_struct *copy = (struct mbsys_swathplus_struct *)copy_ptr;
 
 	/* copy the data - for many formats memory must be allocated and
 	    sub-structures copied separately */
@@ -1555,7 +1411,7 @@ int mbsys_swathplus_copy(int verbose, void *mbio_ptr, void *store_ptr, void *cop
 
 	/* copy MB-System time stamp of most recently read record */
 	copy->time_d = store->time_d;
-	for (i = 0; i < 7; i++) {
+	for (int i = 0; i < 7; i++) {
 		copy->time_i[i] = store->time_i[i];
 	}
 
@@ -1572,6 +1428,9 @@ int mbsys_swathplus_copy(int verbose, void *mbio_ptr, void *store_ptr, void *cop
 	copy->sxp_ping.points_alloc = points_alloc_save;
 	copy->sxp_ping.points = points_save;
 	copy_len = (size_t)store->sxp_ping.points_alloc * sizeof(swpls_point);
+
+	int status = MB_SUCCESS;
+
 	if ((status == MB_SUCCESS) && (copy->sxp_ping.points_alloc < store->sxp_ping.points_alloc)) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, copy_len, (void **)&(copy->sxp_ping.points), error);
 		if (status == MB_SUCCESS) {
@@ -1696,29 +1555,22 @@ int mbsys_swathplus_copy(int verbose, void *mbio_ptr, void *store_ptr, void *cop
 	/* copy WL OFFSET */
 	copy->wl_offset = store->wl_offset;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* mbsys_swathplus_copy */
 /*-------------------------------------------------------------------*/
 int swpls_chk_header(int verbose, void *mbio_ptr, char *buffer, int *recordid, int *size, int *error) {
-	char *function_name = "swpls_chk_header";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
 	int index;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:       %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:      %p\n", (void *)mbio_ptr);
@@ -1726,14 +1578,16 @@ int swpls_chk_header(int verbose, void *mbio_ptr, char *buffer, int *recordid, i
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get values to check */
 	index = 0;
-	mb_get_binary_int(MB_YES, &buffer[index], recordid);
+	mb_get_binary_int(true, &buffer[index], recordid);
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], size);
+	mb_get_binary_int(true, &buffer[index], size);
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	/* check recordid */
 	if ((*recordid != SWPLS_ID_SXP_HEADER_DATA) && (*recordid != SWPLS_ID_PROCESSED_PING) &&
@@ -1752,9 +1606,8 @@ int swpls_chk_header(int verbose, void *mbio_ptr, char *buffer, int *recordid, i
 		*error = MB_ERROR_NO_ERROR;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Output arguments:\n");
 		fprintf(stderr, "dbg2       recordid:      %d\n", *recordid);
 		fprintf(stderr, "dbg2       size:          %d\n", *size);
@@ -1762,21 +1615,12 @@ int swpls_chk_header(int verbose, void *mbio_ptr, char *buffer, int *recordid, i
 		fprintf(stderr, "dbg2       status:        %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_chk_header */
 /* --------------------------------------------------------------------*/
 int swpls_rd_sxpheader(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_sxpheader";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_header *header;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       buffer:     %p\n", (void *)buffer);
@@ -1784,29 +1628,30 @@ int swpls_rd_sxpheader(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	header = &(store->sxp_header);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_header *header = &(store->sxp_header);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(header->swver));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(header->swver));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(header->fmtver));
+	mb_get_binary_int(true, &buffer[index], &(header->fmtver));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	/* set kind */
 	if (status == MB_SUCCESS) {
 		store->kind = MB_DATA_HEADER;
 		store->type = SWPLS_ID_SXP_HEADER_DATA;
-		store->sxp_header_set = MB_YES;
+		store->sxp_header_set = true;
 	}
 	else {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      header:     %p\n", header);
 		fprintf(stderr, "dbg2       error:     %d\n", *error);
@@ -1818,20 +1663,12 @@ int swpls_rd_sxpheader(int verbose, char *buffer, void *store_ptr, int *error) {
 } /* swpls_rd_sxpheader */
 /*--------------------------------------------------------------------*/
 int swpls_rd_sxpping(int verbose, char *buffer, void *store_ptr, int pingtype, int *error) {
-	char *function_name = "swpls_rd_sxpping";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *ping;
-	int index;
 	int int_val;
 	short int short_val;
-	int i;
 	size_t read_len;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       buffer:     %p\n", (void *)buffer);
@@ -1840,95 +1677,97 @@ int swpls_rd_sxpping(int verbose, char *buffer, void *store_ptr, int pingtype, i
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	ping = &(store->sxp_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxpping *ping = &(store->sxp_ping);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
+	int index = SWPLS_SIZE_BLOCKHEADER;
 	strncpy(&buffer[index], ping->linename, SWPLS_MAX_LINENAME);
 	index += SWPLS_MAX_LINENAME;
 	ping->linename[SWPLS_MAX_LINENAME - 1] = '\0';
-	mb_get_binary_int(MB_YES, &buffer[index], &int_val);
+	mb_get_binary_int(true, &buffer[index], &int_val);
 	index += 4;
 	ping->pingnumber = (unsigned int)int_val;
 	index += 4; /* padding bytes */
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->time_d));
+	mb_get_binary_double(true, &buffer[index], &(ping->time_d));
 	index += 8;
-	mb_get_binary_int(MB_YES, &buffer[index], &(ping->notxers));
+	mb_get_binary_int(true, &buffer[index], &(ping->notxers));
 	index += 4;
 	index += 4; /* padding bytes */
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->easting));
+	mb_get_binary_double(true, &buffer[index], &(ping->easting));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->northing));
+	mb_get_binary_double(true, &buffer[index], &(ping->northing));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->roll));
+	mb_get_binary_double(true, &buffer[index], &(ping->roll));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->pitch));
+	mb_get_binary_double(true, &buffer[index], &(ping->pitch));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->heading));
+	mb_get_binary_double(true, &buffer[index], &(ping->heading));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->height));
+	mb_get_binary_double(true, &buffer[index], &(ping->height));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->tide));
+	mb_get_binary_double(true, &buffer[index], &(ping->tide));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->sos));
+	mb_get_binary_double(true, &buffer[index], &(ping->sos));
 	index += 8;
 	ping->txno = buffer[index++];
 	ping->txstat = buffer[index++];
 	ping->txpower = buffer[index++];
 	index += 1; /* padding byte */
-	mb_get_binary_short(MB_YES, &buffer[index], &(ping->analoggain));
+	mb_get_binary_short(true, &buffer[index], &(ping->analoggain));
 	index += 2;
 	ping->nostaves = buffer[index++];
-	for (i = 0; i < SWPLS_MAX_TX_INFO; i++) {
+	for (int i = 0; i < SWPLS_MAX_TX_INFO; i++) {
 		ping->txinfo[i] = buffer[index++];
 	}
 	index += 1; /* padding bytes */
 	ping->freq = buffer[index++];
 	index += 4; /* padding bytes */
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->frequency));
+	mb_get_binary_double(true, &buffer[index], &(ping->frequency));
 	index += 8;
-	mb_get_binary_short(MB_YES, &buffer[index], &(ping->trnstime));
+	mb_get_binary_short(true, &buffer[index], &(ping->trnstime));
 	index += 2;
-	mb_get_binary_short(MB_YES, &buffer[index], &(ping->recvtime));
+	mb_get_binary_short(true, &buffer[index], &(ping->recvtime));
 	index += 2;
 	ping->samprate = buffer[index++];
 	index += 3; /* padding bytes */
-	mb_get_binary_int(MB_YES, &buffer[index], &(ping->nosampsorig));
+	mb_get_binary_int(true, &buffer[index], &(ping->nosampsorig));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(ping->nosampsfile));
+	mb_get_binary_int(true, &buffer[index], &(ping->nosampsfile));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(ping->nosampslots));
+	mb_get_binary_int(true, &buffer[index], &(ping->nosampslots));
 	index += 4;
 	index += 4; /* padding bytes */
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_e));
+	mb_get_binary_double(true, &buffer[index], &(ping->txer_e));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_n));
+	mb_get_binary_double(true, &buffer[index], &(ping->txer_n));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_height));
+	mb_get_binary_double(true, &buffer[index], &(ping->txer_height));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_forward));
+	mb_get_binary_double(true, &buffer[index], &(ping->txer_forward));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_starboard));
+	mb_get_binary_double(true, &buffer[index], &(ping->txer_starboard));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_azimuth));
+	mb_get_binary_double(true, &buffer[index], &(ping->txer_azimuth));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_elevation));
+	mb_get_binary_double(true, &buffer[index], &(ping->txer_elevation));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_skew));
+	mb_get_binary_double(true, &buffer[index], &(ping->txer_skew));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_time));
+	mb_get_binary_double(true, &buffer[index], &(ping->txer_time));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_waterdepth));
+	mb_get_binary_double(true, &buffer[index], &(ping->txer_waterdepth));
 	index += 8;
 
 	if (pingtype == SWPLS_ID_PROCESSED_PING) {
 		ping->txer_pitch = 0.0;
 	}
 	else if (pingtype == SWPLS_ID_PROCESSED_PING2) {
-		mb_get_binary_double(MB_YES, &buffer[index], &(ping->txer_pitch));
+		mb_get_binary_double(true, &buffer[index], &(ping->txer_pitch));
 		index += 8;
 	}
+
+	int status = MB_SUCCESS;
 
 	/* check that we have enough storage for the points stored in the file
 	 */
@@ -1945,20 +1784,20 @@ int swpls_rd_sxpping(int verbose, char *buffer, void *store_ptr, int pingtype, i
 
 	/* extract the point data from the buffer into the ping struct */
 	if (status == MB_SUCCESS) {
-		for (i = 0; i < ping->nosampsfile; i++) {
-			mb_get_binary_int(MB_YES, &buffer[index], &(ping->points[i].sampnum));
+		for (int i = 0; i < ping->nosampsfile; i++) {
+			mb_get_binary_int(true, &buffer[index], &(ping->points[i].sampnum));
 			index += 4;
 			index += 4; /* padding bytes */
-			mb_get_binary_double(MB_YES, &buffer[index], &(ping->points[i].y));
+			mb_get_binary_double(true, &buffer[index], &(ping->points[i].y));
 			index += 8;
-			mb_get_binary_double(MB_YES, &buffer[index], &(ping->points[i].x));
+			mb_get_binary_double(true, &buffer[index], &(ping->points[i].x));
 			index += 8;
-			mb_get_binary_float(MB_YES, &buffer[index], &(ping->points[i].z));
+			mb_get_binary_float(true, &buffer[index], &(ping->points[i].z));
 			index += 4;
-			mb_get_binary_short(MB_YES, &buffer[index], &short_val);
+			mb_get_binary_short(true, &buffer[index], &short_val);
 			index += 2;
 			ping->points[i].amp = (unsigned short)short_val;
-			mb_get_binary_short(MB_YES, &buffer[index], &short_val);
+			mb_get_binary_short(true, &buffer[index], &short_val);
 			index += 2;
 			ping->points[i].procamp = (unsigned short)short_val;
 			ping->points[i].status = buffer[index++];
@@ -1969,7 +1808,7 @@ int swpls_rd_sxpping(int verbose, char *buffer, void *store_ptr, int pingtype, i
 				ping->points[i].tpu = 0.0;
 			}
 			else if (pingtype == SWPLS_ID_PROCESSED_PING2) {
-				mb_get_binary_double(MB_YES, &buffer[index], &(ping->points[i].tpu));
+				mb_get_binary_double(true, &buffer[index], &(ping->points[i].tpu));
 				index += 8;
 			}
 		}
@@ -1993,7 +1832,7 @@ int swpls_rd_sxpping(int verbose, char *buffer, void *store_ptr, int pingtype, i
 		swpls_pr_sxpping(verbose, stderr, ping, error);
 	}
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2        ping:      %p\n", ping);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -2005,16 +1844,8 @@ int swpls_rd_sxpping(int verbose, char *buffer, void *store_ptr, int pingtype, i
 } /* swpls_rd_sxpping */
 /*--------------------------------------------------------------------*/
 int swpls_rd_projection(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_projection";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_projection *projection;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       buffer:     %p\n", (void *)buffer);
@@ -2022,19 +1853,23 @@ int swpls_rd_projection(int verbose, char *buffer, void *store_ptr, int *error) 
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+
+	int status = MB_SUCCESS;
+
+	swpls_projection *projection = NULL;
 
 	/* only read the projection if not previously set */
-	if (store->projection_set == MB_NO) {
+	if (store->projection_set == false) {
 		projection = &(store->projection);
 
 		/* extract the data */
-		index = SWPLS_SIZE_BLOCKHEADER;
-		mb_get_binary_int(MB_YES, &buffer[index], &(projection->time_d));
+		int index = SWPLS_SIZE_BLOCKHEADER;
+		mb_get_binary_int(true, &buffer[index], &(projection->time_d));
 		index += 4;
-		mb_get_binary_int(MB_YES, &buffer[index], &(projection->microsec));
+		mb_get_binary_int(true, &buffer[index], &(projection->microsec));
 		index += 4;
-		mb_get_binary_int(MB_YES, &buffer[index], &(projection->nchars));
+		mb_get_binary_int(true, &buffer[index], &(projection->nchars));
 		index += 4;
 
 		/* allocated memory to hold the message if necessary */
@@ -2062,20 +1897,19 @@ int swpls_rd_projection(int verbose, char *buffer, void *store_ptr, int *error) 
 			/* set the kind and type */
 			store->kind = MB_DATA_PARAMETER;
 			store->type = SWPLS_ID_PROJECTION;
-			store->projection_set = MB_YES;
+			store->projection_set = true;
 		}
 		else {
 			store->kind = MB_DATA_NONE;
 		}
 	}
 
-	/* print debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                 %d\n", *error);
 		fprintf(stderr, "dbg2       store->projection_set: %d\n", store->projection_set);
-		if (store->projection_set == MB_YES) {
+		if (store->projection_set == true) {
 			projection = &(store->projection);
 			fprintf(stderr, "dbg2       projection->projection_id:  %s\n", projection->projection_id);
 		}
@@ -2087,16 +1921,8 @@ int swpls_rd_projection(int verbose, char *buffer, void *store_ptr, int *error) 
 } /* swpls_rd_projection */
 /*--------------------------------------------------------------------*/
 int swpls_rd_comment(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_comment";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_comment *comment;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       buffer:     %p\n", (void *)buffer);
@@ -2104,17 +1930,19 @@ int swpls_rd_comment(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	comment = &(store->comment);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_comment *comment = &(store->comment);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(comment->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(comment->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(comment->microsec));
+	mb_get_binary_int(true, &buffer[index], &(comment->microsec));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(comment->nchars));
+	mb_get_binary_int(true, &buffer[index], &(comment->nchars));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	/* allocated memory to hold the message if necessary */
 	if (comment->message_alloc < comment->nchars) {
@@ -2145,9 +1973,8 @@ int swpls_rd_comment(int verbose, char *buffer, void *store_ptr, int *error) {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -2158,16 +1985,8 @@ int swpls_rd_comment(int verbose, char *buffer, void *store_ptr, int *error) {
 } /* swpls_rd_comment */
 /*--------------------------------------------------------------------*/
 int swpls_rd_sxiheader(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_sxiheader";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_header *header;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2175,29 +1994,30 @@ int swpls_rd_sxiheader(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	header = &(store->sxi_header);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_header *header = &(store->sxi_header);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(header->swver));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(header->swver));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(header->fmtver));
+	mb_get_binary_int(true, &buffer[index], &(header->fmtver));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	/* set kind */
 	if (status == MB_SUCCESS) {
 		store->kind = MB_DATA_HEADER;
 		store->type = SWPLS_ID_SXI_HEADER_DATA;
-		store->sxi_header_set = MB_YES;
+		store->sxi_header_set = true;
 	}
 	else {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Output arguments:\n");
 		fprintf(stderr, "dbg2      header:         %p\n", header);
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
@@ -2205,25 +2025,16 @@ int swpls_rd_sxiheader(int verbose, char *buffer, void *store_ptr, int *error) {
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_sxiheader */
 /*--------------------------------------------------------------------*/
 int swpls_rd_sxiping(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_sxiping";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxiping *ping;
 	short short_val;
 	int int_val;
-	int index;
 	size_t read_len;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2231,41 +2042,43 @@ int swpls_rd_sxiping(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	ping = &(store->sxi_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxiping *ping = &(store->sxi_ping);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(ping->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(ping->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(ping->microsec));
+	mb_get_binary_int(true, &buffer[index], &(ping->microsec));
 	index += 4;
 	ping->channel = buffer[index];
 	index++;
-	mb_get_binary_int(MB_YES, &buffer[index], &int_val);
+	mb_get_binary_int(true, &buffer[index], &int_val);
 	index += 4;
 	ping->pingnumber = (unsigned long)int_val;
-	mb_get_binary_float(MB_YES, &buffer[index], &(ping->frequency));
+	mb_get_binary_float(true, &buffer[index], &(ping->frequency));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(ping->samp_period));
+	mb_get_binary_float(true, &buffer[index], &(ping->samp_period));
 	index += 4;
-	mb_get_binary_short(MB_YES, &buffer[index], &short_val);
+	mb_get_binary_short(true, &buffer[index], &short_val);
 	index += 2;
 	ping->nosamps = (unsigned short)short_val;
-	mb_get_binary_float(MB_YES, &buffer[index], &(ping->sos));
+	mb_get_binary_float(true, &buffer[index], &(ping->sos));
 	index += 4;
-	mb_get_binary_short(MB_YES, &buffer[index], &(ping->txpulse));
+	mb_get_binary_short(true, &buffer[index], &(ping->txpulse));
 	index += 2;
 	ping->data_options = buffer[index];
 	index++;
 	ping->ping_state = (unsigned char)buffer[index];
 	index++;
-	mb_get_binary_short(MB_YES, &buffer[index], &short_val);
+	mb_get_binary_short(true, &buffer[index], &short_val);
 	index += 2;
 	ping->max_count = (unsigned short)short_val;
-	mb_get_binary_short(MB_YES, &buffer[index], &short_val);
+	mb_get_binary_short(true, &buffer[index], &short_val);
 	index += 2;
 	ping->reserve1 = (unsigned short)short_val;
+
+	int status = MB_SUCCESS;
 
 	/* check that we have enough storage for the samples stored in the file
 	 */
@@ -2294,13 +2107,13 @@ int swpls_rd_sxiping(int verbose, char *buffer, void *store_ptr, int *error) {
 
 	/* extract the sample data from the buffer into the ping struct */
 	if (status == MB_SUCCESS) {
-		for (i = 0; i < ping->nosamps; i++) {
-			mb_get_binary_short(MB_YES, &buffer[index], &short_val);
+		for (int i = 0; i < ping->nosamps; i++) {
+			mb_get_binary_short(true, &buffer[index], &short_val);
 			index += 2;
 			ping->sampnum[i] = (unsigned short)short_val;
-			mb_get_binary_short(MB_YES, &buffer[index], &(ping->angle[i]));
+			mb_get_binary_short(true, &buffer[index], &(ping->angle[i]));
 			index += 2;
-			mb_get_binary_short(MB_YES, &buffer[index], &short_val);
+			mb_get_binary_short(true, &buffer[index], &short_val);
 			index += 2;
 			ping->amplitude[i] = (unsigned short)short_val;
 			ping->quality[i] = (unsigned char)buffer[index];
@@ -2321,30 +2134,20 @@ int swpls_rd_sxiping(int verbose, char *buffer, void *store_ptr, int *error) {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_sxiping */
 /*--------------------------------------------------------------------*/
 int swpls_rd_attitude(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_attitude";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_attitude *attitude;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2352,25 +2155,27 @@ int swpls_rd_attitude(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	attitude = &(store->attitude);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_attitude *attitude = &(store->attitude);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(attitude->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(attitude->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(attitude->microsec));
+	mb_get_binary_int(true, &buffer[index], &(attitude->microsec));
 	index += 4;
 	attitude->channel = buffer[index];
 	index++;
-	mb_get_binary_float(MB_YES, &buffer[index], &(attitude->roll));
+	mb_get_binary_float(true, &buffer[index], &(attitude->roll));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(attitude->pitch));
+	mb_get_binary_float(true, &buffer[index], &(attitude->pitch));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(attitude->heading));
+	mb_get_binary_float(true, &buffer[index], &(attitude->heading));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(attitude->height));
+	mb_get_binary_float(true, &buffer[index], &(attitude->height));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2385,30 +2190,20 @@ int swpls_rd_attitude(int verbose, char *buffer, void *store_ptr, int *error) {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_attitude */
 /*--------------------------------------------------------------------*/
 int swpls_rd_posll(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_posll";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_posll *posll;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2416,21 +2211,23 @@ int swpls_rd_posll(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	posll = &(store->posll);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_posll *posll = &(store->posll);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(posll->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(posll->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(posll->microsec));
+	mb_get_binary_int(true, &buffer[index], &(posll->microsec));
 	index += 4;
 	posll->channel = buffer[index];
 	index++;
-	mb_get_binary_double(MB_YES, &buffer[index], &(posll->latitude));
+	mb_get_binary_double(true, &buffer[index], &(posll->latitude));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(posll->longitude));
+	mb_get_binary_double(true, &buffer[index], &(posll->longitude));
 	index += 8;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2445,30 +2242,20 @@ int swpls_rd_posll(int verbose, char *buffer, void *store_ptr, int *error) {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_posll */
 /*--------------------------------------------------------------------*/
 int swpls_rd_posen(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_posen";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_posen *posen;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2476,21 +2263,23 @@ int swpls_rd_posen(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	posen = &(store->posen);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_posen *posen = &(store->posen);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(posen->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(posen->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(posen->microsec));
+	mb_get_binary_int(true, &buffer[index], &(posen->microsec));
 	index += 4;
 	posen->channel = buffer[index];
 	index++;
-	mb_get_binary_double(MB_YES, &buffer[index], &(posen->easting));
+	mb_get_binary_double(true, &buffer[index], &(posen->easting));
 	index += 8;
-	mb_get_binary_double(MB_YES, &buffer[index], &(posen->northing));
+	mb_get_binary_double(true, &buffer[index], &(posen->northing));
 	index += 8;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2505,30 +2294,20 @@ int swpls_rd_posen(int verbose, char *buffer, void *store_ptr, int *error) {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_posen */
 /*--------------------------------------------------------------------*/
 int swpls_rd_ssv(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_ssv";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_ssv *ssv;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2536,19 +2315,21 @@ int swpls_rd_ssv(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	ssv = &(store->ssv);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_ssv *ssv = &(store->ssv);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(ssv->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(ssv->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(ssv->microsec));
+	mb_get_binary_int(true, &buffer[index], &(ssv->microsec));
 	index += 4;
 	ssv->channel = buffer[index];
 	index++;
-	mb_get_binary_float(MB_YES, &buffer[index], &(ssv->ssv));
+	mb_get_binary_float(true, &buffer[index], &(ssv->ssv));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2563,30 +2344,20 @@ int swpls_rd_ssv(int verbose, char *buffer, void *store_ptr, int *error) {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_ssv */
 /*--------------------------------------------------------------------*/
 int swpls_rd_tide(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_tide";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_tide *tide;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2594,19 +2365,21 @@ int swpls_rd_tide(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	tide = &(store->tide);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_tide *tide = &(store->tide);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(tide->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(tide->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(tide->microsec));
+	mb_get_binary_int(true, &buffer[index], &(tide->microsec));
 	index += 4;
 	tide->channel = buffer[index];
 	index++;
-	mb_get_binary_float(MB_YES, &buffer[index], &(tide->tide));
+	mb_get_binary_float(true, &buffer[index], &(tide->tide));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2621,30 +2394,20 @@ int swpls_rd_tide(int verbose, char *buffer, void *store_ptr, int *error) {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_tide */
 /*--------------------------------------------------------------------*/
 int swpls_rd_echosounder(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_echosounder";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_echosounder *echosounder;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2652,19 +2415,21 @@ int swpls_rd_echosounder(int verbose, char *buffer, void *store_ptr, int *error)
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	echosounder = &(store->echosounder);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_echosounder *echosounder = &(store->echosounder);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(echosounder->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(echosounder->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(echosounder->microsec));
+	mb_get_binary_int(true, &buffer[index], &(echosounder->microsec));
 	index += 4;
 	echosounder->channel = buffer[index];
 	index++;
-	mb_get_binary_float(MB_YES, &buffer[index], &(echosounder->altitude));
+	mb_get_binary_float(true, &buffer[index], &(echosounder->altitude));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2679,30 +2444,20 @@ int swpls_rd_echosounder(int verbose, char *buffer, void *store_ptr, int *error)
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_echosounder */
 /*--------------------------------------------------------------------*/
 int swpls_rd_agds(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_agds";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_agds *agds;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2710,21 +2465,23 @@ int swpls_rd_agds(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	agds = &(store->agds);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_agds *agds = &(store->agds);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(agds->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(agds->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(agds->microsec));
+	mb_get_binary_int(true, &buffer[index], &(agds->microsec));
 	index += 4;
 	agds->channel = buffer[index];
 	index++;
-	mb_get_binary_float(MB_YES, &buffer[index], &(agds->hardness));
+	mb_get_binary_float(true, &buffer[index], &(agds->hardness));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(agds->roughness));
+	mb_get_binary_float(true, &buffer[index], &(agds->roughness));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2739,30 +2496,20 @@ int swpls_rd_agds(int verbose, char *buffer, void *store_ptr, int *error) {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_agds */
 /*--------------------------------------------------------------------*/
 int swpls_rd_pos_offset(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_pos_offset";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_pos_offset *pos_offset;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2770,25 +2517,27 @@ int swpls_rd_pos_offset(int verbose, char *buffer, void *store_ptr, int *error) 
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	pos_offset = &(store->pos_offset);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_pos_offset *pos_offset = &(store->pos_offset);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(pos_offset->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(pos_offset->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(pos_offset->microsec));
+	mb_get_binary_int(true, &buffer[index], &(pos_offset->microsec));
 	index += 4;
 	pos_offset->channel = buffer[index];
 	index++;
-	mb_get_binary_float(MB_YES, &buffer[index], &(pos_offset->height));
+	mb_get_binary_float(true, &buffer[index], &(pos_offset->height));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(pos_offset->forward));
+	mb_get_binary_float(true, &buffer[index], &(pos_offset->forward));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(pos_offset->starboard));
+	mb_get_binary_float(true, &buffer[index], &(pos_offset->starboard));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(pos_offset->time));
+	mb_get_binary_float(true, &buffer[index], &(pos_offset->time));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2803,30 +2552,20 @@ int swpls_rd_pos_offset(int verbose, char *buffer, void *store_ptr, int *error) 
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_pos_offset */
 /*--------------------------------------------------------------------*/
 int swpls_rd_imu_offset(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_imu_offset";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_imu_offset *imu_offset;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2834,25 +2573,27 @@ int swpls_rd_imu_offset(int verbose, char *buffer, void *store_ptr, int *error) 
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	imu_offset = &(store->imu_offset);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_imu_offset *imu_offset = &(store->imu_offset);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(imu_offset->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(imu_offset->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(imu_offset->microsec));
+	mb_get_binary_int(true, &buffer[index], &(imu_offset->microsec));
 	index += 4;
 	imu_offset->channel = buffer[index];
 	index++;
-	mb_get_binary_float(MB_YES, &buffer[index], &(imu_offset->height));
+	mb_get_binary_float(true, &buffer[index], &(imu_offset->height));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(imu_offset->forward));
+	mb_get_binary_float(true, &buffer[index], &(imu_offset->forward));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(imu_offset->starboard));
+	mb_get_binary_float(true, &buffer[index], &(imu_offset->starboard));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(imu_offset->time));
+	mb_get_binary_float(true, &buffer[index], &(imu_offset->time));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2867,30 +2608,20 @@ int swpls_rd_imu_offset(int verbose, char *buffer, void *store_ptr, int *error) 
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_imu_offset */
 /*--------------------------------------------------------------------*/
 int swpls_rd_txer_offset(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_txer_offset";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_txer_offset *txer_offset;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2898,33 +2629,35 @@ int swpls_rd_txer_offset(int verbose, char *buffer, void *store_ptr, int *error)
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	txer_offset = &(store->txer_offset);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_txer_offset *txer_offset = &(store->txer_offset);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(txer_offset->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(txer_offset->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(txer_offset->microsec));
+	mb_get_binary_int(true, &buffer[index], &(txer_offset->microsec));
 	index += 4;
 	txer_offset->channel = buffer[index];
 	index++;
-	mb_get_binary_float(MB_YES, &buffer[index], &(txer_offset->height));
+	mb_get_binary_float(true, &buffer[index], &(txer_offset->height));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(txer_offset->forward));
+	mb_get_binary_float(true, &buffer[index], &(txer_offset->forward));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(txer_offset->starboard));
+	mb_get_binary_float(true, &buffer[index], &(txer_offset->starboard));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(txer_offset->azimuth));
+	mb_get_binary_float(true, &buffer[index], &(txer_offset->azimuth));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(txer_offset->elevation));
+	mb_get_binary_float(true, &buffer[index], &(txer_offset->elevation));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(txer_offset->pitch));
+	mb_get_binary_float(true, &buffer[index], &(txer_offset->pitch));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(txer_offset->skew));
+	mb_get_binary_float(true, &buffer[index], &(txer_offset->skew));
 	index += 4;
-	mb_get_binary_float(MB_YES, &buffer[index], &(txer_offset->time));
+	mb_get_binary_float(true, &buffer[index], &(txer_offset->time));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2939,30 +2672,20 @@ int swpls_rd_txer_offset(int verbose, char *buffer, void *store_ptr, int *error)
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_txer_offset */
 /*--------------------------------------------------------------------*/
 int swpls_rd_wl_offset(int verbose, char *buffer, void *store_ptr, int *error) {
-	char *function_name = "swpls_rd_wl_offset";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_wl_offset *wl_offset;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n:");
 		fprintf(stderr, "dbg2     verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2     buffer:           %p\n", (void *)buffer);
@@ -2970,19 +2693,21 @@ int swpls_rd_wl_offset(int verbose, char *buffer, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	wl_offset = &(store->wl_offset);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_wl_offset *wl_offset = &(store->wl_offset);
 
 	/* extract the data */
-	index = SWPLS_SIZE_BLOCKHEADER;
-	mb_get_binary_int(MB_YES, &buffer[index], &(wl_offset->time_d));
+	int index = SWPLS_SIZE_BLOCKHEADER;
+	mb_get_binary_int(true, &buffer[index], &(wl_offset->time_d));
 	index += 4;
-	mb_get_binary_int(MB_YES, &buffer[index], &(wl_offset->microsec));
+	mb_get_binary_int(true, &buffer[index], &(wl_offset->microsec));
 	index += 4;
 	wl_offset->channel = buffer[index];
 	index++;
-	mb_get_binary_float(MB_YES, &buffer[index], &(wl_offset->height));
+	mb_get_binary_float(true, &buffer[index], &(wl_offset->height));
 	index += 4;
+
+	int status = MB_SUCCESS;
 
 	if (status == MB_SUCCESS) {
 		/* set the date and time */
@@ -2997,35 +2722,23 @@ int swpls_rd_wl_offset(int verbose, char *buffer, void *store_ptr, int *error) {
 		store->kind = MB_DATA_NONE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2      error:          %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2      status:         %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_rd_wl_offset */
 /*--------------------------------------------------------------------*/
 int swpls_wr_data(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
-	char *function_name = "swpls_wr_data";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_swathplus_struct *store;
-	FILE *mbfp;
-	char **bufferptr;
-	char *buffer;
-	int *bufferalloc;
 	int size;
 	size_t write_len;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2 MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2 MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2      mbio_ptr:    %p\n", mbio_ptr);
@@ -3033,18 +2746,20 @@ int swpls_wr_data(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 	}
 
 	/* get pointer to mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	mbfp = mb_io_ptr->mbfp;
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	FILE *mbfp = mb_io_ptr->mbfp;
 
 	/* get saved values */
-	bufferptr = (char **)&mb_io_ptr->saveptr1;
-	buffer = (char *)*bufferptr;
-	bufferalloc = (int *)&mb_io_ptr->save6;
+	char **bufferptr = (char **)&mb_io_ptr->saveptr1;
+	char *buffer = (char *)*bufferptr;
+	int *bufferalloc = (int *)&mb_io_ptr->save6;
 
 	/* write the current data record */
+
+	int status = MB_SUCCESS;
 
 	/* write SWPLS_ID_SXP_HEADER_DATA record */
 	if ((store->kind == MB_DATA_HEADER) && (store->type == SWPLS_ID_SXP_HEADER_DATA)) {
@@ -3160,31 +2875,20 @@ int swpls_wr_data(int verbose, void *mbio_ptr, void *store_ptr, int *error) {
 		status = mb_fileio_put(verbose, mbio_ptr, buffer, &write_len, error);
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:    %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_data */
 /*-------------------------------------------------------------------*/
 int swpls_wr_sxpheader(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_sxpheader";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_header *header;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -3193,17 +2897,18 @@ int swpls_wr_sxpheader(int verbose, int *bufferalloc, char **bufferptr, void *st
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	header = &(store->sxp_header);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_header *header = &(store->sxp_header);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_sxpheader(verbose, stderr, header, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_HEADER;
+
+	int status = MB_SUCCESS;
 
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
@@ -3219,48 +2924,36 @@ int swpls_wr_sxpheader(int verbose, int *bufferalloc, char **bufferptr, void *st
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_SXP_HEADER_DATA, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_SXP_HEADER_DATA, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, SWPLS_SIZE_HEADER, &buffer[index]);
+		mb_put_binary_int(true, SWPLS_SIZE_HEADER, &buffer[index]);
 		index += 4;
 
 		/* insert the file header data */
-		mb_put_binary_int(MB_YES, header->swver, &buffer[index]);
+		mb_put_binary_int(true, header->swver, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, header->fmtver, &buffer[index]);
+		mb_put_binary_int(true, header->fmtver, &buffer[index]);
 		index += 4;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_sxpheader */
 /*---------------------------------------------------------------------*/
 int swpls_wr_sxpping(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_sxpping";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxpping *ping;
-	char *buffer;
-	int index;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2      verbose:     %d\n", verbose);
 		fprintf(stderr, "dbg2      bufferalloc: %d\n", *bufferalloc);
@@ -3269,17 +2962,18 @@ int swpls_wr_sxpping(int verbose, int *bufferalloc, char **bufferptr, void *stor
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	ping = &(store->sxp_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxpping *ping = &(store->sxp_ping);
 
-	/* print debug statements */
 	if (verbose >= 4) {
-		fprintf(stderr, "\ndbg4  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg4  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_sxpping(verbose, stderr, ping, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_PROCESSED_PING2 + (ping->nosampsfile * SWPLS_SIZE_POINT2);
+
+	int status = MB_SUCCESS;
 
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
@@ -3295,39 +2989,39 @@ int swpls_wr_sxpping(int verbose, int *bufferalloc, char **bufferptr, void *stor
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the data */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_PROCESSED_PING2, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_PROCESSED_PING2, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 		strncpy(&buffer[index], &(ping->linename[0]), SWPLS_MAX_LINENAME);
 		index += SWPLS_MAX_LINENAME;
-		mb_put_binary_int(MB_YES, ping->pingnumber, &buffer[index]);
+		mb_put_binary_int(true, ping->pingnumber, &buffer[index]);
 		index += 4;
 		index += 4; /* padding bytes */
-		mb_put_binary_double(MB_YES, ping->time_d, &buffer[index]);
+		mb_put_binary_double(true, ping->time_d, &buffer[index]);
 		index += 8;
-		mb_put_binary_int(MB_YES, ping->notxers, &buffer[index]);
+		mb_put_binary_int(true, ping->notxers, &buffer[index]);
 		index += 4;
 		index += 4; /* padding bytes */
-		mb_put_binary_double(MB_YES, ping->easting, &buffer[index]);
+		mb_put_binary_double(true, ping->easting, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->northing, &buffer[index]);
+		mb_put_binary_double(true, ping->northing, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->roll, &buffer[index]);
+		mb_put_binary_double(true, ping->roll, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->pitch, &buffer[index]);
+		mb_put_binary_double(true, ping->pitch, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->heading, &buffer[index]);
+		mb_put_binary_double(true, ping->heading, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->height, &buffer[index]);
+		mb_put_binary_double(true, ping->height, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->tide, &buffer[index]);
+		mb_put_binary_double(true, ping->tide, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->sos, &buffer[index]);
+		mb_put_binary_double(true, ping->sos, &buffer[index]);
 		index += 8;
 		buffer[index] = ping->txno;
 		index += 1;
@@ -3336,11 +3030,11 @@ int swpls_wr_sxpping(int verbose, int *bufferalloc, char **bufferptr, void *stor
 		buffer[index] = ping->txpower;
 		index += 1;
 		index += 1; /* padding byte */
-		mb_put_binary_short(MB_YES, ping->analoggain, &buffer[index]);
+		mb_put_binary_short(true, ping->analoggain, &buffer[index]);
 		index += 2;
 		buffer[index] = ping->nostaves;
 		index += 1;
-		for (i = 0; i < SWPLS_MAX_TX_INFO; i++) {
+		for (int i = 0; i < SWPLS_MAX_TX_INFO; i++) {
 			buffer[index] = ping->txinfo[i];
 			index += 1;
 		}
@@ -3348,94 +3042,82 @@ int swpls_wr_sxpping(int verbose, int *bufferalloc, char **bufferptr, void *stor
 		buffer[index] = ping->freq;
 		index += 1;
 		index += 4; /* padding bytes */
-		mb_put_binary_double(MB_YES, ping->frequency, &buffer[index]);
+		mb_put_binary_double(true, ping->frequency, &buffer[index]);
 		index += 8;
-		mb_put_binary_short(MB_YES, ping->trnstime, &buffer[index]);
+		mb_put_binary_short(true, ping->trnstime, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ping->recvtime, &buffer[index]);
+		mb_put_binary_short(true, ping->recvtime, &buffer[index]);
 		index += 2;
 		buffer[index] = ping->samprate;
 		index += 1;
 		index += 3; /* padding bytes */
-		mb_put_binary_int(MB_YES, ping->nosampsorig, &buffer[index]);
+		mb_put_binary_int(true, ping->nosampsorig, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ping->nosampsfile, &buffer[index]);
+		mb_put_binary_int(true, ping->nosampsfile, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ping->nosampslots, &buffer[index]);
+		mb_put_binary_int(true, ping->nosampslots, &buffer[index]);
 		index += 4;
 		index += 4; /* padding bytes */
-		mb_put_binary_double(MB_YES, ping->txer_e, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_e, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->txer_n, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_n, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->txer_height, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_height, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->txer_forward, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_forward, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->txer_starboard, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_starboard, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->txer_azimuth, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_azimuth, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->txer_elevation, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_elevation, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->txer_skew, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_skew, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->txer_time, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_time, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->txer_waterdepth, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_waterdepth, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, ping->txer_pitch, &buffer[index]);
+		mb_put_binary_double(true, ping->txer_pitch, &buffer[index]);
 		index += 8;
 
 		/* insert the xyza point data */
-		for (i = 0; i != ping->nosampsfile; ++i) {
-			mb_put_binary_int(MB_YES, ping->points[i].sampnum, &buffer[index]);
+		for (int i = 0; i != ping->nosampsfile; ++i) {
+			mb_put_binary_int(true, ping->points[i].sampnum, &buffer[index]);
 			index += 4;
 			index += 4; /* padding bytes */
-			mb_put_binary_double(MB_YES, ping->points[i].y, &buffer[index]);
+			mb_put_binary_double(true, ping->points[i].y, &buffer[index]);
 			index += 8;
-			mb_put_binary_double(MB_YES, ping->points[i].x, &buffer[index]);
+			mb_put_binary_double(true, ping->points[i].x, &buffer[index]);
 			index += 8;
-			mb_put_binary_float(MB_YES, ping->points[i].z, &buffer[index]);
+			mb_put_binary_float(true, ping->points[i].z, &buffer[index]);
 			index += 4;
-			mb_put_binary_short(MB_YES, ping->points[i].amp, &buffer[index]);
+			mb_put_binary_short(true, ping->points[i].amp, &buffer[index]);
 			index += 2;
-			mb_put_binary_short(MB_YES, ping->points[i].procamp, &buffer[index]);
+			mb_put_binary_short(true, ping->points[i].procamp, &buffer[index]);
 			index += 2;
 			buffer[index] = ping->points[i].status;
 			index += 1;
 			index += 7; /* padding bytes */
-			mb_put_binary_double(MB_YES, ping->points[i].tpu, &buffer[index]);
+			mb_put_binary_double(true, ping->points[i].tpu, &buffer[index]);
 			index += 8;
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_sxpping */
 /*------------------------------------------------------------*/
 int swpls_wr_projection(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_projection";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_projection *projection;
-	char *buffer;
-	int index;
-	size_t padding;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2      bufferalloc: %d\n", *bufferalloc);
@@ -3444,12 +3126,11 @@ int swpls_wr_projection(int verbose, int *bufferalloc, char **bufferptr, void *s
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	projection = &(store->projection);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_projection *projection = &(store->projection);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_projection(verbose, stderr, projection, error);
 	}
 
@@ -3458,9 +3139,11 @@ int swpls_wr_projection(int verbose, int *bufferalloc, char **bufferptr, void *s
 
 	/* pad string to byte align on int32 boundary (not necessary, just
 	   easier to read in hexfiend */
-	padding = 4 - (*size % 4);
+	const size_t padding = 4 - (*size % 4);
 	*size = *size + padding;
 	projection->nchars = projection->nchars + padding;
+
+	int status = MB_SUCCESS;
 
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
@@ -3476,50 +3159,38 @@ int swpls_wr_projection(int verbose, int *bufferalloc, char **bufferptr, void *s
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the data */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_PROJECTION, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_PROJECTION, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, *size - SWPLS_SIZE_BLOCKHEADER, &buffer[index]);
+		mb_put_binary_int(true, *size - SWPLS_SIZE_BLOCKHEADER, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, projection->time_d, &buffer[index]);
+		mb_put_binary_int(true, projection->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, projection->microsec, &buffer[index]);
+		mb_put_binary_int(true, projection->microsec, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, projection->nchars, &buffer[index]);
+		mb_put_binary_int(true, projection->nchars, &buffer[index]);
 		index += 4;
 		strncpy(&buffer[index], projection->projection_id, projection->nchars);
 		index += projection->nchars;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_projection */
 /*------------------------------------------------------------*/
 int swpls_wr_comment(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_comment";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_comment *comment;
-	char *buffer;
-	int index;
-	size_t padding;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2      bufferalloc: %d\n", *bufferalloc);
@@ -3528,12 +3199,11 @@ int swpls_wr_comment(int verbose, int *bufferalloc, char **bufferptr, void *stor
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	comment = &(store->comment);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_comment *comment = &(store->comment);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_comment(verbose, stderr, comment, error);
 	}
 
@@ -3542,9 +3212,11 @@ int swpls_wr_comment(int verbose, int *bufferalloc, char **bufferptr, void *stor
 
 	/* pad string to byte align on int32 boundary (not necessary, just
 	   easier to read in hexfiend */
-	padding = 4 - (*size % 4);
+	const size_t padding = 4 - (*size % 4);
 	*size = *size + padding;
 	comment->nchars = comment->nchars + padding;
+
+	int status = MB_SUCCESS;
 
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
@@ -3560,49 +3232,38 @@ int swpls_wr_comment(int verbose, int *bufferalloc, char **bufferptr, void *stor
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the data */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_COMMENT, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_COMMENT, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, *size - SWPLS_SIZE_BLOCKHEADER, &buffer[index]);
+		mb_put_binary_int(true, *size - SWPLS_SIZE_BLOCKHEADER, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, comment->time_d, &buffer[index]);
+		mb_put_binary_int(true, comment->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, comment->microsec, &buffer[index]);
+		mb_put_binary_int(true, comment->microsec, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, comment->nchars, &buffer[index]);
+		mb_put_binary_int(true, comment->nchars, &buffer[index]);
 		index += 4;
 		strncpy(&buffer[index], comment->message, comment->nchars);
 		index += comment->nchars;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_comment */
 /*-------------------------------------------------------------------*/
 int swpls_wr_sxiheader(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_sxiheader";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_header *header;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -3611,18 +3272,19 @@ int swpls_wr_sxiheader(int verbose, int *bufferalloc, char **bufferptr, void *st
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	header = &(store->sxi_header);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_header *header = &(store->sxi_header);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_sxiheader(verbose, stderr, header, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_HEADER;
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -3637,48 +3299,36 @@ int swpls_wr_sxiheader(int verbose, int *bufferalloc, char **bufferptr, void *st
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_SXI_HEADER_DATA, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_SXI_HEADER_DATA, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, SWPLS_SIZE_HEADER, &buffer[index]);
+		mb_put_binary_int(true, SWPLS_SIZE_HEADER, &buffer[index]);
 		index += 4;
 
 		/* insert the file header data */
-		mb_put_binary_int(MB_YES, header->swver, &buffer[index]);
+		mb_put_binary_int(true, header->swver, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, header->fmtver, &buffer[index]);
+		mb_put_binary_int(true, header->fmtver, &buffer[index]);
 		index += 4;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_sxiheader */
 /*-------------------------------------------------------------------*/
 int swpls_wr_sxiping(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_sxiping";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_sxiping *ping;
-	char *buffer;
-	int index;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -3687,18 +3337,19 @@ int swpls_wr_sxiping(int verbose, int *bufferalloc, char **bufferptr, void *stor
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	ping = &(store->sxi_ping);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_sxiping *ping = &(store->sxi_ping);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_sxiping(verbose, stderr, ping, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_PARSED_PING + (ping->nosamps * SWPLS_SIZE_PARSED_POINT);
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -3713,79 +3364,68 @@ int swpls_wr_sxiping(int verbose, int *bufferalloc, char **bufferptr, void *stor
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_PARSED_PING, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_PARSED_PING, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, ping->time_d, &buffer[index]);
+		mb_put_binary_int(true, ping->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ping->microsec, &buffer[index]);
+		mb_put_binary_int(true, ping->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = ping->channel;
 		index++;
-		mb_put_binary_int(MB_YES, ping->pingnumber, &buffer[index]);
+		mb_put_binary_int(true, ping->pingnumber, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, ping->frequency, &buffer[index]);
+		mb_put_binary_float(true, ping->frequency, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, ping->samp_period, &buffer[index]);
+		mb_put_binary_float(true, ping->samp_period, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ping->nosamps, &buffer[index]);
+		mb_put_binary_short(true, ping->nosamps, &buffer[index]);
 		index += 2;
-		mb_put_binary_float(MB_YES, ping->sos, &buffer[index]);
+		mb_put_binary_float(true, ping->sos, &buffer[index]);
 		index += 4;
-		mb_put_binary_short(MB_YES, ping->txpulse, &buffer[index]);
+		mb_put_binary_short(true, ping->txpulse, &buffer[index]);
 		index += 2;
 		buffer[index] = ping->data_options;
 		index++;
 		buffer[index] = ping->ping_state;
 		index++;
-		mb_put_binary_short(MB_YES, ping->max_count, &buffer[index]);
+		mb_put_binary_short(true, ping->max_count, &buffer[index]);
 		index += 2;
-		mb_put_binary_short(MB_YES, ping->reserve1, &buffer[index]);
+		mb_put_binary_short(true, ping->reserve1, &buffer[index]);
 		index += 2;
-		for (i = 0; i < ping->nosamps; i++) {
-			mb_put_binary_short(MB_YES, ping->sampnum[i], &buffer[index]);
+		for (int i = 0; i < ping->nosamps; i++) {
+			mb_put_binary_short(true, ping->sampnum[i], &buffer[index]);
 			index += 2;
-			mb_put_binary_short(MB_YES, ping->angle[i], &buffer[index]);
+			mb_put_binary_short(true, ping->angle[i], &buffer[index]);
 			index += 2;
-			mb_put_binary_short(MB_YES, ping->amplitude[i], &buffer[index]);
+			mb_put_binary_short(true, ping->amplitude[i], &buffer[index]);
 			index += 2;
 			buffer[index] = ping->quality[i];
 			index++;
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_sxiping */
 /*-------------------------------------------------------------------*/
 int swpls_wr_attitude(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_attitude";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_attitude *attitude;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -3794,18 +3434,19 @@ int swpls_wr_attitude(int verbose, int *bufferalloc, char **bufferptr, void *sto
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	attitude = &(store->attitude);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_attitude *attitude = &(store->attitude);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_attitude(verbose, stderr, attitude, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_ATTITUDE;
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -3820,57 +3461,46 @@ int swpls_wr_attitude(int verbose, int *bufferalloc, char **bufferptr, void *sto
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_PARSED_ATTITUDE, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_PARSED_ATTITUDE, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, attitude->time_d, &buffer[index]);
+		mb_put_binary_int(true, attitude->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, attitude->microsec, &buffer[index]);
+		mb_put_binary_int(true, attitude->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = attitude->channel;
 		index++;
-		mb_put_binary_float(MB_YES, attitude->roll, &buffer[index]);
+		mb_put_binary_float(true, attitude->roll, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, attitude->pitch, &buffer[index]);
+		mb_put_binary_float(true, attitude->pitch, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, attitude->heading, &buffer[index]);
+		mb_put_binary_float(true, attitude->heading, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, attitude->height, &buffer[index]);
+		mb_put_binary_float(true, attitude->height, &buffer[index]);
 		index += 2;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_attitude */
 /*-------------------------------------------------------------------*/
 int swpls_wr_posll(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_posll";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_posll *posll;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -3879,18 +3509,19 @@ int swpls_wr_posll(int verbose, int *bufferalloc, char **bufferptr, void *store_
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	posll = &(store->posll);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_posll *posll = &(store->posll);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_posll(verbose, stderr, posll, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_POSITION_LL;
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -3905,53 +3536,42 @@ int swpls_wr_posll(int verbose, int *bufferalloc, char **bufferptr, void *store_
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_PARSED_POSITION_LL, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_PARSED_POSITION_LL, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, posll->time_d, &buffer[index]);
+		mb_put_binary_int(true, posll->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, posll->microsec, &buffer[index]);
+		mb_put_binary_int(true, posll->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = posll->channel;
 		index++;
-		mb_put_binary_double(MB_YES, posll->latitude, &buffer[index]);
+		mb_put_binary_double(true, posll->latitude, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, posll->longitude, &buffer[index]);
+		mb_put_binary_double(true, posll->longitude, &buffer[index]);
 		index += 8;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_posll */
 /*-------------------------------------------------------------------*/
 int swpls_wr_posen(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_posen";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_posen *posen;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -3960,18 +3580,19 @@ int swpls_wr_posen(int verbose, int *bufferalloc, char **bufferptr, void *store_
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	posen = &(store->posen);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_posen *posen = &(store->posen);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_posen(verbose, stderr, posen, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_POSITION_EN;
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -3986,53 +3607,42 @@ int swpls_wr_posen(int verbose, int *bufferalloc, char **bufferptr, void *store_
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_PARSED_POSITION_EN, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_PARSED_POSITION_EN, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, posen->time_d, &buffer[index]);
+		mb_put_binary_int(true, posen->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, posen->microsec, &buffer[index]);
+		mb_put_binary_int(true, posen->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = posen->channel;
 		index++;
-		mb_put_binary_double(MB_YES, posen->easting, &buffer[index]);
+		mb_put_binary_double(true, posen->easting, &buffer[index]);
 		index += 8;
-		mb_put_binary_double(MB_YES, posen->northing, &buffer[index]);
+		mb_put_binary_double(true, posen->northing, &buffer[index]);
 		index += 8;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_posen */
 /*-------------------------------------------------------------------*/
 int swpls_wr_ssv(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_ssv";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_ssv *ssv;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -4041,18 +3651,19 @@ int swpls_wr_ssv(int verbose, int *bufferalloc, char **bufferptr, void *store_pt
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	ssv = &(store->ssv);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_ssv *ssv = &(store->ssv);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_ssv(verbose, stderr, ssv, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_SSV;
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -4067,51 +3678,40 @@ int swpls_wr_ssv(int verbose, int *bufferalloc, char **bufferptr, void *store_pt
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_PARSED_SSV, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_PARSED_SSV, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, ssv->time_d, &buffer[index]);
+		mb_put_binary_int(true, ssv->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, ssv->microsec, &buffer[index]);
+		mb_put_binary_int(true, ssv->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = ssv->channel;
 		index++;
-		mb_put_binary_float(MB_YES, ssv->ssv, &buffer[index]);
+		mb_put_binary_float(true, ssv->ssv, &buffer[index]);
 		index += 4;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_ssv */
 /*-------------------------------------------------------------------*/
 int swpls_wr_tide(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_tide";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_tide *tide;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -4120,17 +3720,18 @@ int swpls_wr_tide(int verbose, int *bufferalloc, char **bufferptr, void *store_p
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	tide = &(store->tide);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_tide *tide = &(store->tide);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_tide(verbose, stderr, tide, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_TIDE;
+
+	int status = MB_SUCCESS;
 
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
@@ -4146,60 +3747,48 @@ int swpls_wr_tide(int verbose, int *bufferalloc, char **bufferptr, void *store_p
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_PARSED_TIDE, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_PARSED_TIDE, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, tide->time_d, &buffer[index]);
+		mb_put_binary_int(true, tide->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, tide->microsec, &buffer[index]);
+		mb_put_binary_int(true, tide->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = tide->channel;
 		index++;
-		mb_put_binary_float(MB_YES, tide->tide, &buffer[index]);
+		mb_put_binary_float(true, tide->tide, &buffer[index]);
 		index += 4;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_tide */
 /*-------------------------------------------------------------------*/
 int swpls_wr_echosounder(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_echosounder";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_echosounder *echosounder;
-	char *buffer;
-	int index;
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_echosounder *echosounder = &(store->echosounder);
 
-	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	echosounder = &(store->echosounder);
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		swpls_pr_echosounder(verbose, stderr, echosounder, error);
 	}
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		fprintf(stderr, "dbg5        echosounder->time_d:      %d\n", echosounder->time_d);
 		fprintf(stderr, "dbg5        echosounder->microsec:    %d\n", echosounder->microsec);
 		fprintf(stderr, "dbg5        echosounder->channel:     %u\n", echosounder->channel);
@@ -4209,6 +3798,8 @@ int swpls_wr_echosounder(int verbose, int *bufferalloc, char **bufferptr, void *
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_ECHOSOUNDER;
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -4223,51 +3814,40 @@ int swpls_wr_echosounder(int verbose, int *bufferalloc, char **bufferptr, void *
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_PARSED_ECHOSOUNDER, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_PARSED_ECHOSOUNDER, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, echosounder->time_d, &buffer[index]);
+		mb_put_binary_int(true, echosounder->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, echosounder->microsec, &buffer[index]);
+		mb_put_binary_int(true, echosounder->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = echosounder->channel;
 		index++;
-		mb_put_binary_float(MB_YES, echosounder->altitude, &buffer[index]);
+		mb_put_binary_float(true, echosounder->altitude, &buffer[index]);
 		index += 4;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_echosounder */
 /*-------------------------------------------------------------------*/
 int swpls_wr_agds(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_agds";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_agds *agds;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -4276,18 +3856,19 @@ int swpls_wr_agds(int verbose, int *bufferalloc, char **bufferptr, void *store_p
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	agds = &(store->agds);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_agds *agds = &(store->agds);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_agds(verbose, stderr, agds, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_AGDS;
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -4302,53 +3883,42 @@ int swpls_wr_agds(int verbose, int *bufferalloc, char **bufferptr, void *store_p
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_PARSED_AGDS, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_PARSED_AGDS, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, agds->time_d, &buffer[index]);
+		mb_put_binary_int(true, agds->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, agds->microsec, &buffer[index]);
+		mb_put_binary_int(true, agds->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = agds->channel;
 		index++;
-		mb_put_binary_float(MB_YES, agds->hardness, &buffer[index]);
+		mb_put_binary_float(true, agds->hardness, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, agds->roughness, &buffer[index]);
+		mb_put_binary_float(true, agds->roughness, &buffer[index]);
 		index += 4;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_agds */
 /*-------------------------------------------------------------------*/
 int swpls_wr_pos_offset(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_pos_offset";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_pos_offset *pos_offset;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -4357,18 +3927,19 @@ int swpls_wr_pos_offset(int verbose, int *bufferalloc, char **bufferptr, void *s
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	pos_offset = &(store->pos_offset);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_pos_offset *pos_offset = &(store->pos_offset);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_pos_offset(verbose, stderr, pos_offset, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_POS_OFFSET;
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -4383,57 +3954,46 @@ int swpls_wr_pos_offset(int verbose, int *bufferalloc, char **bufferptr, void *s
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_POS_OFFSET, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_POS_OFFSET, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, pos_offset->time_d, &buffer[index]);
+		mb_put_binary_int(true, pos_offset->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, pos_offset->microsec, &buffer[index]);
+		mb_put_binary_int(true, pos_offset->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = pos_offset->channel;
 		index++;
-		mb_put_binary_float(MB_YES, pos_offset->height, &buffer[index]);
+		mb_put_binary_float(true, pos_offset->height, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, pos_offset->forward, &buffer[index]);
+		mb_put_binary_float(true, pos_offset->forward, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, pos_offset->starboard, &buffer[index]);
+		mb_put_binary_float(true, pos_offset->starboard, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, pos_offset->time, &buffer[index]);
+		mb_put_binary_float(true, pos_offset->time, &buffer[index]);
 		index += 4;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_pos_offset */
 /*-------------------------------------------------------------------*/
 int swpls_wr_imu_offset(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_imu_offset";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_imu_offset *imu_offset;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -4442,18 +4002,19 @@ int swpls_wr_imu_offset(int verbose, int *bufferalloc, char **bufferptr, void *s
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	imu_offset = &(store->imu_offset);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_imu_offset *imu_offset = &(store->imu_offset);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_imu_offset(verbose, stderr, imu_offset, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_IMU_OFFSET;
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -4468,57 +4029,46 @@ int swpls_wr_imu_offset(int verbose, int *bufferalloc, char **bufferptr, void *s
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_IMU_OFFSET, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_IMU_OFFSET, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, imu_offset->time_d, &buffer[index]);
+		mb_put_binary_int(true, imu_offset->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, imu_offset->microsec, &buffer[index]);
+		mb_put_binary_int(true, imu_offset->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = imu_offset->channel;
 		index++;
-		mb_put_binary_float(MB_YES, imu_offset->height, &buffer[index]);
+		mb_put_binary_float(true, imu_offset->height, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, imu_offset->forward, &buffer[index]);
+		mb_put_binary_float(true, imu_offset->forward, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, imu_offset->starboard, &buffer[index]);
+		mb_put_binary_float(true, imu_offset->starboard, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, imu_offset->time, &buffer[index]);
+		mb_put_binary_float(true, imu_offset->time, &buffer[index]);
 		index += 4;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_imu_offset */
 /*-------------------------------------------------------------------*/
 int swpls_wr_txer_offset(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_txer_offset";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_txer_offset *txer_offset;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -4527,18 +4077,19 @@ int swpls_wr_txer_offset(int verbose, int *bufferalloc, char **bufferptr, void *
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	txer_offset = &(store->txer_offset);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_txer_offset *txer_offset = &(store->txer_offset);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_txer_offset(verbose, stderr, txer_offset, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_TXER_OFFSET;
 
+	int status = MB_SUCCESS;
+
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
 		status = mb_reallocd(verbose, __FILE__, __LINE__, *size, (void **)bufferptr, error);
@@ -4553,65 +4104,54 @@ int swpls_wr_txer_offset(int verbose, int *bufferalloc, char **bufferptr, void *
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_TXER_OFFSET, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_TXER_OFFSET, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, txer_offset->time_d, &buffer[index]);
+		mb_put_binary_int(true, txer_offset->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, txer_offset->microsec, &buffer[index]);
+		mb_put_binary_int(true, txer_offset->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = txer_offset->channel;
 		index++;
-		mb_put_binary_float(MB_YES, txer_offset->height, &buffer[index]);
+		mb_put_binary_float(true, txer_offset->height, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, txer_offset->forward, &buffer[index]);
+		mb_put_binary_float(true, txer_offset->forward, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, txer_offset->starboard, &buffer[index]);
+		mb_put_binary_float(true, txer_offset->starboard, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, txer_offset->azimuth, &buffer[index]);
+		mb_put_binary_float(true, txer_offset->azimuth, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, txer_offset->elevation, &buffer[index]);
+		mb_put_binary_float(true, txer_offset->elevation, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, txer_offset->pitch, &buffer[index]);
+		mb_put_binary_float(true, txer_offset->pitch, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, txer_offset->skew, &buffer[index]);
+		mb_put_binary_float(true, txer_offset->skew, &buffer[index]);
 		index += 4;
-		mb_put_binary_float(MB_YES, txer_offset->time, &buffer[index]);
+		mb_put_binary_float(true, txer_offset->time, &buffer[index]);
 		index += 4;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_txer_offset */
 /*-------------------------------------------------------------------*/
 int swpls_wr_wl_offset(int verbose, int *bufferalloc, char **bufferptr, void *store_ptr, int *size, int *error) {
-	char *function_name = "swpls_wr_wl_offset";
-	int status = MB_SUCCESS;
-	struct mbsys_swathplus_struct *store;
-	swpls_wl_offset *wl_offset;
-	char *buffer;
-	int index;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       bufferalloc:  %d\n", *bufferalloc);
@@ -4620,17 +4160,18 @@ int swpls_wr_wl_offset(int verbose, int *bufferalloc, char **bufferptr, void *st
 	}
 
 	/* get pointer to raw data structure */
-	store = (struct mbsys_swathplus_struct *)store_ptr;
-	wl_offset = &(store->wl_offset);
+	struct mbsys_swathplus_struct *store = (struct mbsys_swathplus_struct *)store_ptr;
+	swpls_wl_offset *wl_offset = &(store->wl_offset);
 
-	/* print debug statements */
 	if (verbose >= 5) {
-		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg5  Values to be written in MBIO function <%s>\n", __func__);
 		swpls_pr_wl_offset(verbose, stderr, wl_offset, error);
 	}
 
 	/* figure out size of output record */
 	*size = SWPLS_SIZE_BLOCKHEADER + SWPLS_SIZE_WL_OFFSET;
+
+	int status = MB_SUCCESS;
 
 	/* allocate memory to write record if necessary */
 	if (*bufferalloc < *size) {
@@ -4646,48 +4187,42 @@ int swpls_wr_wl_offset(int verbose, int *bufferalloc, char **bufferptr, void *st
 	/* proceed to write if buffer allocated */
 	if (status == MB_SUCCESS) {
 		/* get buffer for writing */
-		buffer = (char *)*bufferptr;
+		char *buffer = (char *)*bufferptr;
 
 		/* insert the block header */
-		index = 0;
-		mb_put_binary_int(MB_YES, SWPLS_ID_WL_OFFSET, &buffer[index]);
+		int index = 0;
+		mb_put_binary_int(true, SWPLS_ID_WL_OFFSET, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
+		mb_put_binary_int(true, (*size - SWPLS_SIZE_BLOCKHEADER), &buffer[index]);
 		index += 4;
 
 		/* insert the data */
-		mb_put_binary_int(MB_YES, wl_offset->time_d, &buffer[index]);
+		mb_put_binary_int(true, wl_offset->time_d, &buffer[index]);
 		index += 4;
-		mb_put_binary_int(MB_YES, wl_offset->microsec, &buffer[index]);
+		mb_put_binary_int(true, wl_offset->microsec, &buffer[index]);
 		index += 4;
 		buffer[index] = wl_offset->channel;
 		index++;
-		mb_put_binary_float(MB_YES, wl_offset->height, &buffer[index]);
+		mb_put_binary_float(true, wl_offset->height, &buffer[index]);
 		index += 4;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_wr_wl_offset */
 /*----------------------------------------------------------------------*/
 int swpls_pr_sxpheader(int verbose, FILE *fout, swpls_header *header, int *error) {
-	char *function_name = "swpls_pr_sxpheader";
-	int status = MB_SUCCESS;
 	char starter[5];
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       header:       %p\n", (void *)header);
@@ -4704,32 +4239,27 @@ int swpls_pr_sxpheader(int verbose, FILE *fout, swpls_header *header, int *error
 	fprintf(fout, "%s        swver:  %d\n", starter, header->swver);
 	fprintf(fout, "%s        fmtver: %d\n", starter, header->fmtver);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_sxpheader */
 /*----------------------------------------------------------------------*/
 int swpls_pr_sxpping(int verbose, FILE *fout, swpls_sxpping *ping, int *error) {
-	char *function_name = "swpls_pr_sxpping";
-	int status = MB_SUCCESS;
 	swpls_point *points;
 	char starter[5];
 	int size;
 	time_t tm;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       ping:         %p\n", (void *)ping);
@@ -4763,7 +4293,7 @@ int swpls_pr_sxpping(int verbose, FILE *fout, swpls_sxpping *ping, int *error) {
 	fprintf(fout, "%s        txpower:              %u\n", starter, ping->txpower);
 	fprintf(fout, "%s        analoggain:           %u\n", starter, ping->analoggain);
 	fprintf(fout, "%s        nostaves:             %u\n", starter, ping->nostaves);
-	for (i = 0; i < SWPLS_MAX_TX_INFO; i++) {
+	for (int i = 0; i < SWPLS_MAX_TX_INFO; i++) {
 		fprintf(fout, "%s        txinfo[%d]:            %u\n", starter, i, ping->txinfo[i]);
 	}
 	fprintf(fout, "%s        freq:                 %u\n", starter, ping->freq);
@@ -4787,35 +4317,31 @@ int swpls_pr_sxpping(int verbose, FILE *fout, swpls_sxpping *ping, int *error) {
 	fprintf(fout, "%s        txer_pitch:           %lf\n", starter, ping->txer_pitch);
 
 	points = ping->points;
-	for (i = 0; i < ping->nosampsfile; i++) {
+	for (int i = 0; i < ping->nosampsfile; i++) {
 		fprintf(fout, "%s        %4d %11.2lf %10.2lf %7.2f %5u %5u %u %5.2lf\n", starter, points[i].sampnum, points[i].y,
 		        points[i].x, points[i].z, points[i].amp, points[i].procamp, points[i].status, points[i].tpu);
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_sxpping */
 /*----------------------------------------------------------------------*/
 int swpls_pr_projection(int verbose, FILE *fout, swpls_projection *projection, int *error) {
-	char *function_name = "swpls_pr_projection";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 	int size;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       projection:      %p\n", (void *)projection);
@@ -4836,30 +4362,26 @@ int swpls_pr_projection(int verbose, FILE *fout, swpls_projection *projection, i
 	fprintf(fout, "%s        nchars:               %d\n", starter, projection->nchars);
 	fprintf(fout, "%s        projection_id:        %s\n", starter, projection->projection_id);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_projection */
 /*----------------------------------------------------------------------*/
 int swpls_pr_comment(int verbose, FILE *fout, swpls_comment *comment, int *error) {
-	char *function_name = "swpls_pr_comment";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 	int size;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       comment:      %p\n", (void *)comment);
@@ -4881,28 +4403,24 @@ int swpls_pr_comment(int verbose, FILE *fout, swpls_comment *comment, int *error
 	fprintf(fout, "%s        nchars:               %d\n", starter, comment->nchars);
 	fprintf(fout, "%s        message:              %s\n", starter, comment->message);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_comment */
 /*----------------------------------------------------------------------*/
 int swpls_pr_sxiheader(int verbose, FILE *fout, swpls_header *header, int *error) {
-	char *function_name = "swpls_pr_sxiheader";
-	int status = MB_SUCCESS;
 	char starter[5];
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       header:       %p\n", (void *)header);
@@ -4919,31 +4437,26 @@ int swpls_pr_sxiheader(int verbose, FILE *fout, swpls_header *header, int *error
 	fprintf(fout, "%s        swver:        %d\n", starter, header->swver);
 	fprintf(fout, "%s        fmtver:       %d\n", starter, header->fmtver);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_sxiheader */
 /*----------------------------------------------------------------------*/
 int swpls_pr_sxiping(int verbose, FILE *fout, swpls_sxiping *ping, int *error) {
-	char *function_name = "swpls_pr_sxiping";
-	int status = MB_SUCCESS;
 	char starter[5];
 	int size;
 	time_t tm;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       ping:       %p\n", (void *)ping);
@@ -4974,34 +4487,30 @@ int swpls_pr_sxiping(int verbose, FILE *fout, swpls_sxiping *ping, int *error) {
 	fprintf(fout, "%s        ping_state:   %u\n", starter, ping->ping_state);
 	fprintf(fout, "%s        max_count:    %u\n", starter, ping->max_count);
 	fprintf(fout, "%s        reserve1:     %u\n", starter, ping->reserve1);
-	for (i = 0; i < ping->nosamps; i++) {
+	for (int i = 0; i < ping->nosamps; i++) {
 		fprintf(fout, "%s        sampnum: %4u angle: %6d amplitude: %5u quality: %u\n", starter, ping->sampnum[i], ping->angle[i],
 		        ping->amplitude[i], ping->quality[i]);
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_sxiping */
 /*----------------------------------------------------------------------*/
 int swpls_pr_attitude(int verbose, FILE *fout, swpls_attitude *attitude, int *error) {
-	char *function_name = "swpls_pr_attitude";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       attitude:     %p\n", (void *)attitude);
@@ -5024,29 +4533,25 @@ int swpls_pr_attitude(int verbose, FILE *fout, swpls_attitude *attitude, int *er
 	fprintf(fout, "%s        heading:      %f\n", starter, attitude->heading);
 	fprintf(fout, "%s        height:       %f\n", starter, attitude->height);
 
-	/* print output debug statements */
+	int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_attitude */
 /*----------------------------------------------------------------------*/
 int swpls_pr_posll(int verbose, FILE *fout, swpls_posll *posll, int *error) {
-	char *function_name = "swpls_pr_posll";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       posll:        %p\n", (void *)posll);
@@ -5068,29 +4573,25 @@ int swpls_pr_posll(int verbose, FILE *fout, swpls_posll *posll, int *error) {
 	fprintf(fout, "%s        latitude:     %lf\n", starter, posll->latitude);
 	fprintf(fout, "%s        longitude:    %lf\n", starter, posll->longitude);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_posll */
 /*----------------------------------------------------------------------*/
 int swpls_pr_posen(int verbose, FILE *fout, swpls_posen *posen, int *error) {
-	char *function_name = "swpls_pr_posen";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       posen:        %p\n", (void *)posen);
@@ -5113,29 +4614,25 @@ int swpls_pr_posen(int verbose, FILE *fout, swpls_posen *posen, int *error) {
 	fprintf(fout, "%s        easting:      %lf\n", starter, posen->easting);
 	fprintf(fout, "%s        northing:     %lf\n", starter, posen->northing);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_posen */
 /*----------------------------------------------------------------------*/
 int swpls_pr_ssv(int verbose, FILE *fout, swpls_ssv *ssv, int *error) {
-	char *function_name = "swpls_pr_ssv";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       ssv:          %p\n", (void *)ssv);
@@ -5156,29 +4653,25 @@ int swpls_pr_ssv(int verbose, FILE *fout, swpls_ssv *ssv, int *error) {
 	fprintf(fout, "%s        channel:      %u\n", starter, ssv->channel);
 	fprintf(fout, "%s        ssv:          %f\n", starter, ssv->ssv);
 
-	/* print output debug statements */
+	int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_ssv */
 /*----------------------------------------------------------------------*/
 int swpls_pr_tide(int verbose, FILE *fout, swpls_tide *tide, int *error) {
-	char *function_name = "swpls_pr_tide";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       tide:         %p\n", (void *)tide);
@@ -5199,29 +4692,25 @@ int swpls_pr_tide(int verbose, FILE *fout, swpls_tide *tide, int *error) {
 	fprintf(fout, "%s        channel:      %u\n", starter, tide->channel);
 	fprintf(fout, "%s        tide:         %f\n", starter, tide->tide);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_tide */
 /*----------------------------------------------------------------------*/
 int swpls_pr_echosounder(int verbose, FILE *fout, swpls_echosounder *echosounder, int *error) {
-	char *function_name = "swpls_pr_echosounder";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       echosounder:  %p\n", (void *)echosounder);
@@ -5243,29 +4732,25 @@ int swpls_pr_echosounder(int verbose, FILE *fout, swpls_echosounder *echosounder
 	fprintf(fout, "%s        channel:      %u\n", starter, echosounder->channel);
 	fprintf(fout, "%s        altitude:     %f\n", starter, echosounder->altitude);
 
-	/* print output debug statements */
+	int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_echosounder */
 /*----------------------------------------------------------------------*/
 int swpls_pr_agds(int verbose, FILE *fout, swpls_agds *agds, int *error) {
-	char *function_name = "swpls_pr_agds";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       agds:  %p\n", (void *)agds);
@@ -5287,29 +4772,25 @@ int swpls_pr_agds(int verbose, FILE *fout, swpls_agds *agds, int *error) {
 	fprintf(fout, "%s        hardness:     %f\n", starter, agds->hardness);
 	fprintf(fout, "%s        roughness:    %f\n", starter, agds->roughness);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_agds */
 /*----------------------------------------------------------------------*/
 int swpls_pr_pos_offset(int verbose, FILE *fout, swpls_pos_offset *pos_offset, int *error) {
-	char *function_name = "swpls_pr_pos_offset";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       pos_offset:  %p\n", (void *)pos_offset);
@@ -5333,29 +4814,25 @@ int swpls_pr_pos_offset(int verbose, FILE *fout, swpls_pos_offset *pos_offset, i
 	fprintf(fout, "%s        starboard:    %f\n", starter, pos_offset->starboard);
 	fprintf(fout, "%s        time:         %f\n", starter, pos_offset->time);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_pos_offset */
 /*----------------------------------------------------------------------*/
 int swpls_pr_imu_offset(int verbose, FILE *fout, swpls_imu_offset *imu_offset, int *error) {
-	char *function_name = "swpls_pr_imu_offset";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       imu_offset:  %p\n", (void *)imu_offset);
@@ -5379,29 +4856,25 @@ int swpls_pr_imu_offset(int verbose, FILE *fout, swpls_imu_offset *imu_offset, i
 	fprintf(fout, "%s        starboard:    %f\n", starter, imu_offset->starboard);
 	fprintf(fout, "%s        time:         %f\n", starter, imu_offset->time);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 } /* swpls_pr_imu_offset */
 /*----------------------------------------------------------------------*/
 int swpls_pr_txer_offset(int verbose, FILE *fout, swpls_txer_offset *txer_offset, int *error) {
-	char *function_name = "swpls_pr_txer_offset";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       txer_offset:  %p\n", (void *)txer_offset);
@@ -5429,28 +4902,26 @@ int swpls_pr_txer_offset(int verbose, FILE *fout, swpls_txer_offset *txer_offset
 	fprintf(fout, "%s        skew:         %f\n", starter, txer_offset->skew);
 	fprintf(fout, "%s        time:         %f\n", starter, txer_offset->time);
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
+
 	return (status);
 } /* swpls_pr_txer_offset */
 /*----------------------------------------------------------------------*/
 int swpls_pr_wl_offset(int verbose, FILE *fout, swpls_wl_offset *wl_offset, int *error) {
-	char *function_name = "swpls_pr_wl_offset";
-	int status = MB_SUCCESS;
 	char starter[5];
 	time_t tm;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       wl_offset:  %p\n", (void *)wl_offset);
@@ -5471,8 +4942,10 @@ int swpls_pr_wl_offset(int verbose, FILE *fout, swpls_wl_offset *wl_offset, int 
 	fprintf(fout, "%s        channel:      %u\n", starter, wl_offset->channel);
 	fprintf(fout, "%s        height:       %f\n", starter, wl_offset->height);
 
+	int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -5487,16 +4960,13 @@ int swpls_pr_wl_offset(int verbose, FILE *fout, swpls_wl_offset *wl_offset, int 
  * heave - heave component of ping
  */
 static int get_sxp_heave(int verbose, swpls_sxpping *sxp_ping, double *heave, int *error) {
-	char *function_name = "get_sxp_heave";
-	int status = MB_SUCCESS;
 	swpls_vector txoffset;
 	swpls_matrix vtow;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       sxp_ping:    %p\n", (void *)sxp_ping);
@@ -5516,8 +4986,10 @@ static int get_sxp_heave(int verbose, swpls_sxpping *sxp_ping, double *heave, in
 
 	*heave = sxp_ping->height - (-txoffset.y);
 
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       height:     %f\n", sxp_ping->height);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -5533,16 +5005,13 @@ static int get_sxp_heave(int verbose, swpls_sxpping *sxp_ping, double *heave, in
  * sxp_ping - SWATHplus processed ping
  */
 static int set_sxp_height(int verbose, double heave, swpls_sxpping *sxp_ping, int *error) {
-	char *function_name = "set_sxp_height";
-	int status = MB_SUCCESS;
 	swpls_vector txoffset;
 	swpls_matrix vtow;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       heave:        %f\n", heave);
@@ -5562,8 +5031,10 @@ static int set_sxp_height(int verbose, double heave, swpls_sxpping *sxp_ping, in
 
 	sxp_ping->height = heave + (-txoffset.y);
 
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       sxp_ping->height: %f\n", sxp_ping->height);
 		fprintf(stderr, "dbg2       error:            %d\n", *error);
@@ -5612,23 +5083,20 @@ static int set_sxp_height(int verbose, double heave, swpls_sxpping *sxp_ping, in
  * m - transformation matrix to (re)initialize
  */
 int swpls_init_transform(int verbose, swpls_matrix *m, int *error) {
-	char *function_name = "swpls_init_transform";
-	int status = MB_SUCCESS;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       m:            %p\n", (void *)m);
 	}
 
-	status = set_identity(verbose, m, error);
+	const int status = set_identity(verbose, m, error);
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -5644,15 +5112,12 @@ int swpls_init_transform(int verbose, swpls_matrix *m, int *error) {
  * dz - translate along z-axis (positive forward)
  */
 int swpls_concat_translate(int verbose, swpls_matrix *m, double dx, double dy, double dz, int *error) {
-	char *function_name = "swpls_concat_translation";
-	int status = MB_SUCCESS;
 	swpls_matrix translate;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       m:            %p\n", (void *)m);
@@ -5661,7 +5126,7 @@ int swpls_concat_translate(int verbose, swpls_matrix *m, double dx, double dy, d
 		fprintf(stderr, "dbg2       dz:           %f.3\n", dz);
 	}
 
-	status = set_identity(verbose, &translate, error);
+	int status = set_identity(verbose, &translate, error);
 	if (status == MB_SUCCESS) {
 		translate.tx = dx;
 		translate.ty = dy;
@@ -5673,7 +5138,7 @@ int swpls_concat_translate(int verbose, swpls_matrix *m, double dx, double dy, d
 	}
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -5687,16 +5152,13 @@ int swpls_concat_translate(int verbose, swpls_matrix *m, double dx, double dy, d
  * pitch - angle of declination in radians (positive nose down)
  */
 int swpls_concat_rotate_x(int verbose, swpls_matrix *m, double pitch, int *error) {
-	char *function_name = "swpls_concat_rotate_x";
-	int status = MB_SUCCESS;
 	double sinp, cosp;
 	swpls_matrix rotate;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       m:            %p\n", (void *)m);
@@ -5706,7 +5168,7 @@ int swpls_concat_rotate_x(int verbose, swpls_matrix *m, double pitch, int *error
 	sinp = sin(pitch);
 	cosp = cos(pitch);
 
-	status = set_identity(verbose, &rotate, error);
+	const int status = set_identity(verbose, &rotate, error);
 	if (status == MB_SUCCESS) {
 		rotate.m22 = cosp;
 		rotate.m23 = sinp;
@@ -5716,7 +5178,7 @@ int swpls_concat_rotate_x(int verbose, swpls_matrix *m, double pitch, int *error
 	}
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -5730,16 +5192,13 @@ int swpls_concat_rotate_x(int verbose, swpls_matrix *m, double pitch, int *error
  * heading - angle of heading in radians (positive to right)
  */
 int swpls_concat_rotate_y(int verbose, swpls_matrix *m, double heading, int *error) {
-	char *function_name = "swpls_concat_rotate_y";
-	int status = MB_SUCCESS;
 	double sint, cost;
 	swpls_matrix rotate;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       m:            %p\n", (void *)m);
@@ -5749,7 +5208,7 @@ int swpls_concat_rotate_y(int verbose, swpls_matrix *m, double heading, int *err
 	sint = sin(heading);
 	cost = cos(heading);
 
-	status = set_identity(verbose, &rotate, error);
+	int status = set_identity(verbose, &rotate, error);
 	if (status == MB_SUCCESS) {
 		rotate.m11 = cost;
 		rotate.m13 = -sint;
@@ -5759,7 +5218,7 @@ int swpls_concat_rotate_y(int verbose, swpls_matrix *m, double heading, int *err
 	}
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -5773,16 +5232,13 @@ int swpls_concat_rotate_y(int verbose, swpls_matrix *m, double heading, int *err
  * bank - angle of bank in radians (positive starboard up)
  */
 int swpls_concat_rotate_z(int verbose, swpls_matrix *m, double bank, int *error) {
-	char *function_name = "swpls_concat_rotate_z";
-	int status = MB_SUCCESS;
 	double sint, cost;
 	swpls_matrix rotate;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       m:            %p\n", (void *)m);
@@ -5792,7 +5248,7 @@ int swpls_concat_rotate_z(int verbose, swpls_matrix *m, double bank, int *error)
 	sint = sin(bank);
 	cost = cos(bank);
 
-	status = set_identity(verbose, &rotate, error);
+	int status = set_identity(verbose, &rotate, error);
 	if (status == MB_SUCCESS) {
 		rotate.m11 = cost;
 		rotate.m12 = sint;
@@ -5802,7 +5258,7 @@ int swpls_concat_rotate_z(int verbose, swpls_matrix *m, double bank, int *error)
 	}
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -5817,15 +5273,12 @@ int swpls_concat_rotate_z(int verbose, swpls_matrix *m, double bank, int *error)
  * p - vector to modify
  */
 int swpls_transform(int verbose, const swpls_matrix *m, swpls_vector *p, int *error) {
-	char *function_name = "swpls_transform";
-	int status = MB_SUCCESS;
 	double x, y, z;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       m:            %p\n", (void *)m);
@@ -5843,8 +5296,10 @@ int swpls_transform(int verbose, const swpls_matrix *m, swpls_vector *p, int *er
 	p->y = y;
 	p->z = z;
 
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2       p->x:       %f\n", p->x);
@@ -5862,16 +5317,13 @@ int swpls_transform(int verbose, const swpls_matrix *m, swpls_vector *p, int *er
  * q - output quaternion
  */
 int swpls_angles_to_quat(int verbose, const swpls_angles *orientation, swpls_quaternion *q, int *error) {
-	char *function_name = "swpls_angles_to_quat";
-	int status = MB_SUCCESS;
 	double sp, sb, sh;
 	double cp, cb, ch;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       orientation:  %p\n", (void *)orientation);
@@ -5890,8 +5342,10 @@ int swpls_angles_to_quat(int verbose, const swpls_angles *orientation, swpls_qua
 	q->y = -ch * sp * sb + sh * cp * cb;
 	q->z = -sh * sp * cb + ch * cp * sb;
 
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -5907,15 +5361,12 @@ int swpls_angles_to_quat(int verbose, const swpls_angles *orientation, swpls_qua
  * orientation - output orienation in Euler angle format
  */
 int swpls_quat_to_angles(int verbose, const swpls_quaternion *q, swpls_angles *orientation, int *error) {
-	char *function_name = "swpls_quat_to_angles";
-	int status = MB_SUCCESS;
 	double sp;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       q:            %p\n", (void *)q);
@@ -5935,8 +5386,10 @@ int swpls_quat_to_angles(int verbose, const swpls_quaternion *q, swpls_angles *o
 		orientation->bank = atan2(q->x * q->y + q->w * q->z, 0.5 - q->x * q->x - q->z * q->z);
 	}
 
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -5954,8 +5407,6 @@ int swpls_quat_to_angles(int verbose, const swpls_quaternion *q, swpls_angles *o
  * q - iterpolated orientation quaternion coresponding to t
  */
 int swpls_slerp(int verbose, const swpls_quaternion *q0, const swpls_quaternion *q1, double t, swpls_quaternion *q, int *error) {
-	char *function_name = "swpls_slerp";
-	int status = MB_SUCCESS;
 	double q1w, q1x, q1y, q1z;
 	double k0, k1;
 	double omega, cosOmega, sinOmega, oneOverSinOmega;
@@ -5963,8 +5414,7 @@ int swpls_slerp(int verbose, const swpls_quaternion *q0, const swpls_quaternion 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       q0:           %p\n", (void *)q0);
@@ -6022,8 +5472,10 @@ int swpls_slerp(int verbose, const swpls_quaternion *q0, const swpls_quaternion 
 		q->w = k0 * q0->w + k1 * q1w;
 	}
 
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -6049,14 +5501,11 @@ static double wrap_pi(double theta) {
  * m - transformation matrix to reset
  */
 static int set_identity(int verbose, swpls_matrix *m, int *error) {
-	char *function_name = "set_identity";
-	int status = MB_SUCCESS;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       m:            %p\n", (void *)m);
@@ -6078,8 +5527,10 @@ static int set_identity(int verbose, swpls_matrix *m, int *error) {
 	m->ty = 0.0;
 	m->tz = 0.0;
 
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -6095,15 +5546,12 @@ static int set_identity(int verbose, swpls_matrix *m, int *error) {
  * b - transformation matrix b
  */
 static int concat_transform(int verbose, swpls_matrix *a, swpls_matrix *b, int *error) {
-	char *function_name = "concat_transform";
-	int status = MB_SUCCESS;
 	swpls_matrix r;
 
 	*error = MB_ERROR_NO_ERROR;
 
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called.\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:      %d\n", verbose);
 		fprintf(stderr, "dbg2       a:            %p\n", (void *)a);
@@ -6142,8 +5590,10 @@ static int concat_transform(int verbose, swpls_matrix *a, swpls_matrix *b, int *
 	a->ty = r.ty;
 	a->tz = r.tz;
 
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");

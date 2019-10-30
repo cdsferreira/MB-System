@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_reson7k.h	3/3/2004
- *	$Id$
  *
- *    Copyright (c) 2004-2017 by
+ *    Copyright (c) 2004-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -67,10 +66,10 @@
  *      records.
  */
 
-/* include mb_define.h */
-#ifndef MB_DEFINE_DEF
+#ifndef MBSYS_RESON7K_H_
+#define MBSYS_RESON7K_H_
+
 #include "mb_define.h"
-#endif
 
 /*---------------------------------------------------------------*/
 /* Record ID definitions */
@@ -138,9 +137,9 @@
 #define R7KRECID_7kInstallationParameters 7030
 #define R7KRECID_7kSystemEvents 7050
 #define R7KRECID_7kSystemEventMessage 7051
-#define R7KRECID_7kTargetData 7060
 #define R7KRECID_7kDataStorageStatus 7052
 #define R7KRECID_7kCalibratedSnippetData 7058
+#define R7KRECID_7kTargetData 7060
 #define R7KRECID_7kFileHeader 7200
 #define R7KRECID_7kFileCatalog 7300
 #define R7KRECID_7kTriggerSequenceSetup 7301
@@ -2100,14 +2099,14 @@ struct mbsys_reson7k_struct {
 
 	/* ping record id's */
 	int current_ping_number;
-	int read_volatilesettings;
-	int read_matchfilter;
-	int read_beamgeometry;
-	int read_remotecontrolsettings;
-	int read_bathymetry;
-	int read_backscatter;
-	int read_beam;
-	int read_verticaldepth;
+	int read_volatilesettings;  // TODO(schwehr): bool
+	int read_matchfilter;  // TODO(schwehr): bool
+	int read_beamgeometry;  // TODO(schwehr): bool
+	int read_remotecontrolsettings;  // TODO(schwehr): bool
+	int read_bathymetry;  // TODO(schwehr): bool
+	int read_backscatter;  // TODO(schwehr): bool
+	int read_beam;  // TODO(schwehr): bool
+	int read_verticaldepth;  // TODO(schwehr): bool
 	int read_tvg;
 	int read_image;
 	int read_v2pingmotion;
@@ -2367,7 +2366,7 @@ int mbsys_reson7k_deall(int verbose, void *mbio_ptr, void **store_ptr, int *erro
 int mbsys_reson7k_zero_ss(int verbose, void *store_ptr, int *error);
 int mbsys_reson7k_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss,
                              int *error);
-int mbsys_reson7k_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error);
+int mbsys_reson7k_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error);
 int mbsys_reson7k_sonartype(int verbose, void *mbio_ptr, void *store_ptr, int *sonartype, int *error);
 int mbsys_reson7k_sidescantype(int verbose, void *mbio_ptr, void *store_ptr, int *ss_type, int *error);
 int mbsys_reson7k_preprocess(int verbose, void *mbio_ptr, void *store_ptr, void *platform_ptr, void *preprocess_pars_ptr,
@@ -2478,3 +2477,5 @@ int mbsys_reson7k_print_pitch(int verbose, s7kr_pitch *pitch, int *error);
 int mbsys_reson7k_print_soundvelocity(int verbose, s7kr_soundvelocity *soundvelocity, int *error);
 int mbsys_reson7k_print_absorptionloss(int verbose, s7kr_absorptionloss *absorptionloss, int *error);
 int mbsys_reson7k_print_spreadingloss(int verbose, s7kr_spreadingloss *spreadingloss, int *error);
+
+#endif  /* MBSYS_RESON7K_H_ */

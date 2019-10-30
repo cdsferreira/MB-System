@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_sb2000.h	10/4/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -35,6 +34,9 @@
  *   6. The data structure defined below includes all of the values
  *      which are passed in SeaBeam 2000 records.
  */
+
+#ifndef MBSYS_SB2000_H_
+#define MBSYS_SB2000_H_
 
 /* number of bathymetry beams for SeaBeam 2000 */
 #define MBSYS_SB2000_BEAMS 121
@@ -154,3 +156,5 @@ int mbsys_sb2000_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int ti
                             double navlat, double speed, double heading, double draft, double roll, double pitch, double heave,
                             int *error);
 int mbsys_sb2000_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
+
+#endif  /* MBSYS_SB2000_H_ */

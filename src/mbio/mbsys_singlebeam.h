@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_singlebeam.h	4/13/93
- *	$Id$
  *
- *    Copyright (c) 1999-2017 by
+ *    Copyright (c) 1999-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -45,6 +44,9 @@
  *      These values are accessed by a special function
  *      mbsys_singlebeam_swathbounds().
  */
+
+#ifndef MBSYS_SINGLEBEAM_H_
+#define MBSYS_SINGLEBEAM_H_
 
 struct mbsys_singlebeam_struct {
 	/* type of data record */
@@ -233,7 +235,7 @@ int mbsys_singlebeam_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *e
 int mbsys_singlebeam_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error);
 int mbsys_singlebeam_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss,
                                 int *error);
-int mbsys_singlebeam_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error);
+int mbsys_singlebeam_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error);
 int mbsys_singlebeam_segynumber(int verbose, void *mbio_ptr, int *line, int *shot, int *cdp, int *error);
 int mbsys_singlebeam_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time_i[7], double *time_d,
                              double *navlon, double *navlat, double *speed, double *heading, int *nbath, int *namp, int *nss,
@@ -259,3 +261,5 @@ int mbsys_singlebeam_swathbounds(int verbose, void *mbio_ptr, void *store_ptr, i
                                  double *stbdlon, double *stbdlat, int *error);
 int mbsys_singlebeam_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
 int mbsys_singlebeam_pressuredepth(int verbose, double pressure, double latitude, double *depth, int *error);
+
+#endif  /* MBSYS_SINGLEBEAM_H_ */

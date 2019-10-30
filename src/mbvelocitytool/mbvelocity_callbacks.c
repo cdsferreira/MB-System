@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbvelocity_callbacks.c	4/7/97
- *    $Id$
- *
- *    Copyright (c) 1993-2017 by
+  *
+ *    Copyright (c) 1993-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -37,7 +36,6 @@
  * Code Generator Xcessory 2.0 (09/09/96)
  *
  */
-#include <Xm/Xm.h>
 
 /*
  * Standard includes for builtins.
@@ -48,6 +46,17 @@
 #include <ctype.h>
 
 /* X11 includes */
+
+/* Need to include windows.h BEFORE the the Xm stuff otherwise VC14+ barf with conflicts */
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+#	ifndef WIN32
+#		define WIN32
+#	endif
+#	include <WinSock2.h>
+#include <windows.h>
+#endif
+
+#include <Xm/Xm.h>
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -102,7 +111,6 @@ WidgetList BxWidgetIdsFromNames PROTOTYPE((Widget, char *, char *));
 /*--------------------------------------------------------------------*/
 
 /* id variables */
-static char svn_id[] = "$Id$";
 static char program_name[] = "MBvelocitytool";
 
 /* additional widgets */
@@ -446,7 +454,7 @@ void do_mbvelocity_init(int argc, char **argv) {
 	fontStruct = XLoadQueryFont(display, xgfont);
 	if (fontStruct == NULL) {
 		fprintf(stderr, "\nFailure to load font using XLoadQueryFont: %s\n", xgfont);
-		fprintf(stderr, "\tSource file: %s\n\tSource line: %d\n\tSource version: %s", __FILE__, __LINE__, svn_id);
+		fprintf(stderr, "\tSource file: %s\n\tSource line: %d", __FILE__, __LINE__);
 		fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
 		exit(-1);
 	}

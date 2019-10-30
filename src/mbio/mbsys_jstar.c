@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_jstar.c	10/4/94
- *	$Id$
  *
- *    Copyright (c) 2005-2017 by
+ *    Copyright (c) 2005-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -22,52 +21,40 @@
  *
  * Author:	D. W. Caress
  * Date:	May 4, 2005
- *
  */
 
-/* standard include files */
-#include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-/* mbio include files */
-#include "mb_status.h"
+#include "mb_aux.h"
+#include "mb_define.h"
 #include "mb_format.h"
 #include "mb_io.h"
-#include "mb_define.h"
 #include "mb_process.h"
-#include "mb_aux.h"
 #include "mb_segy.h"
+#include "mb_status.h"
 #include "mbsys_jstar.h"
-
-static char svn_id[] = "$Id$";
 
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mbsys_jstar_alloc";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* allocate memory for data structure */
-	status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_jstar_struct), (void **)store_ptr, error);
+	const int status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_jstar_struct), (void **)store_ptr, error);
 
 	/* make sure trace pointers are null */
-	store = (struct mbsys_jstar_struct *)mb_io_ptr->store_data;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)mb_io_ptr->store_data;
 	store->kind = MB_DATA_NONE;
 	store->sbp.trace_alloc = 0;
 	store->sbp.trace = NULL;
@@ -77,9 +64,8 @@ int mbsys_jstar_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error)
 	store->ssstbd.trace = NULL;
 	store->comment.comment[0] = 0;
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)*store_ptr);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
@@ -87,28 +73,23 @@ int mbsys_jstar_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *error)
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error) {
-	char *function_name = "mbsys_jstar_deall";
-	int status = MB_SUCCESS;
-	struct mbsys_jstar_struct *store;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
 		fprintf(stderr, "dbg2       store_ptr:  %p\n", (void *)*store_ptr);
 	}
 
+	int status = MB_SUCCESS;
+
 	/* deallocate memory for data structure */
 	if (*store_ptr != NULL) {
-		store = (struct mbsys_jstar_struct *)*store_ptr;
+		struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)*store_ptr;
 		if (store->sbp.trace != NULL && store->sbp.trace_alloc > 0) {
 			status = mb_freed(verbose, __FILE__, __LINE__, (void **)&(store->sbp.trace), error);
 		}
@@ -124,32 +105,20 @@ int mbsys_jstar_deall(int verbose, void *mbio_ptr, void **store_ptr, int *error)
 	}
 	status = mb_freed(verbose, __FILE__, __LINE__, (void **)store_ptr, error);
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbath, int *namp, int *nss, int *error) {
-	char *function_name = "mbsys_jstar_dimensions";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *sbp;
-	struct mbsys_jstar_channel_struct *ssport;
-	struct mbsys_jstar_channel_struct *ssstbd;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -157,24 +126,24 @@ int mbsys_jstar_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *ki
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
 
 	/* get beam and pixel numbers */
 	if (*kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
-		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
+		struct mbsys_jstar_channel_struct *sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
 		*nbath = 1;
 		*namp = 0;
 		*nss = 0;
 	}
 	else if (*kind == MB_DATA_DATA || *kind == MB_DATA_SIDESCAN2) {
-		ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
-		ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
+		struct mbsys_jstar_channel_struct *ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
+		struct mbsys_jstar_channel_struct *ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
 		*nbath = 1;
 		*namp = 0;
 		if ((ssport->samples + ssstbd->samples) > MBSYS_JSTAR_PIXELS_MAX)
@@ -189,9 +158,10 @@ int mbsys_jstar_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *ki
 		*nss = 0;
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 		fprintf(stderr, "dbg2       nbath:      %d\n", *nbath);
@@ -202,63 +172,52 @@ int mbsys_jstar_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *ki
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
-int mbsys_jstar_pingnumber(int verbose, void *mbio_ptr, int *pingnumber, int *error) {
-	char *function_name = "mbsys_jstar_pingnumber";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *sbp;
-	struct mbsys_jstar_channel_struct *ssport;
-	struct mbsys_jstar_channel_struct *ssstbd;
-	int kind;
+int mbsys_jstar_pingnumber(int verbose, void *mbio_ptr, unsigned int *pingnumber, int *error) {
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)mb_io_ptr->store_data;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)mb_io_ptr->store_data;
 
 	/* get data kind */
-	kind = store->kind;
+	const int kind = store->kind;
 
 	/* extract data from structure */
 	if (kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
-		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
+		struct mbsys_jstar_channel_struct *sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
 		*pingnumber = sbp->pingNum;
 	}
 	else if (kind == MB_DATA_DATA || kind == MB_DATA_SIDESCAN2) {
-		ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
-		ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
+		struct mbsys_jstar_channel_struct *ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
+		struct mbsys_jstar_channel_struct *ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
 		*pingnumber = ssport->pingNum;
 	}
 	else {
 		*pingnumber = mb_io_ptr->ping_count;
 	}
 
-	/* print output debug statements */
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
-		fprintf(stderr, "dbg2       pingnumber: %d\n", *pingnumber);
+		fprintf(stderr, "dbg2       pingnumber: %u\n", *pingnumber);
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -266,15 +225,9 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
                            void *mbio_ptr,  /* in: see mb_io.h:/^struct mb_io_struct/ */
                            void *store_ptr, /* in: see mbsys_reson7k.h:/^struct mbsys_reson7k_struct/ */
                            void *platform_ptr, void *preprocess_pars_ptr, int *error) {
-	char *function_name = "mbsys_jstar_preprocess";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
 	struct mbsys_jstar_channel_struct *sbp;
 	struct mbsys_jstar_channel_struct *ssport;
 	struct mbsys_jstar_channel_struct *ssstbd;
-	struct mb_platform_struct *platform;
-	struct mb_preprocess_struct *pars;
 
 	int time_i[7], time_j[5];
 	double time_d = 0.0;
@@ -294,12 +247,9 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 	int jheading = 0;
 	int jaltitude = 0;
 	int jattitude = 0;
-	int i;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:                   %p\n", (void *)mbio_ptr);
@@ -309,7 +259,7 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 	}
 
 	/* always successful */
-	status = MB_SUCCESS;
+	int status = MB_SUCCESS;
 	*error = MB_ERROR_NO_ERROR;
 
 	/* check for non-null data */
@@ -318,14 +268,13 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 	assert(preprocess_pars_ptr != NULL);
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointers */
-	store = (struct mbsys_jstar_struct *)store_ptr;
-	platform = (struct mb_platform_struct *)platform_ptr;
-	pars = (struct mb_preprocess_struct *)preprocess_pars_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mb_platform_struct *platform = (struct mb_platform_struct *)platform_ptr;
+	struct mb_preprocess_struct *pars = (struct mb_preprocess_struct *)preprocess_pars_ptr;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
 		fprintf(stderr, "dbg2       target_sensor:              %d\n", pars->target_sensor);
 		fprintf(stderr, "dbg2       timestamp_changed:          %d\n", pars->timestamp_changed);
@@ -350,7 +299,7 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 		fprintf(stderr, "dbg2       attitude_pitch:             %p\n", pars->attitude_pitch);
 		fprintf(stderr, "dbg2       attitude_heave:             %p\n", pars->attitude_heave);
 		fprintf(stderr, "dbg2       n_kluge:                    %d\n", pars->n_kluge);
-		for (i = 0; i < pars->n_kluge; i++)
+		for (int i = 0; i < pars->n_kluge; i++)
 			fprintf(stderr, "dbg2       kluge_id[%d]:                    %d\n", i, pars->kluge_id[i]);
 	}
 
@@ -360,7 +309,7 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
 
 		/* change timestamp if indicated */
-		if (pars->timestamp_changed == MB_YES) {
+		if (pars->timestamp_changed == true) {
 			time_d = pars->time_d;
 			mb_get_date(verbose, time_d, time_i);
 			mb_get_jtime(verbose, time_i, time_j);
@@ -374,7 +323,7 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 			        "Timestamp changed in function %s: "
 			        "%4.4d/%2.2d/%2.2d %2.2d:%2.2d:%2.2d.%6.6d "
 			        "| ping_number:%d\n",
-			        function_name, time_i[0], time_i[1], time_i[2], time_i[3], time_i[4], time_i[5], time_i[6], sbp->pingNum);
+			        __func__, time_i[0], time_i[1], time_i[2], time_i[3], time_i[4], time_i[5], time_i[6], sbp->pingNum);
 		}
 
 		/* get time */
@@ -394,7 +343,7 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 		ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
 
 		/* change timestamp if indicated */
-		if (pars->timestamp_changed == MB_YES) {
+		if (pars->timestamp_changed == true) {
 			time_d = pars->time_d;
 			mb_get_date(verbose, time_d, time_i);
 			mb_get_jtime(verbose, time_i, time_j);
@@ -414,7 +363,7 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 			        "Timestamp changed in function %s: "
 			        "%4.4d/%2.2d/%2.2d %2.2d:%2.2d:%2.2d.%6.6d "
 			        "| ping_number:%d\n",
-			        function_name, time_i[0], time_i[1], time_i[2], time_i[3], time_i[4], time_i[5], time_i[6], ssport->pingNum);
+			        __func__, time_i[0], time_i[1], time_i[2], time_i[3], time_i[4], time_i[5], time_i[6], ssport->pingNum);
 		}
 
 		/* get time */
@@ -497,7 +446,7 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 			sbp->startDepth = sensordepth / sbp->sampleInterval / 0.00000075;
 			sbp->sonarDepth = 1000 * sensordepth;
 		}
-		
+
 		/* set altitude */
 		if (pars->n_altitude > 1) {
 			sbp->sonarAltitude = (int)(1000 * altitude);
@@ -547,7 +496,7 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 			ssport->sonarDepth = 1000 * sensordepth;
 			ssstbd->sonarDepth = 1000 * sensordepth;
 		}
-		
+
 		/* set altitude */
 		if (pars->n_altitude > 1) {
 			ssport->sonarAltitude = (int)(1000 * altitude);
@@ -571,16 +520,14 @@ int mbsys_jstar_preprocess(int verbose,     /* in: verbosity level set on comman
 	else {
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -588,10 +535,6 @@ int mbsys_jstar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
                         double *navlat, double *speed, double *heading, int *nbath, int *namp, int *nss, char *beamflag,
                         double *bath, double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss,
                         double *ssacrosstrack, double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mbsys_jstar_extract";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
 	struct mbsys_jstar_channel_struct *sbp;
 	struct mbsys_jstar_channel_struct *ssport;
 	struct mbsys_jstar_channel_struct *ssstbd;
@@ -601,12 +544,9 @@ int mbsys_jstar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 	double range, altitude;
 	double weight;
 	int istart, jstart;
-	int i, j;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -614,10 +554,10 @@ int mbsys_jstar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
@@ -673,9 +613,8 @@ int mbsys_jstar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 			beamflag[0] = MB_FLAG_NULL;
 		}
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -692,11 +631,11 @@ int mbsys_jstar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 			fprintf(stderr, "dbg4       speed:      %f\n", *speed);
 			fprintf(stderr, "dbg4       heading:    %f\n", *heading);
 			fprintf(stderr, "dbg4       nbath:      %d\n", *nbath);
-			for (i = 0; i < *nbath; i++)
+			for (int i = 0; i < *nbath; i++)
 				fprintf(stderr, "dbg4       beam:%4d  flag:%3d  bath:%f  bathdist:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i]);
 			fprintf(stderr, "dbg4        nss:      %d\n", *nss);
-			for (i = 0; i < *nss; i++)
+			for (int i = 0; i < *nss; i++)
 				fprintf(stderr, "dbg4        beam:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 				        ssalongtrack[i]);
 		}
@@ -767,48 +706,38 @@ int mbsys_jstar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		else
 			pixelsize = rawpixelsize;
 		altitude = 0.001 * ssport->sonarAltitude;
-		// fprintf(stderr,"rawpixelsize:%f pixelsize:%f altitude:%f\n", rawpixelsize,pixelsize,altitude);
 
 		/* zero the array */
-		for (i = 0; i < *nss; i++) {
+		for (int i = 0; i < *nss; i++) {
 			ss[i] = 0.0;
 			range = altitude + fabs(pixelsize * (i - *nss / 2));
 			ssacrosstrack[i] = sqrt(range * range - altitude * altitude);
 			if (i < *nss / 2)
 				ssacrosstrack[i] = -ssacrosstrack[i];
 			ssalongtrack[i] = 0.0;
-			/*fprintf(stderr,"i:%d range:%f altitude:%f xtrack:%f\n",i,range,altitude,ssacrosstrack[i]);*/
 		}
 
 		/* bin the data */
 		istart = (int)(altitude / rawpixelsize);
-		/*fprintf(stderr,"istart:%d altitude:%f rawpixelsize:%f startDepth:%d\n",
-		istart,altitude,rawpixelsize,ssport->startDepth);*/
 		weight = exp(MB_LN_2 * ((double)ssport->weightingFactor));
-		/*fprintf(stderr, "Subsystem: %d Weights: %d %f ",ssport->message.subsystem,ssport->weightingFactor,weight);*/
 		jstart = *nss / 2;
-		/*fprintf(stderr,"Port istart:%d of %d    jstart:%d of %d\n",istart,ssport->samples,jstart,*nss);*/
-		for (i = istart; i < ssport->samples; i++) {
+		for (int i = istart; i < ssport->samples; i++) {
 			range = rawpixelsize * (i + ssport->startDepth);
-			j = jstart - (int)((i - istart) * rawpixelsize / pixelsize);
+			const int j = jstart - (int)((i - istart) * rawpixelsize / pixelsize);
 			ss[j] += ssport->trace[i] / weight;
 			ssalongtrack[j] += 1.0;
-			/*fprintf(stderr,"Binning Port: i:%d j:%d ss:%f\n",i,j,ss[j]/ssalongtrack[j]);*/
 		}
 		istart = MAX(0, ((int)(altitude / rawpixelsize)));
 		weight = exp(MB_LN_2 * ((double)ssstbd->weightingFactor));
-		/*fprintf(stderr, "   %d %f\n",ssstbd->weightingFactor,weight);*/
-		/*fprintf(stderr,"Stbd istart:%d of %d    jstart:%d of %d\n",istart,ssstbd->samples,jstart,*nss);*/
-		for (i = istart; i < ssstbd->samples; i++) {
+		for (int i = istart; i < ssstbd->samples; i++) {
 			range = rawpixelsize * (i + ssstbd->startDepth);
-			j = jstart + (int)((i - istart) * rawpixelsize / pixelsize);
+			const int j = jstart + (int)((i - istart) * rawpixelsize / pixelsize);
 			ss[j] += ssstbd->trace[i] / weight;
 			ssalongtrack[j] += 1.0;
-			/*fprintf(stderr,"Binning Stbd: i:%d j:%d ss:%f\n",i,j,ss[j]/ssalongtrack[j]);*/
 		}
 
 		/* average the data in the bins */
-		for (i = 0; i < *nss; i++) {
+		for (int i = 0; i < *nss; i++) {
 			if (ss[i] > 0.0 && ssalongtrack[i] > 0.0) {
 				ss[i] /= ssalongtrack[i];
 				ssalongtrack[i] = 0.0;
@@ -817,13 +746,12 @@ int mbsys_jstar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 				ss[i] = MB_SIDESCAN_NULL;
 			}
 		}
-		for (i = *nss; i < MBSYS_JSTAR_PIXELS_MAX; i++) {
+		for (int i = *nss; i < MBSYS_JSTAR_PIXELS_MAX; i++) {
 			ss[i] = MB_SIDESCAN_NULL;
 		}
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -840,11 +768,11 @@ int mbsys_jstar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 			fprintf(stderr, "dbg4       speed:      %f\n", *speed);
 			fprintf(stderr, "dbg4       heading:    %f\n", *heading);
 			fprintf(stderr, "dbg4       nbath:      %d\n", *nbath);
-			for (i = 0; i < *nbath; i++)
+			for (int i = 0; i < *nbath; i++)
 				fprintf(stderr, "dbg4       beam:%4d  flag:%3d  bath:%f  bathdist:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i]);
 			fprintf(stderr, "dbg4        nss:      %d\n", *nss);
-			for (i = 0; i < *nss; i++)
+			for (int i = 0; i < *nss; i++)
 				fprintf(stderr, "dbg4        pixel:%d   ss:%f  acrosstrack:%f  alongtrack:%f\n", i, ss[i], ssacrosstrack[i],
 				        ssalongtrack[i]);
 		}
@@ -857,18 +785,16 @@ int mbsys_jstar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		/* copy comment */
 		strcpy(comment, store->comment.comment);
 
-		/* print debug statements */
 		if (verbose >= 4) {
-			fprintf(stderr, "\ndbg4  New ping read by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  New ping read by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  New ping values:\n");
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
 			fprintf(stderr, "dbg4       comment:    %s\n", comment);
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -891,16 +817,18 @@ int mbsys_jstar_extract(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 	}
 	if (verbose >= 2 && *error <= MB_ERROR_NO_ERROR && (*kind == MB_DATA_DATA || *kind == MB_DATA_SIDESCAN2)) {
 		fprintf(stderr, "dbg2       nbath:         %d\n", *nbath);
-		for (i = 0; i < *nbath; i++)
+		for (int i = 0; i < *nbath; i++)
 			fprintf(stderr, "dbg2       beam:%4d  flag:%3d  bath:%f  bathdist:%f\n", i, beamflag[i], bath[i], bathacrosstrack[i]);
 	}
+
+	const int status = MB_SUCCESS;
+
 	if (verbose >= 2) {
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
@@ -908,10 +836,6 @@ int mbsys_jstar_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, i
                        double navlat, double speed, double heading, int nbath, int namp, int nss, char *beamflag, double *bath,
                        double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss, double *ssacrosstrack,
                        double *ssalongtrack, char *comment, int *error) {
-	char *function_name = "mbsys_jstar_insert";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
 	struct mbsys_jstar_channel_struct *sbp;
 	struct mbsys_jstar_channel_struct *ssport;
 	struct mbsys_jstar_channel_struct *ssstbd;
@@ -920,12 +844,9 @@ int mbsys_jstar_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, i
 	int istart, jstart, jxtrackmax;
 	int shortspersample;
 	int nsamples, trace_size;
-	int i, j;
 
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -949,16 +870,16 @@ int mbsys_jstar_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, i
 	if (verbose >= 2 && (kind == MB_DATA_DATA || kind == MB_DATA_SIDESCAN2)) {
 		fprintf(stderr, "dbg2       nbath:      %d\n", nbath);
 		if (verbose >= 3)
-			for (i = 0; i < nbath; i++)
+			for (int i = 0; i < nbath; i++)
 				fprintf(stderr, "dbg3       beam:%4d  flag:%3d  bath:%f  bathdist:%f\n", i, beamflag[i], bath[i],
 				        bathacrosstrack[i]);
 		fprintf(stderr, "dbg2       namp:       %d\n", namp);
 		if (verbose >= 3)
-			for (i = 0; i < namp; i++)
+			for (int i = 0; i < namp; i++)
 				fprintf(stderr, "dbg3        amp[%d]: %f\n", i, amp[i]);
 		fprintf(stderr, "dbg2        nss:       %d\n", nss);
 		if (verbose >= 3)
-			for (i = 0; i < nss; i++)
+			for (int i = 0; i < nss; i++)
 				fprintf(stderr, "dbg3        ss[%d]: %f    ssdist[%d]: %f\n", i, ss[i], i, ssacrosstrack[i]);
 	}
 	if (verbose >= 2 && kind == MB_DATA_COMMENT) {
@@ -966,13 +887,15 @@ int mbsys_jstar_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, i
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* set data kind */
 	store->kind = kind;
+
+	int status = MB_SUCCESS;
 
 	/* insert subbottom data into structure */
 	if (kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
@@ -1112,7 +1035,7 @@ int mbsys_jstar_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, i
 		pixelsize = 2.0 * altitude / nss;
 		nsamples = nss / 2;
 		range = altitude;
-		for (j = 0; j < nss; j++) {
+		for (int j = 0; j < nss; j++) {
 			if (xtrackmax < fabs(ssacrosstrack[j])) {
 				xtrackmax = fabs(ssacrosstrack[j]);
 				jxtrackmax = j;
@@ -1161,14 +1084,14 @@ int mbsys_jstar_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, i
 
 			/* zero trace before bottom arrival */
 			istart = (int)(altitude / pixelsize);
-			for (i = 0; i < istart; i++) {
+			for (int i = 0; i < istart; i++) {
 				ssport->trace[i] = 0;
 				ssstbd->trace[i] = 0;
 			}
 
 			/* get maximum value to determine scaling */
 			ssmax = 0.0;
-			for (i = 0; i < nss; i++)
+			for (int i = 0; i < nss; i++)
 				ssmax = MAX(ssmax, ss[i]);
 			if (ssmax > 0.0) {
 				weight = 65535.0 / ssmax;
@@ -1179,14 +1102,14 @@ int mbsys_jstar_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, i
 			/* insert port and starboard traces from sidescan swath */
 			jstart = nss / 2 - 1;
 			weight = exp(MB_LN_2 * ((double)ssport->weightingFactor));
-			for (j = jstart; j >= 0; j--) {
-				i = istart + (jstart - j);
+			for (int j = jstart; j >= 0; j--) {
+				const int i = istart + (jstart - j);
 				ssport->trace[i] = (short)(ss[j] * weight);
 			}
 			jstart = nss / 2;
 			weight = exp(MB_LN_2 * ((double)ssstbd->weightingFactor));
-			for (j = jstart; j < nss; j++) {
-				i = istart + (j - jstart);
+			for (int j = jstart; j < nss; j++) {
+				const int i = istart + (j - jstart);
 				ssstbd->trace[i] = (short)(ss[j] * weight);
 			}
 		}
@@ -1197,32 +1120,22 @@ int mbsys_jstar_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind, i
 		strcpy(store->comment.comment, comment);
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, double *ttimes, double *angles,
                        double *angles_forward, double *angles_null, double *heave, double *alongtrack_offset, double *draft,
                        double *ssv, int *error) {
-	char *function_name = "mbsys_jstar_ttimes";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1236,13 +1149,15 @@ int mbsys_jstar_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, 
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA || *kind == MB_DATA_SIDESCAN2) {
@@ -1264,9 +1179,8 @@ int mbsys_jstar_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, 
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -1274,7 +1188,7 @@ int mbsys_jstar_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, 
 		fprintf(stderr, "dbg2       draft:      %f\n", *draft);
 		fprintf(stderr, "dbg2       ssv:        %f\n", *ssv);
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: tt:%f  angle_xtrk:%f  angle_ltrk:%f  angle_null:%f  depth_off:%f  ltrk_off:%f\n",
 			        i, ttimes[i], angles[i], angles_forward[i], angles_null[i], heave[i], alongtrack_offset[i]);
 	}
@@ -1284,21 +1198,12 @@ int mbsys_jstar_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind, 
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nbeams, int *detects, int *error) {
-	char *function_name = "mbsys_jstar_detects";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1307,13 +1212,15 @@ int mbsys_jstar_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_DATA) {
@@ -1341,15 +1248,14 @@ int mbsys_jstar_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
 	if (verbose >= 2 && *error == MB_ERROR_NO_ERROR) {
 		fprintf(stderr, "dbg2       nbeams:     %d\n", *nbeams);
-		for (i = 0; i < *nbeams; i++)
+		for (int i = 0; i < *nbeams; i++)
 			fprintf(stderr, "dbg2       beam %d: detects:%d\n", i, detects[i]);
 	}
 	if (verbose >= 2) {
@@ -1358,23 +1264,13 @@ int mbsys_jstar_detects(int verbose, void *mbio_ptr, void *store_ptr, int *kind,
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *transducer_depth,
                                  double *altitude, int *error) {
-	char *function_name = "mbsys_jstar_extract_altitude";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *sbp;
-	struct mbsys_jstar_channel_struct *ssport;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1382,18 +1278,20 @@ int mbsys_jstar_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, i
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
 
+	int status = MB_SUCCESS;
+
 	/* extract data from structure */
 	if (*kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
 		/* get channel */
-		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
+		struct mbsys_jstar_channel_struct *sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
 
 		/* get transducer_depth */
 		if (sbp->sonarDepth > 0)
@@ -1406,7 +1304,7 @@ int mbsys_jstar_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, i
 
 	else if (*kind == MB_DATA_DATA || *kind == MB_DATA_SIDESCAN2) {
 		/* get channel */
-		ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
+		struct mbsys_jstar_channel_struct *ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
 
 		/* get transducer_depth */
 		if (ssport->sonarDepth > 0)
@@ -1436,9 +1334,8 @@ int mbsys_jstar_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, i
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       transducer_depth:  %f\n", *transducer_depth);
@@ -1448,25 +1345,13 @@ int mbsys_jstar_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr, i
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, double transducer_depth, double altitude,
                                 int *error) {
-	char *function_name = "mbsys_jstar_insert_altitude";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *sbp;
-	struct mbsys_jstar_channel_struct *ssport;
-	struct mbsys_jstar_channel_struct *ssstbd;
-	int kind;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1476,17 +1361,20 @@ int mbsys_jstar_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, do
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
-	kind = store->kind;
+	const int kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
 		/* get channel */
+	struct mbsys_jstar_channel_struct *sbp;
 		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
 
 		/* get transducer_depth and altitude */
@@ -1496,8 +1384,8 @@ int mbsys_jstar_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, do
 
 	else if (kind == MB_DATA_DATA || kind == MB_DATA_SIDESCAN2) {
 		/* get channel */
-		ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
-		ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
+		struct mbsys_jstar_channel_struct *ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
+		struct mbsys_jstar_channel_struct *ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
 
 		/* get transducer_depth and altitude */
 		ssport->sonarDepth = 1000 * transducer_depth;
@@ -1526,34 +1414,22 @@ int mbsys_jstar_insert_altitude(int verbose, void *mbio_ptr, void *store_ptr, do
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int time_i[7], double *time_d,
                             double *navlon, double *navlat, double *speed, double *heading, double *draft, double *roll,
                             double *pitch, double *heave, int *error) {
-	char *function_name = "mbsys_jstar_extract_nav";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *sbp;
-	struct mbsys_jstar_channel_struct *ssport;
-	int time_j[5];
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1561,20 +1437,23 @@ int mbsys_jstar_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *k
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
 
+	int status = MB_SUCCESS;
+
 	/* extract subbottom data from structure */
 	if (*kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
 		/* get channel */
-		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
+		struct mbsys_jstar_channel_struct *sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
 
 		/* get time */
+		int time_j[5];
 		time_j[0] = sbp->year;
 		time_j[1] = sbp->day;
 		time_j[2] = 60 * sbp->hour + sbp->minute;
@@ -1608,9 +1487,8 @@ int mbsys_jstar_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		*pitch = 180.0 / 32768.0 * (double)sbp->pitch;
 		*heave = 0.0;
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -1638,9 +1516,10 @@ int mbsys_jstar_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *k
 	/* extract data from structure */
 	else if (*kind == MB_DATA_DATA || *kind == MB_DATA_SIDESCAN2) {
 		/* get channel */
-		ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
+		struct mbsys_jstar_channel_struct *ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
 
 		/* get time */
+		int time_j[5];
 		time_j[0] = ssport->year;
 		time_j[1] = ssport->day;
 		time_j[2] = 60 * ssport->hour + ssport->minute;
@@ -1674,9 +1553,8 @@ int mbsys_jstar_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		*pitch = 180.0 / 32768.0 * (double)ssport->pitch;
 		*heave = 0.0;
 
-		/* print debug statements */
 		if (verbose >= 5) {
-			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", function_name);
+			fprintf(stderr, "\ndbg4  Data extracted by MBIO function <%s>\n", __func__);
 			fprintf(stderr, "dbg4  Extracted values:\n");
 			fprintf(stderr, "dbg4       kind:       %d\n", *kind);
 			fprintf(stderr, "dbg4       error:      %d\n", *error);
@@ -1715,9 +1593,8 @@ int mbsys_jstar_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
@@ -1745,26 +1622,14 @@ int mbsys_jstar_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int *k
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int time_i[7], double time_d, double navlon,
                            double navlat, double speed, double heading, double draft, double roll, double pitch, double heave,
                            int *error) {
-	char *function_name = "mbsys_jstar_insert_nav";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *sbp;
-	struct mbsys_jstar_channel_struct *ssport;
-	struct mbsys_jstar_channel_struct *ssstbd;
-	int time_j[5];
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -1788,21 +1653,24 @@ int mbsys_jstar_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int tim
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
+
+	int status = MB_SUCCESS;
 
 	/* insert subbottom data into structure */
 	if (store->kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
 		/* get channel */
-		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
+		struct mbsys_jstar_channel_struct *sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
 
 		/* set kind and subsystem */
 		store->kind = MB_DATA_SUBBOTTOM_SUBBOTTOM;
 		store->subsystem = MBSYS_JSTAR_SUBSYSTEM_SBP;
 
 		/* get time */
+		int time_j[5];
 		mb_get_jtime(verbose, time_i, time_j);
 		sbp->year = time_i[0];
 		sbp->day = time_j[1];
@@ -1840,8 +1708,8 @@ int mbsys_jstar_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int tim
 	/* insert data in structure */
 	else if (store->kind == MB_DATA_DATA || store->kind == MB_DATA_SIDESCAN2) {
 		/* get channels */
-		ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
-		ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
+		struct mbsys_jstar_channel_struct *ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
+                struct mbsys_jstar_channel_struct *ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
 
 		/* set kind and subsystem */
 		store->kind = MB_DATA_DATA;
@@ -1864,6 +1732,7 @@ int mbsys_jstar_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int tim
 		}
 
 		/* get time */
+		int time_j[5];
 		mb_get_jtime(verbose, time_i, time_j);
 		ssport->year = time_i[0];
 		ssport->day = time_j[1];
@@ -1913,32 +1782,21 @@ int mbsys_jstar_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int tim
 		ssstbd->pitch = 32768 * pitch / 180.0;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return value:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_extract_rawssdimensions(int verbose, void *mbio_ptr, void *store_ptr, int *kind, double *sample_interval,
                                         int *num_samples_port, int *num_samples_stbd, int *error) {
-	char *function_name = "mbsys_jstar_extract_rawssdimensions";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *ssport;
-	struct mbsys_jstar_channel_struct *ssstbd;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -1946,19 +1804,21 @@ int mbsys_jstar_extract_rawssdimensions(int verbose, void *mbio_ptr, void *store
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
 
+	int status = MB_SUCCESS;
+
 	/* extract sidescan data from structure */
 	if (*kind == MB_DATA_DATA || *kind == MB_DATA_SIDESCAN2) {
 		/* get channels */
-		ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
-		ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
+		struct mbsys_jstar_channel_struct *ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
+		struct mbsys_jstar_channel_struct *ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
 
 		/* get sample_interval */
 		if (ssport != NULL)
@@ -1983,10 +1843,8 @@ int mbsys_jstar_extract_rawssdimensions(int verbose, void *mbio_ptr, void *store
 		*error = MB_ERROR_BAD_KIND;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       sample_interval:   %lf\n", *sample_interval);
@@ -1997,26 +1855,14 @@ int mbsys_jstar_extract_rawssdimensions(int verbose, void *mbio_ptr, void *store
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_extract_rawss(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *sidescan_type,
                               double *sample_interval, double *beamwidth_xtrack, double *beamwidth_ltrack, int *num_samples_port,
                               double *rawss_port, int *num_samples_stbd, double *rawss_stbd, int *error) {
-	char *function_name = "mbsys_jstar_extract_rawss";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *ssport;
-	struct mbsys_jstar_channel_struct *ssstbd;
-	double weight;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -2024,19 +1870,21 @@ int mbsys_jstar_extract_rawss(int verbose, void *mbio_ptr, void *store_ptr, int 
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
 
+	int status = MB_SUCCESS;
+
 	/* extract sidescan data from structure */
 	if (*kind == MB_DATA_DATA || *kind == MB_DATA_SIDESCAN2) {
 		/* get channels */
-		ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
-		ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
+		struct mbsys_jstar_channel_struct *ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
+		struct mbsys_jstar_channel_struct *ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
 
 		/* sidescan type is always linear */
 		*sidescan_type = MB_SIDESCAN_LINEAR;
@@ -2074,8 +1922,8 @@ int mbsys_jstar_extract_rawss(int verbose, void *mbio_ptr, void *store_ptr, int 
 		/* get numbers of samples and time series */
 		if (ssport != NULL) {
 			*num_samples_port = ssport->samples;
-			weight = exp(MB_LN_2 * ((double)ssport->weightingFactor));
-			for (i = 0; i < *num_samples_port; i++) {
+			const double weight = exp(MB_LN_2 * ((double)ssport->weightingFactor));
+			for (int i = 0; i < *num_samples_port; i++) {
 				rawss_port[i] = ssport->trace[i] / weight;
 			}
 		}
@@ -2083,8 +1931,8 @@ int mbsys_jstar_extract_rawss(int verbose, void *mbio_ptr, void *store_ptr, int 
 			*num_samples_port = 0;
 		if (ssstbd != NULL) {
 			*num_samples_stbd = ssstbd->samples;
-			weight = exp(MB_LN_2 * ((double)ssstbd->weightingFactor));
-			for (i = 0; i < *num_samples_stbd; i++) {
+			const double weight = exp(MB_LN_2 * ((double)ssstbd->weightingFactor));
+			for (int i = 0; i < *num_samples_stbd; i++) {
 				rawss_stbd[i] = ssstbd->trace[i] / weight;
 			}
 		}
@@ -2098,10 +1946,8 @@ int mbsys_jstar_extract_rawss(int verbose, void *mbio_ptr, void *store_ptr, int 
 		*error = MB_ERROR_BAD_KIND;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       sidescan_type:     %d\n", *sidescan_type);
@@ -2109,37 +1955,24 @@ int mbsys_jstar_extract_rawss(int verbose, void *mbio_ptr, void *store_ptr, int 
 		fprintf(stderr, "dbg2       beamwidth_xtrack:  %lf\n", *beamwidth_xtrack);
 		fprintf(stderr, "dbg2       beamwidth_ltrack:  %lf\n", *beamwidth_ltrack);
 		fprintf(stderr, "dbg2       num_samples_port:  %d\n", *num_samples_port);
-		for (i = 0; i < *num_samples_port; i++)
+		for (int i = 0; i < *num_samples_port; i++)
 			fprintf(stderr, "dbg2       sample: %d  rawss_port:%f\n", i, rawss_port[i]);
 		fprintf(stderr, "dbg2       num_samples_stbd:  %d\n", *num_samples_stbd);
-		for (i = 0; i < *num_samples_stbd; i++)
+		for (int i = 0; i < *num_samples_stbd; i++)
 			fprintf(stderr, "dbg2       sample: %d  rawss_stbd:%f\n", i, rawss_stbd[i]);
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_insert_rawss(int verbose, void *mbio_ptr, void *store_ptr, int kind, int sidescan_type, double sample_interval,
                              double beamwidth_xtrack, double beamwidth_ltrack, int num_samples_port, double *rawss_port,
                              int num_samples_stbd, double *rawss_stbd, int *error) {
-	char *function_name = "mbsys_jstar_insert_rawss";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *ssport;
-	struct mbsys_jstar_channel_struct *ssstbd;
-	double weight;
-	size_t data_size;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:           %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:            %p\n", (void *)mbio_ptr);
@@ -2150,27 +1983,29 @@ int mbsys_jstar_insert_rawss(int verbose, void *mbio_ptr, void *store_ptr, int k
 		fprintf(stderr, "dbg2       beamwidth_xtrack:  %lf\n", beamwidth_xtrack);
 		fprintf(stderr, "dbg2       beamwidth_ltrack:  %lf\n", beamwidth_ltrack);
 		fprintf(stderr, "dbg2       num_samples_port:  %d\n", num_samples_port);
-		for (i = 0; i < num_samples_port; i++)
+		for (int i = 0; i < num_samples_port; i++)
 			fprintf(stderr, "dbg2       sample: %d  rawss_port:%f\n", i, rawss_port[i]);
 		fprintf(stderr, "dbg2       num_samples_stbd:  %d\n", num_samples_stbd);
-		for (i = 0; i < num_samples_stbd; i++)
+		for (int i = 0; i < num_samples_stbd; i++)
 			fprintf(stderr, "dbg2       sample: %d  rawss_stbd:%f\n", i, rawss_stbd[i]);
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* set data kind */
 	store->kind = kind;
 
+	int status = MB_SUCCESS;
+
 	/* insert sidescan data into structure */
 	if (kind == store->kind && (store->kind == MB_DATA_DATA || store->kind == MB_DATA_SIDESCAN2)) {
 		/* get channels */
-		ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
-		ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
+		struct mbsys_jstar_channel_struct *ssport = (struct mbsys_jstar_channel_struct *)&(store->ssport);
+		struct mbsys_jstar_channel_struct *ssstbd = (struct mbsys_jstar_channel_struct *)&(store->ssstbd);
 
 		/* set sample_interval */
 		if (ssport != NULL)
@@ -2186,7 +2021,7 @@ int mbsys_jstar_insert_rawss(int verbose, void *mbio_ptr, void *store_ptr, int k
 			ssport->samples = num_samples_port;
 
 			/* allocated memory for samples if needed */
-			data_size = sizeof(short) * ssport->samples;
+			const size_t data_size = sizeof(short) * ssport->samples;
 			if (ssport->trace_alloc < data_size) {
 				status = mb_reallocd(verbose, __FILE__, __LINE__, data_size, (void **)&(ssport->trace), error);
 				if (status == MB_SUCCESS) {
@@ -2199,8 +2034,8 @@ int mbsys_jstar_insert_rawss(int verbose, void *mbio_ptr, void *store_ptr, int k
 			}
 
 			/* copy the samples, correcting for weighting */
-			weight = exp(MB_LN_2 * ((double)ssport->weightingFactor));
-			for (i = 0; i < num_samples_port; i++) {
+			const double weight = exp(MB_LN_2 * ((double)ssport->weightingFactor));
+			for (int i = 0; i < num_samples_port; i++) {
 				ssport->trace[i] = (short)(weight * rawss_port[i]);
 			}
 		}
@@ -2209,7 +2044,7 @@ int mbsys_jstar_insert_rawss(int verbose, void *mbio_ptr, void *store_ptr, int k
 			ssstbd->samples = num_samples_stbd;
 
 			/* allocated memory for samples if needed */
-			data_size = sizeof(short) * ssstbd->samples;
+			const size_t data_size = sizeof(short) * ssstbd->samples;
 			if (ssstbd->trace_alloc < data_size) {
 				status = mb_reallocd(verbose, __FILE__, __LINE__, data_size, (void **)&(ssstbd->trace), error);
 				if (status == MB_SUCCESS) {
@@ -2222,8 +2057,8 @@ int mbsys_jstar_insert_rawss(int verbose, void *mbio_ptr, void *store_ptr, int k
 			}
 
 			/* copy the samples, correcting for weighting */
-			weight = exp(MB_LN_2 * ((double)ssstbd->weightingFactor));
-			for (i = 0; i < num_samples_stbd; i++) {
+			const double weight = exp(MB_LN_2 * ((double)ssstbd->weightingFactor));
+			for (int i = 0; i < num_samples_stbd; i++) {
 				ssstbd->trace[i] = (short)(weight * rawss_stbd[i]);
 			}
 		}
@@ -2235,40 +2070,21 @@ int mbsys_jstar_insert_rawss(int verbose, void *mbio_ptr, void *store_ptr, int k
 		*error = MB_ERROR_BAD_KIND;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_extract_segytraceheader(int verbose, void *mbio_ptr, void *store_ptr, int *kind, void *segytraceheader_ptr,
                                         int *error) {
-	char *function_name = "mbsys_jstar_extract_segytraceheader";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *sbp;
-	struct mb_segytraceheader_struct *mb_segytraceheader_ptr;
-	double dsonardepth, dsonaraltitude, dwaterdepth;
-	int sonardepth, waterdepth;
-	int watersoundspeed;
-	float fwatertime;
-	double longitude, latitude;
-	int time_i[7], time_j[5];
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:        %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:         %p\n", (void *)mbio_ptr);
@@ -2278,47 +2094,53 @@ int mbsys_jstar_extract_segytraceheader(int verbose, void *mbio_ptr, void *store
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
-	mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segytraceheader_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mb_segytraceheader_struct *mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segytraceheader_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
 
+	int status = MB_SUCCESS;
+
 	/* extract data from structure */
 	if (*kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
 		/* get channel */
-		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
+		struct mbsys_jstar_channel_struct *sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
 
 		/* get time */
+		int time_j[5];
 		time_j[0] = sbp->year;
 		time_j[1] = sbp->day;
 		time_j[2] = 60 * sbp->hour + sbp->minute;
 		time_j[3] = sbp->second;
 		time_j[4] = (int)1000 * (sbp->millisecondsToday - 1000 * floor(0.001 * ((double)sbp->millisecondsToday)));
+		int time_i[7];
 		mb_get_itime(verbose, time_j, time_i);
 
 		/* get needed values */
 		/* get transducer_depth */
+		double dsonardepth;
 		if (sbp->sonarDepth > 0)
 			dsonardepth = 0.001 * sbp->sonarDepth;
 		else
 			dsonardepth = sbp->startDepth * sbp->sampleInterval * 0.00000075;
-		dsonaraltitude = 0.001 * sbp->sonarAltitude;
+		const double dsonaraltitude = 0.001 * sbp->sonarAltitude;
+		double dwaterdepth;
 		if (sbp->sonarDepth > 0)
 			dwaterdepth = 0.001 * sbp->sonarDepth;
 		else
 			dwaterdepth = dsonardepth + dsonaraltitude;
-		sonardepth = (int)(100 * dsonardepth);
-		waterdepth = (int)(100 * dwaterdepth);
-		watersoundspeed = 1500;
-		fwatertime = 2.0 * dwaterdepth / ((double)watersoundspeed);
+		const int sonardepth = (int)(100 * dsonardepth);
+		const int waterdepth = (int)(100 * dwaterdepth);
+		const double watersoundspeed = 1500;
+		const float fwatertime = 2.0 * dwaterdepth / ((double)watersoundspeed);
 
 		/* get navigation */
-		longitude = sbp->coordX / 600000.0;
-		latitude = sbp->coordY / 600000.0;
+		const double longitude = sbp->coordX / 600000.0;
+		const double latitude = sbp->coordY / 600000.0;
 
 		/* extract the data */
 		mb_segytraceheader_ptr->seq_num = sbp->pingNum;
@@ -2361,7 +2183,7 @@ int mbsys_jstar_extract_segytraceheader(int verbose, void *mbio_ptr, void *store
 		mb_segytraceheader_ptr->emute_mils = 0;
 		mb_segytraceheader_ptr->nsamps = sbp->samples;
 		mb_segytraceheader_ptr->si_micros = (short)(sbp->sampleInterval / 1000);
-		for (i = 0; i < 19; i++)
+		for (int i = 0; i < 19; i++)
 			mb_segytraceheader_ptr->other_1[i] = 0;
 		mb_segytraceheader_ptr->year = time_i[0];
 		mb_segytraceheader_ptr->day_of_yr = time_j[1];
@@ -2370,7 +2192,7 @@ int mbsys_jstar_extract_segytraceheader(int verbose, void *mbio_ptr, void *store
 		mb_segytraceheader_ptr->sec = time_i[5];
 		mb_segytraceheader_ptr->mils = time_i[6] / 1000;
 		mb_segytraceheader_ptr->tr_weight = 1;
-		for (i = 0; i < 5; i++)
+		for (int i = 0; i < 5; i++)
 			mb_segytraceheader_ptr->other_2[i] = 0;
 		mb_segytraceheader_ptr->delay = 0.0;
 		mb_segytraceheader_ptr->smute_sec = 0.0;
@@ -2405,9 +2227,8 @@ int mbsys_jstar_extract_segytraceheader(int verbose, void *mbio_ptr, void *store
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
 		fprintf(stderr, "dbg2       seq_num:           %d\n", mb_segytraceheader_ptr->seq_num);
@@ -2449,7 +2270,7 @@ int mbsys_jstar_extract_segytraceheader(int verbose, void *mbio_ptr, void *store
 		fprintf(stderr, "dbg2       emute_mils:        %d\n", mb_segytraceheader_ptr->emute_mils);
 		fprintf(stderr, "dbg2       nsamps:            %d\n", mb_segytraceheader_ptr->nsamps);
 		fprintf(stderr, "dbg2       si_micros:         %d\n", mb_segytraceheader_ptr->si_micros);
-		for (i = 0; i < 19; i++)
+		for (int i = 0; i < 19; i++)
 			fprintf(stderr, "dbg2       other_1[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_1[i]);
 		fprintf(stderr, "dbg2       year:              %d\n", mb_segytraceheader_ptr->year);
 		fprintf(stderr, "dbg2       day_of_yr:         %d\n", mb_segytraceheader_ptr->day_of_yr);
@@ -2458,7 +2279,7 @@ int mbsys_jstar_extract_segytraceheader(int verbose, void *mbio_ptr, void *store
 		fprintf(stderr, "dbg2       sec:               %d\n", mb_segytraceheader_ptr->sec);
 		fprintf(stderr, "dbg2       mils:              %d\n", mb_segytraceheader_ptr->mils);
 		fprintf(stderr, "dbg2       tr_weight:         %d\n", mb_segytraceheader_ptr->tr_weight);
-		for (i = 0; i < 5; i++)
+		for (int i = 0; i < 5; i++)
 			fprintf(stderr, "dbg2       other_2[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_2[i]);
 		fprintf(stderr, "dbg2       delay:             %f\n", mb_segytraceheader_ptr->delay);
 		fprintf(stderr, "dbg2       smute_sec:         %f\n", mb_segytraceheader_ptr->smute_sec);
@@ -2480,27 +2301,13 @@ int mbsys_jstar_extract_segytraceheader(int verbose, void *mbio_ptr, void *store
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *sampleformat, int *kind, void *segyheader_ptr,
                              float *segydata, int *error) {
-	char *function_name = "mbsys_jstar_extract_segy";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *sbp;
-	struct mb_segytraceheader_struct *mb_segytraceheader_ptr;
-	short *shortptr;
-	unsigned short *ushortptr;
-	double weight;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:           %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:            %p\n", (void *)mbio_ptr);
@@ -2512,35 +2319,36 @@ int mbsys_jstar_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
 	*kind = store->kind;
 
 	/* get segy traceheader */
-	mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segyheader_ptr;
+	struct mb_segytraceheader_struct *mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segyheader_ptr;
+
+	int status = MB_SUCCESS;
 
 	/* extract data from structure */
 	if (*kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
 		/* get channel */
-		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
-		shortptr = (short *)sbp->trace;
-		ushortptr = (unsigned short *)sbp->trace;
+		struct mbsys_jstar_channel_struct *sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
+		short *shortptr = (short *)sbp->trace;
+		unsigned short *ushortptr = (unsigned short *)sbp->trace;
 
 		/* extract segy header */
 		status = mbsys_jstar_extract_segytraceheader(verbose, mbio_ptr, store_ptr, kind, segyheader_ptr, error);
 
 		/* get the trace weight */
-		weight = exp(MB_LN_2 * ((double)sbp->weightingFactor));
-		/*fprintf(stderr, "Subsystem: %d Weight: %d %f\n",sbp->message.subsystem,sbp->weightingFactor,weight);*/
+		const double weight = exp(MB_LN_2 * ((double)sbp->weightingFactor));
 
 		/* extract the data */
 		if (sbp->dataFormat == MBSYS_JSTAR_TRACEFORMAT_ENVELOPE) {
 			*sampleformat = MB_SEGY_SAMPLEFORMAT_ENVELOPE;
-			for (i = 0; i < sbp->samples; i++) {
+			for (int i = 0; i < sbp->samples; i++) {
 				segydata[i] = (float)(((double)ushortptr[i]) / weight);
 			}
 		}
@@ -2551,7 +2359,7 @@ int mbsys_jstar_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *
 
 			/* convert analytic data to desired envelope */
 			if (*sampleformat == MB_SEGY_SAMPLEFORMAT_ENVELOPE) {
-				for (i = 0; i < sbp->samples; i++) {
+				for (int i = 0; i < sbp->samples; i++) {
 					segydata[i] =
 					    (float)(sqrt((double)(shortptr[2 * i] * shortptr[2 * i] + shortptr[2 * i + 1] * shortptr[2 * i + 1])) /
 					            weight);
@@ -2560,7 +2368,7 @@ int mbsys_jstar_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *
 
 			/* else extract desired analytic data */
 			else if (*sampleformat == MB_SEGY_SAMPLEFORMAT_ANALYTIC) {
-				for (i = 0; i < sbp->samples; i++) {
+				for (int i = 0; i < sbp->samples; i++) {
 					segydata[2 * i] = (float)(((double)shortptr[2 * i]) / weight);
 					segydata[2 * i + 1] = (float)(((double)shortptr[2 * i + 1]) / weight);
 				}
@@ -2568,26 +2376,26 @@ int mbsys_jstar_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *
 
 			/* else extract desired real trace from analytic data */
 			else if (*sampleformat == MB_SEGY_SAMPLEFORMAT_TRACE) {
-				for (i = 0; i < sbp->samples; i++) {
+				for (int i = 0; i < sbp->samples; i++) {
 					segydata[i] = (float)(((double)shortptr[2 * i]) / weight);
 				}
 			}
 		}
 		else if (sbp->dataFormat == MBSYS_JSTAR_TRACEFORMAT_RAW) {
 			*sampleformat = MB_SEGY_SAMPLEFORMAT_TRACE;
-			for (i = 0; i < sbp->samples; i++) {
+			for (int i = 0; i < sbp->samples; i++) {
 				segydata[i] = (float)(((double)ushortptr[i]) / weight);
 			}
 		}
 		else if (sbp->dataFormat == MBSYS_JSTAR_TRACEFORMAT_REALANALYTIC) {
 			*sampleformat = MB_SEGY_SAMPLEFORMAT_TRACE;
-			for (i = 0; i < sbp->samples; i++) {
+			for (int i = 0; i < sbp->samples; i++) {
 				segydata[i] = (float)(((double)ushortptr[i]) / weight);
 			}
 		}
 		else if (sbp->dataFormat == MBSYS_JSTAR_TRACEFORMAT_PIXEL) {
 			*sampleformat = MB_SEGY_SAMPLEFORMAT_TRACE;
-			for (i = 0; i < sbp->samples; i++) {
+			for (int i = 0; i < sbp->samples; i++) {
 				segydata[i] = (float)(((double)ushortptr[i]) / weight);
 			}
 		}
@@ -2609,9 +2417,8 @@ int mbsys_jstar_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       sampleformat:      %d\n", *sampleformat);
 		fprintf(stderr, "dbg2       kind:              %d\n", *kind);
@@ -2654,7 +2461,7 @@ int mbsys_jstar_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *
 		fprintf(stderr, "dbg2       emute_mils:        %d\n", mb_segytraceheader_ptr->emute_mils);
 		fprintf(stderr, "dbg2       nsamps:            %d\n", mb_segytraceheader_ptr->nsamps);
 		fprintf(stderr, "dbg2       si_micros:         %d\n", mb_segytraceheader_ptr->si_micros);
-		for (i = 0; i < 19; i++)
+		for (int i = 0; i < 19; i++)
 			fprintf(stderr, "dbg2       other_1[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_1[i]);
 		fprintf(stderr, "dbg2       year:              %d\n", mb_segytraceheader_ptr->year);
 		fprintf(stderr, "dbg2       day_of_yr:         %d\n", mb_segytraceheader_ptr->day_of_yr);
@@ -2663,7 +2470,7 @@ int mbsys_jstar_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *
 		fprintf(stderr, "dbg2       sec:               %d\n", mb_segytraceheader_ptr->sec);
 		fprintf(stderr, "dbg2       mils:              %d\n", mb_segytraceheader_ptr->mils);
 		fprintf(stderr, "dbg2       tr_weight:         %d\n", mb_segytraceheader_ptr->tr_weight);
-		for (i = 0; i < 5; i++)
+		for (int i = 0; i < 5; i++)
 			fprintf(stderr, "dbg2       other_2[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_2[i]);
 		fprintf(stderr, "dbg2       delay:             %f\n", mb_segytraceheader_ptr->delay);
 		fprintf(stderr, "dbg2       smute_sec:         %f\n", mb_segytraceheader_ptr->smute_sec);
@@ -2680,39 +2487,20 @@ int mbsys_jstar_extract_segy(int verbose, void *mbio_ptr, void *store_ptr, int *
 		fprintf(stderr, "dbg2       roll:              %f\n", mb_segytraceheader_ptr->roll);
 		fprintf(stderr, "dbg2       pitch:             %f\n", mb_segytraceheader_ptr->pitch);
 		fprintf(stderr, "dbg2       heading:           %f\n", mb_segytraceheader_ptr->heading);
-		for (i = 0; i < mb_segytraceheader_ptr->nsamps; i++)
+		for (int i = 0; i < mb_segytraceheader_ptr->nsamps; i++)
 			fprintf(stderr, "dbg2       segydata[%d]:      %f\n", i, segydata[i]);
 		fprintf(stderr, "dbg2       error:             %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int kind, void *segyheader_ptr, float *segydata,
                             int *error) {
-	char *function_name = "mbsys_jstar_insert_segy";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_channel_struct *sbp;
-	struct mb_segytraceheader_struct *mb_segytraceheader_ptr;
-	int sonardepth, waterdepth;
-	int time_i[7];
-	int time_j[5];
-	float factor;
-	float datamax;
-	double weight;
-	int data_size;
-	short *shortptr;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:        %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:         %p\n", (void *)mbio_ptr);
@@ -2722,22 +2510,24 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get data kind */
 	store->kind = kind;
 
 	/* get segy traceheader */
-	mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segyheader_ptr;
+	struct mb_segytraceheader_struct *mb_segytraceheader_ptr = (struct mb_segytraceheader_struct *)segyheader_ptr;
+
+	int status = MB_SUCCESS;
 
 	/* insert data to structure */
 	if (store->kind == MB_DATA_SUBBOTTOM_SUBBOTTOM) {
 		/* get channel */
-		sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
-		shortptr = (short *)sbp->trace;
+		struct mbsys_jstar_channel_struct *sbp = (struct mbsys_jstar_channel_struct *)&(store->sbp);
+		short *shortptr = (short *)sbp->trace;
 
 		/* extract the data */
 		if (mb_segytraceheader_ptr->shot_num != 0)
@@ -2751,6 +2541,7 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 		else
 			sbp->pingNum = 0;
 		sbp->dataFormat = mb_segytraceheader_ptr->use;
+		int sonardepth;
 		if (mb_segytraceheader_ptr->grp_elev != 0)
 			sonardepth = -mb_segytraceheader_ptr->grp_elev;
 		else if (mb_segytraceheader_ptr->src_elev != 0)
@@ -2759,10 +2550,12 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 			sonardepth = mb_segytraceheader_ptr->src_depth;
 		else
 			sonardepth = 0;
+		float factor;
 		if (mb_segytraceheader_ptr->elev_scalar < 0)
 			factor = 1.0 / ((float)(-mb_segytraceheader_ptr->elev_scalar));
 		else
 			factor = (float)mb_segytraceheader_ptr->elev_scalar;
+		int waterdepth;
 		if (mb_segytraceheader_ptr->src_wbd != 0)
 			waterdepth = -mb_segytraceheader_ptr->grp_elev;
 		else if (mb_segytraceheader_ptr->grp_wbd != 0)
@@ -2775,11 +2568,13 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 			factor = (float)mb_segytraceheader_ptr->coord_scalar / 3600.0;
 		sbp->samples = mb_segytraceheader_ptr->nsamps;
 		sbp->sampleInterval = 1000 * mb_segytraceheader_ptr->si_micros;
+		int time_j[5];
 		time_j[0] = mb_segytraceheader_ptr->year;
 		time_j[1] = mb_segytraceheader_ptr->day_of_yr;
 		time_j[2] = 60 * mb_segytraceheader_ptr->hour + mb_segytraceheader_ptr->min;
 		time_j[3] = mb_segytraceheader_ptr->sec;
 		time_j[4] = 1000 * mb_segytraceheader_ptr->mils;
+		int time_i[7];
 		mb_get_itime(verbose, time_j, time_i);
 		sbp->year = time_j[0];
 		sbp->day = time_j[1];
@@ -2795,8 +2590,8 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 			sbp->sonarAltitude = 0;
 
 		/* get max data value */
-		datamax = 0.0;
-		for (i = 0; i < mb_segytraceheader_ptr->nsamps; i++) {
+		float datamax = 0.0;
+		for (int i = 0; i < mb_segytraceheader_ptr->nsamps; i++) {
 			if (fabs(segydata[i]) > datamax)
 				datamax = fabs(segydata[i]);
 		}
@@ -2805,10 +2600,10 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 		}
 		else
 			sbp->weightingFactor = 0;
-		weight = pow(2.0, (double)sbp->weightingFactor);
+		const double weight = pow(2.0, (double)sbp->weightingFactor);
 
 		/* make sure enough memory is allocated for channel data */
-		data_size = sizeof(short) * sbp->samples;
+		const int data_size = sizeof(short) * sbp->samples;
 		if (sbp->trace_alloc < data_size) {
 			status = mb_reallocd(verbose, __FILE__, __LINE__, data_size, (void **)&(sbp->trace), error);
 			if (status == MB_SUCCESS) {
@@ -2823,7 +2618,7 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 		/* copy over the data */
 		if (sbp->trace_alloc >= data_size) {
 			shortptr = (short *)sbp->trace;
-			for (i = 0; i < sbp->samples; i++) {
+			for (int i = 0; i < sbp->samples; i++) {
 				shortptr[i] = (short)(segydata[i] * weight);
 			}
 		}
@@ -2845,9 +2640,8 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 		status = MB_FAILURE;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       seq_num:           %d\n", mb_segytraceheader_ptr->seq_num);
 		fprintf(stderr, "dbg2       seq_reel:          %d\n", mb_segytraceheader_ptr->seq_reel);
@@ -2888,7 +2682,7 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 		fprintf(stderr, "dbg2       emute_mils:        %d\n", mb_segytraceheader_ptr->emute_mils);
 		fprintf(stderr, "dbg2       nsamps:            %d\n", mb_segytraceheader_ptr->nsamps);
 		fprintf(stderr, "dbg2       si_micros:         %d\n", mb_segytraceheader_ptr->si_micros);
-		for (i = 0; i < 19; i++)
+		for (int i = 0; i < 19; i++)
 			fprintf(stderr, "dbg2       other_1[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_1[i]);
 		fprintf(stderr, "dbg2       year:              %d\n", mb_segytraceheader_ptr->year);
 		fprintf(stderr, "dbg2       day_of_yr:         %d\n", mb_segytraceheader_ptr->day_of_yr);
@@ -2897,7 +2691,7 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 		fprintf(stderr, "dbg2       sec:               %d\n", mb_segytraceheader_ptr->sec);
 		fprintf(stderr, "dbg2       mils:              %d\n", mb_segytraceheader_ptr->mils);
 		fprintf(stderr, "dbg2       tr_weight:         %d\n", mb_segytraceheader_ptr->tr_weight);
-		for (i = 0; i < 5; i++)
+		for (int i = 0; i < 5; i++)
 			fprintf(stderr, "dbg2       other_2[%2d]:       %d\n", i, mb_segytraceheader_ptr->other_2[i]);
 		fprintf(stderr, "dbg2       delay:             %f\n", mb_segytraceheader_ptr->delay);
 		fprintf(stderr, "dbg2       smute_sec:         %f\n", mb_segytraceheader_ptr->smute_sec);
@@ -2919,24 +2713,13 @@ int mbsys_jstar_insert_segy(int verbose, void *mbio_ptr, void *store_ptr, int ki
 		fprintf(stderr, "dbg2       status:            %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_ctd(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int *nctd, double *time_d, double *conductivity,
                     double *temperature, double *depth, double *salinity, double *soundspeed, int *error) {
-	char *function_name = "mbsys_jstar_ctd";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_pressure_struct *pressure;
-	double g, x, p;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mb_ptr:     %p\n", (void *)mbio_ptr);
@@ -2944,16 +2727,18 @@ int mbsys_jstar_ctd(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
 
 	/* get pressure record structure */
-	pressure = (struct mbsys_jstar_pressure_struct *)&store->pressure;
+	struct mbsys_jstar_pressure_struct *pressure = (struct mbsys_jstar_pressure_struct *)&store->pressure;
 
 	/* get data kind */
 	*kind = store->kind;
+
+	int status = MB_SUCCESS;
 
 	/* get the ctd data from the Edgetech pressure record */
 	if (*kind == MB_DATA_CTD) {
@@ -2964,25 +2749,23 @@ int mbsys_jstar_ctd(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int
 
 		/* Convert pressure to depth using UNESCO equations in UNESCO Technical Paper Marine Science No. 44
 		 *	http://www.seabird.com/application_notes/AN69.htm */
-		p = 0.00068947 * pressure->pressure; /*convert pressure from 0.001 PSI to decibar */
-		x = 0.0;                             /* sin(latitude) where latitude is assumed zero here */
-		g = 9.780318 * (1.0 + (5.2788e-3 + 2.36e-5 * x) * x) + 1.092e-6 * p;
+		const double p = 0.00068947 * pressure->pressure; /*convert pressure from 0.001 PSI to decibar */
+		const double x = 0.0;                             /* sin(latitude) where latitude is assumed zero here */
+		const double g = 9.780318 * (1.0 + (5.2788e-3 + 2.36e-5 * x) * x) + 1.092e-6 * p;
 
 		*depth = ((((-1.82e-15 * p + 2.279e-10) * p - 2.2512e-5) * p + 9.72659) * p) / g;
 		*salinity = 0.001 * pressure->salinity; /* convert from ppm to PSU */
 		*soundspeed = 1000.0 * pressure->soundspeed;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       kind:       %d\n", *kind);
 	}
 	if (verbose >= 2 && *error == MB_ERROR_NO_ERROR) {
 		fprintf(stderr, "dbg2       nctd:          %d\n", *nctd);
-		for (i = 0; i < *nctd; i++) {
+		for (int i = 0; i < *nctd; i++) {
 			fprintf(stderr, "dbg2       time_d:        %f\n", time_d[i]);
 			fprintf(stderr, "dbg2       conductivity:  %f\n", conductivity[i]);
 			fprintf(stderr, "dbg2       temperature:   %f\n", temperature[i]);
@@ -2997,30 +2780,12 @@ int mbsys_jstar_ctd(int verbose, void *mbio_ptr, void *store_ptr, int *kind, int
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/
 int mbsys_jstar_copyrecord(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error) {
-	char *function_name = "mbsys_jstar_copyrecord";
-	int status = MB_SUCCESS;
-	struct mb_io_struct *mb_io_ptr;
-	struct mbsys_jstar_struct *store;
-	struct mbsys_jstar_struct *copy;
-	unsigned int sbp_trace_alloc;
-	unsigned short *sbp_trace;
-	unsigned int ssport_trace_alloc;
-	unsigned short *ssport_trace;
-	unsigned int ssstbd_trace_alloc;
-	unsigned short *ssstbd_trace;
-	int shortspersample;
-	int trace_size;
-	int i;
-
-	/* print input debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", svn_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:    %d\n", verbose);
 		fprintf(stderr, "dbg2       mbio_ptr:   %p\n", (void *)mbio_ptr);
@@ -3029,19 +2794,19 @@ int mbsys_jstar_copyrecord(int verbose, void *mbio_ptr, void *store_ptr, void *c
 	}
 
 	/* get mbio descriptor */
-	mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointers */
-	store = (struct mbsys_jstar_struct *)store_ptr;
-	copy = (struct mbsys_jstar_struct *)copy_ptr;
+	struct mbsys_jstar_struct *store = (struct mbsys_jstar_struct *)store_ptr;
+	struct mbsys_jstar_struct *copy = (struct mbsys_jstar_struct *)copy_ptr;
 
 	/* save existing trace pointers in copy */
-	sbp_trace_alloc = copy->sbp.trace_alloc;
-	sbp_trace = copy->sbp.trace;
-	ssport_trace_alloc = copy->ssport.trace_alloc;
-	ssport_trace = copy->ssport.trace;
-	ssstbd_trace_alloc = copy->ssstbd.trace_alloc;
-	ssstbd_trace = copy->ssstbd.trace;
+	unsigned int sbp_trace_alloc = copy->sbp.trace_alloc;
+	unsigned short *sbp_trace = copy->sbp.trace;
+	unsigned int ssport_trace_alloc = copy->ssport.trace_alloc;
+	unsigned short *ssport_trace = copy->ssport.trace;
+	unsigned int ssstbd_trace_alloc = copy->ssstbd.trace_alloc;
+	unsigned short *ssstbd_trace = copy->ssstbd.trace;
 
 	/* copy the data */
 	*copy = *store;
@@ -3057,18 +2822,21 @@ int mbsys_jstar_copyrecord(int verbose, void *mbio_ptr, void *store_ptr, void *c
 	/* allocate memory and copy each trace */
 
 	/* allocate memory for the subbottom trace */
+	int shortspersample;
 	if (copy->sbp.dataFormat == 1)
 		shortspersample = 2;
 	else
 		shortspersample = 1;
-	trace_size = shortspersample * copy->sbp.samples * sizeof(short);
+	int trace_size = shortspersample * copy->sbp.samples * sizeof(short);
+
+	int status = MB_SUCCESS;
 	if (copy->sbp.trace_alloc < trace_size) {
 		if ((status = mb_reallocd(verbose, __FILE__, __LINE__, trace_size, (void **)&(copy->sbp.trace), error)) == MB_SUCCESS) {
 			copy->sbp.trace_alloc = trace_size;
 		}
 	}
 	if (copy->sbp.trace_alloc >= trace_size) {
-		for (i = 0; i < shortspersample * copy->sbp.samples; i++) {
+		for (int i = 0; i < shortspersample * copy->sbp.samples; i++) {
 			copy->sbp.trace[i] = store->sbp.trace[i];
 		}
 	}
@@ -3086,7 +2854,7 @@ int mbsys_jstar_copyrecord(int verbose, void *mbio_ptr, void *store_ptr, void *c
 		}
 	}
 	if (copy->ssport.trace_alloc >= trace_size) {
-		for (i = 0; i < shortspersample * copy->ssport.samples; i++) {
+		for (int i = 0; i < shortspersample * copy->ssport.samples; i++) {
 			copy->ssport.trace[i] = store->ssport.trace[i];
 		}
 	}
@@ -3104,21 +2872,19 @@ int mbsys_jstar_copyrecord(int verbose, void *mbio_ptr, void *store_ptr, void *c
 		}
 	}
 	if (copy->ssstbd.trace_alloc >= trace_size) {
-		for (i = 0; i < shortspersample * copy->ssstbd.samples; i++) {
+		for (int i = 0; i < shortspersample * copy->ssstbd.samples; i++) {
 			copy->ssstbd.trace[i] = store->ssstbd.trace[i];
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:     %d\n", status);
 	}
 
-	/* return status */
 	return (status);
 }
 /*--------------------------------------------------------------------*/

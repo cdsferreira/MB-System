@@ -1,8 +1,7 @@
 /*------------------------------------------------------------------------------
  *    The MB-system:	mbview_nav.c	10/28/2003
- *    $Id$
  *
- *    Copyright (c) 2003-2017 by
+ *    Copyright (c) 2003-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -28,6 +27,15 @@
 #include <ctype.h>
 #include <math.h>
 
+/* Need to include windows.h BEFORE the the Xm stuff otherwise VC14+ barf with conflicts */
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+#	ifndef WIN32
+#		define WIN32
+#	endif
+#	include <WinSock2.h>
+#include <windows.h>
+#endif
+
 /* Motif required Headers */
 #include <X11/StringDefs.h>
 #include <X11/cursorfont.h>
@@ -48,11 +56,6 @@
 #include "MB3DNavList.h"
 
 /* OpenGL include files */
-#ifdef WIN32
-#undef BOOL /* It was defined by a chain of inclusions in the (patched) X11/Xmd.h */
-#include <windows.h>
-#endif
-
 #include <GL/gl.h>
 #include <GL/glu.h>
 #ifndef WIN32
@@ -73,20 +76,17 @@
 /* local variables */
 static char value_string[MB_PATH_MAXLINE];
 
-static char rcs_id[] = "$Id$";
 
 /*------------------------------------------------------------------------------*/
 int mbview_getnavcount(int verbose, size_t instance, int *nnav, int *error) {
 	/* local variables */
-	char *function_name = "mbview_getnavcount";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -102,7 +102,7 @@ int mbview_getnavcount(int verbose, size_t instance, int *nnav, int *error) {
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       nnav:                      %d\n", *nnav);
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
@@ -117,7 +117,6 @@ int mbview_getnavcount(int verbose, size_t instance, int *nnav, int *error) {
 /*------------------------------------------------------------------------------*/
 int mbview_getnavpointcount(int verbose, size_t instance, int nav, int *npoint, int *nintpoint, int *error) {
 	/* local variables */
-	char *function_name = "mbview_getnavpointcount";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -125,8 +124,7 @@ int mbview_getnavpointcount(int verbose, size_t instance, int nav, int *npoint, 
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -151,7 +149,7 @@ int mbview_getnavpointcount(int verbose, size_t instance, int nav, int *npoint, 
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       npoint:                    %d\n", *npoint);
 		fprintf(stderr, "dbg2       nintpoint:                 %d\n", *nintpoint);
@@ -169,14 +167,12 @@ int mbview_allocnavarrays(int verbose, int npointtotal, double **time_d, double 
                           double **heading, double **speed, double **navportlon, double **navportlat, double **navstbdlon,
                           double **navstbdlat, int **line, int **shot, int **cdp, int *error) {
 	/* local variables */
-	char *function_name = "mbview_allocnavarrays";
 	int status = MB_SUCCESS;
 	fprintf(stderr, "mbview_allocnavarrays: %d points\n", npointtotal);
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -232,7 +228,7 @@ int mbview_allocnavarrays(int verbose, int npointtotal, double **time_d, double 
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       time_d:                    %p\n", *time_d);
 		fprintf(stderr, "dbg2       navlon:                    %p\n", *navlon);
@@ -268,13 +264,11 @@ int mbview_freenavarrays(int verbose, double **time_d, double **navlon, double *
                          double **speed, double **navportlon, double **navportlat, double **navstbdlon, double **navstbdlat,
                          int **line, int **shot, int **cdp, int *error) {
 	/* local variables */
-	char *function_name = "mbview_freenavarrays";
 	int status = MB_SUCCESS;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -324,7 +318,7 @@ int mbview_freenavarrays(int verbose, double **time_d, double **navlon, double *
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       time_d:                    %p\n", *time_d);
 		fprintf(stderr, "dbg2       navlon:                    %p\n", *navlon);
@@ -362,7 +356,6 @@ int mbview_addnav(int verbose, size_t instance, int npoint, double *time_d, doub
                   mb_path navpathraw, mb_path navpathprocessed, int navformat, int navswathbounds, int navline, int navshot,
                   int navcdp, int decimation, int *error) {
 	/* local variables */
-	char *function_name = "mbview_addnav";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -371,8 +364,7 @@ int mbview_addnav(int verbose, size_t instance, int npoint, double *time_d, doub
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -382,20 +374,20 @@ int mbview_addnav(int verbose, size_t instance, int npoint, double *time_d, doub
 			fprintf(stderr, "dbg2       point:%d time_d:%f lon:%f lat:%f z:%f heading:%f zpeed:%f\n", i, time_d[i], navlon[i],
 			        navlat[i], navz[i], heading[i], speed[i]);
 		}
-		if (navswathbounds == MB_YES)
+		if (navswathbounds == true)
 			for (i = 0; i < npoint; i++) {
 				fprintf(stderr, "dbg2       point:%d port: lon:%f lat:%f  stbd: lon:%f lat:%f\n", i, navportlon[i], navportlat[i],
 				        navstbdlon[i], navstbdlat[i]);
 			}
-		if (navline == MB_YES)
+		if (navline == true)
 			for (i = 0; i < npoint; i++) {
 				fprintf(stderr, "dbg2       point:%d line:%d\n", i, line[i]);
 			}
-		if (navshot == MB_YES)
+		if (navshot == true)
 			for (i = 0; i < npoint; i++) {
 				fprintf(stderr, "dbg2       point:%d shot:%d\n", i, shot[i]);
 			}
-		if (navcdp == MB_YES)
+		if (navcdp == true)
 			for (i = 0; i < npoint; i++) {
 				fprintf(stderr, "dbg2       point:%d cdp: %d\n", i, cdp[i]);
 			}
@@ -445,11 +437,11 @@ int mbview_addnav(int verbose, size_t instance, int npoint, double *time_d, doub
 				shared.shareddata.navs[i].pathraw[0] = '\0';
 				shared.shareddata.navs[i].pathprocessed[0] = '\0';
 				shared.shareddata.navs[i].format = 0;
-				shared.shareddata.navs[i].swathbounds = MB_NO;
-				shared.shareddata.navs[i].line = MB_NO;
-				shared.shareddata.navs[i].shot = MB_NO;
-				shared.shareddata.navs[i].cdp = MB_NO;
-				shared.shareddata.navs[i].decimation = MB_NO;
+				shared.shareddata.navs[i].swathbounds = false;
+				shared.shareddata.navs[i].line = false;
+				shared.shareddata.navs[i].shot = false;
+				shared.shareddata.navs[i].cdp = false;
+				shared.shareddata.navs[i].decimation = false;
 				shared.shareddata.navs[i].npoints = 0;
 				shared.shareddata.navs[i].npoints_alloc = 0;
 				shared.shareddata.navs[i].nselected = 0;
@@ -500,18 +492,18 @@ int mbview_addnav(int verbose, size_t instance, int npoint, double *time_d, doub
 		shared.shareddata.navs[inav].npoints = npoint;
 		for (i = 0; i < npoint; i++) {
 			/* set status values */
-			shared.shareddata.navs[inav].navpts[i].draped = MB_NO;
-			shared.shareddata.navs[inav].navpts[i].selected = MB_NO;
+			shared.shareddata.navs[inav].navpts[i].draped = false;
+			shared.shareddata.navs[inav].navpts[i].selected = false;
 
 			/* set time and shot info */
 			shared.shareddata.navs[inav].navpts[i].time_d = time_d[i];
 			shared.shareddata.navs[inav].navpts[i].heading = heading[i];
 			shared.shareddata.navs[inav].navpts[i].speed = speed[i];
-			if (shared.shareddata.navs[inav].line == MB_YES)
+			if (shared.shareddata.navs[inav].line == true)
 				shared.shareddata.navs[inav].navpts[i].line = line[i];
-			if (shared.shareddata.navs[inav].shot == MB_YES)
+			if (shared.shareddata.navs[inav].shot == true)
 				shared.shareddata.navs[inav].navpts[i].shot = shot[i];
-			if (shared.shareddata.navs[inav].cdp == MB_YES)
+			if (shared.shareddata.navs[inav].cdp == true)
 				shared.shareddata.navs[inav].navpts[i].cdp = cdp[i];
 
 			/* ************************************************* */
@@ -623,7 +615,7 @@ int mbview_addnav(int verbose, size_t instance, int npoint, double *time_d, doub
 
 	/* print nav debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Nav data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Nav data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Nav values:\n");
 		fprintf(stderr, "dbg2       nav_mode:           %d\n", shared.shareddata.nav_mode);
 		fprintf(stderr, "dbg2       nav_view_mode:      %d\n", data->nav_view_mode);
@@ -736,7 +728,7 @@ int mbview_addnav(int verbose, size_t instance, int npoint, double *time_d, doub
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -752,15 +744,13 @@ int mbview_enableviewnavs(int verbose, size_t instance, int *error)
 
 {
 	/* local variables */
-	char *function_name = "mbview_enableviewnavs";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -777,13 +767,13 @@ int mbview_enableviewnavs(int verbose, size_t instance, int *error)
 		data = &(view->data);
 
 		/* if instance active reset action sensitivity */
-		if (data->active == MB_YES)
+		if (data->active == true)
 			mbview_update_sensitivity(verbose, instance, error);
 	}
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -799,15 +789,13 @@ int mbview_enableadjustnavs(int verbose, size_t instance, int *error)
 
 {
 	/* local variables */
-	char *function_name = "mbview_enableadjustnavs";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -824,13 +812,13 @@ int mbview_enableadjustnavs(int verbose, size_t instance, int *error)
 		data = &(view->data);
 
 		/* if instance active reset action sensitivity */
-		if (data->active == MB_YES)
+		if (data->active == true)
 			mbview_update_sensitivity(verbose, instance, error);
 	}
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -845,7 +833,6 @@ int mbview_enableadjustnavs(int verbose, size_t instance, int *error)
 int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, int ypixel) {
 
 	/* local variables */
-	char *function_name = "mbview_pick_nav_select";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -861,8 +848,7 @@ int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, i
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -1061,7 +1047,7 @@ int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, i
 							}
 							shared.shareddata.navs[inav].nselected = 0;
 							for (jpt = 0; jpt < shared.shareddata.navs[inav].npoints; jpt++) {
-								if (shared.shareddata.navs[inav].navpts[jpt].selected == MB_YES)
+								if (shared.shareddata.navs[inav].navpts[jpt].selected == true)
 									shared.shareddata.navs[inav].nselected++;
 							}
 						}
@@ -1074,7 +1060,7 @@ int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, i
 						shared.shareddata.navs[inav].navpts[jpt].selected = select;
 						shared.shareddata.navs[inav].nselected = 0;
 						for (jpt = 0; jpt < shared.shareddata.navs[inav].npoints; jpt++) {
-							if (shared.shareddata.navs[inav].navpts[jpt].selected == MB_YES)
+							if (shared.shareddata.navs[inav].navpts[jpt].selected == true)
 								shared.shareddata.navs[inav].nselected++;
 						}
 					}
@@ -1102,7 +1088,7 @@ int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, i
 							}
 							shared.shareddata.navs[inav].nselected = 0;
 							for (jpt = 0; jpt < shared.shareddata.navs[inav].npoints; jpt++) {
-								if (shared.shareddata.navs[inav].navpts[jpt].selected == MB_YES)
+								if (shared.shareddata.navs[inav].navpts[jpt].selected == true)
 									shared.shareddata.navs[inav].nselected++;
 							}
 						}
@@ -1127,7 +1113,7 @@ int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, i
 				shared.shareddata.nav_point_selected[1] = MBV_SELECT_NONE;
 				for (i = 0; i < shared.shareddata.nnav; i++) {
 					for (j = 0; j < shared.shareddata.navs[i].npoints; j++) {
-						shared.shareddata.navs[i].navpts[j].selected = MB_NO;
+						shared.shareddata.navs[i].navpts[j].selected = false;
 					}
 				}
 
@@ -1294,7 +1280,7 @@ int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, i
 					/* clear all previous selection */
 					for (i = 0; i < shared.shareddata.nnav; i++) {
 						for (j = 0; j < shared.shareddata.navs[i].npoints; j++) {
-							shared.shareddata.navs[i].navpts[j].selected = MB_NO;
+							shared.shareddata.navs[i].navpts[j].selected = false;
 						}
 					}
 
@@ -1418,7 +1404,7 @@ int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, i
 		XBell(view->dpy, 100);
 		for (i = 0; i < shared.shareddata.nnav; i++) {
 			for (j = 0; j < shared.shareddata.navs[i].npoints; j++) {
-				shared.shareddata.navs[i].navpts[j].selected = MB_NO;
+				shared.shareddata.navs[i].navpts[j].selected = false;
 			}
 		}
 	}
@@ -1439,7 +1425,7 @@ int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, i
 
 	/* print nav debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Nav data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Nav data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Nav values:\n");
 		fprintf(stderr, "dbg2       nav_mode:              %d\n", shared.shareddata.nav_mode);
 		fprintf(stderr, "dbg2       nav_view_mode:         %d\n", data->nav_view_mode);
@@ -1550,7 +1536,7 @@ int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, i
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -1562,7 +1548,6 @@ int mbview_pick_nav_select(size_t instance, int select, int which, int xpixel, i
 int mbview_extract_nav_profile(size_t instance) {
 
 	/* local variables */
-	char *function_name = "mbview_extract_nav_profile";
 	int status = MB_SUCCESS;
 	int error = MB_ERROR_NO_ERROR;
 	struct mbview_world_struct *view;
@@ -1574,8 +1559,7 @@ int mbview_extract_nav_profile(size_t instance) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -1595,7 +1579,7 @@ int mbview_extract_nav_profile(size_t instance) {
 		nprpoints = 0;
 		for (i = 0; i < shared.shareddata.nnav; i++) {
 			for (j = 0; j < shared.shareddata.navs[i].npoints; j++) {
-				if (shared.shareddata.navs[i].navpts[j].selected == MB_YES) {
+				if (shared.shareddata.navs[i].navpts[j].selected == true) {
 					nprpoints++;
 				}
 			}
@@ -1618,10 +1602,10 @@ int mbview_extract_nav_profile(size_t instance) {
 			for (i = 0; i < shared.shareddata.nnav; i++) {
 				firstj = -1;
 				for (j = 0; j < shared.shareddata.navs[i].npoints; j++) {
-					if (shared.shareddata.navs[i].navpts[j].selected == MB_YES) {
-						data->profile.points[data->profile.npoints].boundary = MB_YES;
+					if (shared.shareddata.navs[i].navpts[j].selected == true) {
+						data->profile.points[data->profile.npoints].boundary = true;
 						if (data->profile.npoints > 0 && i == lasti && j > 1 && lastj == j - 1 && j > 0 && firstj != j - 1)
-							data->profile.points[data->profile.npoints - 1].boundary = MB_NO;
+							data->profile.points[data->profile.npoints - 1].boundary = false;
 						lasti = i;
 						lastj = j;
 						if (firstj == -1)
@@ -1731,7 +1715,7 @@ int mbview_extract_nav_profile(size_t instance) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -1744,7 +1728,6 @@ int mbview_extract_nav_profile(size_t instance) {
 int mbview_nav_delete(size_t instance, int inav) {
 
 	/* local variables */
-	char *function_name = "mbview_nav_delete";
 	int error = MB_ERROR_NO_ERROR;
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
@@ -1753,8 +1736,7 @@ int mbview_nav_delete(size_t instance, int inav) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       inav:            %d\n", inav);
@@ -1784,10 +1766,10 @@ int mbview_nav_delete(size_t instance, int inav) {
 		shared.shareddata.navs[shared.shareddata.nnav - 1].pathraw[0] = '\0';
 		shared.shareddata.navs[shared.shareddata.nnav - 1].pathprocessed[0] = '\0';
 		shared.shareddata.navs[shared.shareddata.nnav - 1].format = 0;
-		shared.shareddata.navs[shared.shareddata.nnav - 1].swathbounds = MB_NO;
-		shared.shareddata.navs[shared.shareddata.nnav - 1].line = MB_NO;
-		shared.shareddata.navs[shared.shareddata.nnav - 1].shot = MB_NO;
-		shared.shareddata.navs[shared.shareddata.nnav - 1].cdp = MB_NO;
+		shared.shareddata.navs[shared.shareddata.nnav - 1].swathbounds = false;
+		shared.shareddata.navs[shared.shareddata.nnav - 1].line = false;
+		shared.shareddata.navs[shared.shareddata.nnav - 1].shot = false;
+		shared.shareddata.navs[shared.shareddata.nnav - 1].cdp = false;
 		shared.shareddata.navs[shared.shareddata.nnav - 1].decimation = 1;
 		shared.shareddata.navs[shared.shareddata.nnav - 1].npoints = 0;
 		shared.shareddata.navs[shared.shareddata.nnav - 1].npoints_alloc = 0;
@@ -1812,7 +1794,7 @@ int mbview_nav_delete(size_t instance, int inav) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -1825,7 +1807,6 @@ int mbview_nav_delete(size_t instance, int inav) {
 int mbview_navpicksize(size_t instance) {
 
 	/* local variables */
-	char *function_name = "mbview_navpicksize";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -1836,8 +1817,7 @@ int mbview_navpicksize(size_t instance) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -1873,14 +1853,14 @@ int mbview_navpicksize(size_t instance) {
 		    shared.shareddata.navpick.endpoints[0].ydisplay[instance] + xlength * (headingx - headingy);
 		for (i = 0; i < 4; i++) {
 			mbview_projectinverse(
-			    instance, MB_YES, shared.shareddata.navpick.xpoints[i].xdisplay[instance],
+			    instance, true, shared.shareddata.navpick.xpoints[i].xdisplay[instance],
 			    shared.shareddata.navpick.xpoints[i].ydisplay[instance], shared.shareddata.navpick.xpoints[i].zdisplay[instance],
 			    &shared.shareddata.navpick.xpoints[i].xlon, &shared.shareddata.navpick.xpoints[i].ylat,
 			    &shared.shareddata.navpick.xpoints[i].xgrid[instance], &shared.shareddata.navpick.xpoints[i].ygrid[instance]);
 			mbview_getzdata(instance, shared.shareddata.navpick.xpoints[i].xgrid[instance],
 			                shared.shareddata.navpick.xpoints[i].ygrid[instance], &found,
 			                &shared.shareddata.navpick.xpoints[i].zdata);
-			if (found == MB_NO)
+			if (found == false)
 				shared.shareddata.navpick.xpoints[i].zdata = shared.shareddata.navpick.endpoints[0].zdata;
 			mbview_projectll2display(instance, shared.shareddata.navpick.xpoints[i].xlon,
 			                         shared.shareddata.navpick.xpoints[i].ylat, shared.shareddata.navpick.xpoints[i].zdata,
@@ -1919,14 +1899,14 @@ int mbview_navpicksize(size_t instance) {
 		    shared.shareddata.navpick.endpoints[1].ydisplay[instance] + xlength * (headingx - headingy);
 		for (i = 4; i < 8; i++) {
 			mbview_projectinverse(
-			    instance, MB_YES, shared.shareddata.navpick.xpoints[i].xdisplay[instance],
+			    instance, true, shared.shareddata.navpick.xpoints[i].xdisplay[instance],
 			    shared.shareddata.navpick.xpoints[i].ydisplay[instance], shared.shareddata.navpick.xpoints[i].zdisplay[instance],
 			    &shared.shareddata.navpick.xpoints[i].xlon, &shared.shareddata.navpick.xpoints[i].ylat,
 			    &shared.shareddata.navpick.xpoints[i].xgrid[instance], &shared.shareddata.navpick.xpoints[i].ygrid[instance]);
 			mbview_getzdata(instance, shared.shareddata.navpick.xpoints[i].xgrid[instance],
 			                shared.shareddata.navpick.xpoints[i].ygrid[instance], &found,
 			                &shared.shareddata.navpick.xpoints[i].zdata);
-			if (found == MB_NO)
+			if (found == false)
 				shared.shareddata.navpick.xpoints[i].zdata = shared.shareddata.navpick.endpoints[1].zdata;
 			shared.shareddata.navpick.xpoints[i].zdisplay[instance] =
 			    view->scale * (data->exageration * shared.shareddata.navpick.xpoints[i].zdata - view->zorigin);
@@ -1947,7 +1927,7 @@ int mbview_navpicksize(size_t instance) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}
@@ -1958,7 +1938,6 @@ int mbview_navpicksize(size_t instance) {
 /*------------------------------------------------------------------------------*/
 int mbview_drawnavpick(size_t instance) {
 	/* local variables */
-	char *function_name = "mbview_drawnavpick";
 	int status = MB_SUCCESS;
 	int i;
 	struct mbview_world_struct *view;
@@ -1969,8 +1948,7 @@ int mbview_drawnavpick(size_t instance) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -2109,12 +2087,12 @@ int mbview_drawnavpick(size_t instance) {
 		}
 	}
 #ifdef MBV_GETERRORS
-	mbview_glerrorcheck(instance, 1, function_name);
+	mbview_glerrorcheck(instance, 1, __func__);
 #endif
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
@@ -2126,7 +2104,6 @@ int mbview_drawnavpick(size_t instance) {
 /*------------------------------------------------------------------------------*/
 int mbview_drawnav(size_t instance, int rez) {
 	/* local variables */
-	char *function_name = "mbview_drawnav";
 	int status = MB_SUCCESS;
 	int error = MB_ERROR_NO_ERROR;
 	struct mbview_world_struct *view;
@@ -2141,8 +2118,7 @@ int mbview_drawnav(size_t instance, int rez) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -2170,9 +2146,9 @@ int mbview_drawnav(size_t instance, int rez) {
 			glBegin(GL_LINE_STRIP);
 			for (jpoint = 0; jpoint < shared.shareddata.navs[inav].npoints; jpoint += stride) {
 				/* set size and color */
-				if (shared.shareddata.navs[inav].navpts[jpoint].selected == MB_YES ||
+				if (shared.shareddata.navs[inav].navpts[jpoint].selected == true ||
 				    (jpoint < shared.shareddata.navs[inav].npoints - 1 &&
-				     shared.shareddata.navs[inav].navpts[jpoint + 1].selected == MB_YES)) {
+				     shared.shareddata.navs[inav].navpts[jpoint + 1].selected == true)) {
 					glColor3f(colortable_object_red[MBV_COLOR_RED], colortable_object_green[MBV_COLOR_RED],
 					          colortable_object_blue[MBV_COLOR_RED]);
 				}
@@ -2198,8 +2174,8 @@ int mbview_drawnav(size_t instance, int rez) {
 			glBegin(GL_LINE_STRIP);
 			for (jpoint = 0; jpoint < shared.shareddata.navs[inav].npoints - stride; jpoint += stride) {
 				/* set size and color */
-				if (shared.shareddata.navs[inav].navpts[jpoint].selected == MB_YES ||
-				    shared.shareddata.navs[inav].navpts[jpoint + stride].selected == MB_YES) {
+				if (shared.shareddata.navs[inav].navpts[jpoint].selected == true ||
+				    shared.shareddata.navs[inav].navpts[jpoint + stride].selected == true) {
 					glColor3f(colortable_object_red[MBV_COLOR_RED], colortable_object_green[MBV_COLOR_RED],
 					          colortable_object_blue[MBV_COLOR_RED]);
 				}
@@ -2245,17 +2221,17 @@ int mbview_drawnav(size_t instance, int rez) {
 		/* loop over the navs plotting swathbounds */
 		for (inav = 0; inav < shared.shareddata.nnav; inav++) {
 			timegapuse = 60.0 * shared.shareddata.navs[inav].decimation * view->timegap;
-			if (shared.shareddata.navs[inav].swathbounds == MB_YES && shared.shareddata.navs[inav].nselected > 0) {
+			if (shared.shareddata.navs[inav].swathbounds == true && shared.shareddata.navs[inav].nselected > 0) {
 				glColor3f(colortable_object_red[MBV_COLOR_YELLOW], colortable_object_green[MBV_COLOR_YELLOW],
 				          colortable_object_blue[MBV_COLOR_YELLOW]);
 				glLineWidth((float)(shared.shareddata.navs[inav].size));
 
 				/* draw port side of swath */
-				swathbounds_on = MB_NO;
+				swathbounds_on = false;
 				for (jpoint = 0; jpoint < shared.shareddata.navs[inav].npoints; jpoint++) {
 					/* draw from center at start of selected data */
-					if (swathbounds_on == MB_NO && shared.shareddata.navs[inav].navpts[jpoint].selected == MB_YES) {
-						swathbounds_on = MB_YES;
+					if (swathbounds_on == false && shared.shareddata.navs[inav].navpts[jpoint].selected == true) {
+						swathbounds_on = true;
 						glBegin(GL_LINE_STRIP);
 
 						if (data->display_mode == MBV_DISPLAY_3D && stride == 1) {
@@ -2279,15 +2255,15 @@ int mbview_drawnav(size_t instance, int rez) {
 					}
 
 					/* draw during selected data */
-					if (shared.shareddata.navs[inav].navpts[jpoint].selected == MB_YES) {
+					if (shared.shareddata.navs[inav].navpts[jpoint].selected == true) {
 						glVertex3f((float)(shared.shareddata.navs[inav].navpts[jpoint].pointport.xdisplay[instance]),
 						           (float)(shared.shareddata.navs[inav].navpts[jpoint].pointport.ydisplay[instance]),
 						           (float)(shared.shareddata.navs[inav].navpts[jpoint].pointport.zdisplay[instance]));
 					}
 
 					/* draw to center at end of selected data */
-					if (swathbounds_on == MB_YES &&
-					    (shared.shareddata.navs[inav].navpts[jpoint].selected == MB_NO ||
+					if (swathbounds_on == true &&
+					    (shared.shareddata.navs[inav].navpts[jpoint].selected == false ||
 					     jpoint >= shared.shareddata.navs[inav].npoints - 1 ||
 					     (jpoint > 0 && (shared.shareddata.navs[inav].navpts[jpoint].time_d -
 					                     shared.shareddata.navs[inav].navpts[jpoint - 1].time_d) > timegapuse))) {
@@ -2310,17 +2286,17 @@ int mbview_drawnav(size_t instance, int rez) {
 							           (float)(shared.shareddata.navs[inav].navpts[jpoint].pointcntr.zdisplay[instance]));
 						}
 
-						swathbounds_on = MB_NO;
+						swathbounds_on = false;
 						glEnd();
 					}
 				}
 
 				/* draw starboard side of swath */
-				swathbounds_on = MB_NO;
+				swathbounds_on = false;
 				for (jpoint = 0; jpoint < shared.shareddata.navs[inav].npoints; jpoint++) {
 					/* draw from center at start of selected data */
-					if (swathbounds_on == MB_NO && shared.shareddata.navs[inav].navpts[jpoint].selected == MB_YES) {
-						swathbounds_on = MB_YES;
+					if (swathbounds_on == false && shared.shareddata.navs[inav].navpts[jpoint].selected == true) {
+						swathbounds_on = true;
 						glBegin(GL_LINE_STRIP);
 
 						if (data->display_mode == MBV_DISPLAY_3D && stride == 1) {
@@ -2344,15 +2320,15 @@ int mbview_drawnav(size_t instance, int rez) {
 					}
 
 					/* draw during selected data */
-					if (shared.shareddata.navs[inav].navpts[jpoint].selected == MB_YES) {
+					if (shared.shareddata.navs[inav].navpts[jpoint].selected == true) {
 						glVertex3f((float)(shared.shareddata.navs[inav].navpts[jpoint].pointstbd.xdisplay[instance]),
 						           (float)(shared.shareddata.navs[inav].navpts[jpoint].pointstbd.ydisplay[instance]),
 						           (float)(shared.shareddata.navs[inav].navpts[jpoint].pointstbd.zdisplay[instance]));
 					}
 
 					/* draw to center at end of selected data */
-					if (swathbounds_on == MB_YES &&
-					    (shared.shareddata.navs[inav].navpts[jpoint].selected == MB_NO ||
+					if (swathbounds_on == true &&
+					    (shared.shareddata.navs[inav].navpts[jpoint].selected == false ||
 					     jpoint >= shared.shareddata.navs[inav].npoints - 1 ||
 					     (jpoint > 0 && (shared.shareddata.navs[inav].navpts[jpoint].time_d -
 					                     shared.shareddata.navs[inav].navpts[jpoint - 1].time_d) > timegapuse))) {
@@ -2375,7 +2351,7 @@ int mbview_drawnav(size_t instance, int rez) {
 							           (float)(shared.shareddata.navs[inav].navpts[jpoint].pointcntr.zdisplay[instance]));
 						}
 
-						swathbounds_on = MB_NO;
+						swathbounds_on = false;
 						glEnd();
 					}
 				}
@@ -2389,12 +2365,12 @@ int mbview_drawnav(size_t instance, int rez) {
 		}
 	}
 #ifdef MBV_GETERRORS
-	mbview_glerrorcheck(instance, 1, function_name);
+	mbview_glerrorcheck(instance, 1, __func__);
 #endif
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
@@ -2405,7 +2381,6 @@ int mbview_drawnav(size_t instance, int rez) {
 /*------------------------------------------------------------------------------*/
 int mbview_updatenavlist() {
 	/* local variables */
-	char *function_name = "mbview_updatenavlist";
 	int status = MB_SUCCESS;
 	XmString *xstr;
 	int inav;
@@ -2415,8 +2390,7 @@ int mbview_updatenavlist() {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 	}
@@ -2476,7 +2450,7 @@ int mbview_updatenavlist() {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:  %d\n", status);
 	}
@@ -2488,7 +2462,6 @@ int mbview_updatenavlist() {
 
 int mbview_picknavbyname(int verbose, size_t instance, char *name, int *error) {
 	/* local variables */
-	char *function_name = "mbview_picknavbyname";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -2498,8 +2471,7 @@ int mbview_picknavbyname(int verbose, size_t instance, char *name, int *error) {
 
 	/* print starting debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       instance:         %zu\n", instance);
@@ -2513,11 +2485,11 @@ int mbview_picknavbyname(int verbose, size_t instance, char *name, int *error) {
 	// fprintf(stderr,"mbview_picknavbyname:%s\n",name);
 
 	/* find and select the navigation associated with name */
-	found = MB_NO;
+	found = false;
 	if (shared.shareddata.nav_mode != MBV_NAV_OFF && shared.shareddata.nnav > 0) {
-		for (inav = 0; inav < shared.shareddata.nnav && found == MB_NO; inav++) {
+		for (inav = 0; inav < shared.shareddata.nnav && found == false; inav++) {
 			if (strcmp(shared.shareddata.navs[inav].name, name) == 0) {
-				found = MB_YES;
+				found = true;
 				shared.shareddata.navpick_type = MBV_PICK_TWOPOINT;
 				shared.shareddata.nav_selected[0] = inav;
 				shared.shareddata.nav_point_selected[0] = 0;
@@ -2527,11 +2499,11 @@ int mbview_picknavbyname(int verbose, size_t instance, char *name, int *error) {
 				shared.shareddata.nav_selected_mbnavadjust[0] = MBV_SELECT_NONE;
 				shared.shareddata.nav_selected_mbnavadjust[1] = MBV_SELECT_NONE;
 				for (jpt = 0; jpt < shared.shareddata.navs[inav].npoints; jpt++) {
-					shared.shareddata.navs[inav].navpts[jpt].selected = MB_YES;
+					shared.shareddata.navs[inav].navpts[jpt].selected = true;
 				}
 			}
 		}
-		// if (found == MB_YES) fprintf(stderr,"FILE FOUND: %s\n",name);
+		// if (found == true) fprintf(stderr,"FILE FOUND: %s\n",name);
 	}
 
 	/* else beep */
@@ -2546,7 +2518,7 @@ int mbview_picknavbyname(int verbose, size_t instance, char *name, int *error) {
 		XBell(view->dpy, 100);
 		for (i = 0; i < shared.shareddata.nnav; i++) {
 			for (j = 0; j < shared.shareddata.navs[i].npoints; j++) {
-				shared.shareddata.navs[i].navpts[j].selected = MB_NO;
+				shared.shareddata.navs[i].navpts[j].selected = false;
 			}
 		}
 	}
@@ -2564,7 +2536,7 @@ int mbview_picknavbyname(int verbose, size_t instance, char *name, int *error) {
 
 	/* print nav debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  Nav data altered in function <%s>\n", function_name);
+		fprintf(stderr, "\ndbg2  Nav data altered in function <%s>\n", __func__);
 		fprintf(stderr, "dbg2  Nav values:\n");
 		fprintf(stderr, "dbg2       nav_mode:              %d\n", shared.shareddata.nav_mode);
 		fprintf(stderr, "dbg2       nav_view_mode:         %d\n", data->nav_view_mode);
@@ -2675,7 +2647,7 @@ int mbview_picknavbyname(int verbose, size_t instance, char *name, int *error) {
 
 	/* print output debug statements */
 	if (mbv_verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return status:\n");
 		fprintf(stderr, "dbg2       status:          %d\n", status);
 	}

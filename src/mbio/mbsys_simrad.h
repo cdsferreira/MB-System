@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbsys_simrad.h	8/5/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -87,6 +86,9 @@
  *      we offer no guarantees that this will always be the case.
  *
  */
+
+#ifndef MBSYS_SIMRAD_H_
+#define MBSYS_SIMRAD_H_
 
 /* sonar types */
 #define MBSYS_SIMRAD_UNKNOWN 0
@@ -751,3 +753,5 @@ int mbsys_simrad_insert_svp(int verbose, void *mbio_ptr, void *store_ptr, int ns
 int mbsys_simrad_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_ptr, int *error);
 int mbsys_simrad_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel_size_set, double *pixel_size, int swath_width_set,
                         double *swath_width, int pixel_int, int *error);
+
+#endif  /* MBSYS_SIMRAD_H_ */

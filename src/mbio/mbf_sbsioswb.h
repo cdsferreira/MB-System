@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mbf_sbsioswb.h	9/18/94
- *	$Id$
  *
- *    Copyright (c) 1994-2017 by
+ *    Copyright (c) 1994-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -48,6 +47,9 @@
  * of the binary data structure used in the MBF_SBSIOSWB format.
  */
 
+#ifndef MBF_SBSIOSWB_H_
+#define MBF_SBSIOSWB_H_
+
 /* number of beams in pings */
 #define MB_BEAMS_SBSIOSWB 19
 
@@ -84,3 +86,5 @@ struct mbf_sbsioswb_struct {
 	struct mbf_sbsioswb_bath_struct bath_struct[MB_BEAMS_SBSIOSWB];
 	char comment[MBSYS_SB_MAXLINE];
 };
+
+#endif  /* MBF_SBSIOSWB_H_ */

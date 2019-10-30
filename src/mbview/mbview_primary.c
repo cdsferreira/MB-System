@@ -1,8 +1,7 @@
 /*------------------------------------------------------------------------------
  *    The MB-system:	mbview_primary.c	9/25/2003
- *    $Id$
  *
- *    Copyright (c) 2003-2017 by
+ *    Copyright (c) 2003-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -30,6 +29,15 @@
 #include <ctype.h>
 #include <math.h>
 
+/* Need to include windows.h BEFORE the the Xm stuff otherwise VC14+ barf with conflicts */
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+#	ifndef WIN32
+#		define WIN32
+#	endif
+#	include <WinSock2.h>
+#include <windows.h>
+#endif
+
 /* Motif required Headers */
 #include <X11/StringDefs.h>
 #include <X11/cursorfont.h>
@@ -49,11 +57,6 @@
 #include "MB3DNavList.h"
 
 /* OpenGL include files */
-#ifdef WIN32
-#undef BOOL /* It was defined by a chain of inclusions in the (patched) X11/Xmd.h */
-#include <windows.h>
-#endif
-
 #include <GL/gl.h>
 #include <GL/glu.h>
 #ifndef WIN32
@@ -72,7 +75,6 @@
 /*------------------------------------------------------------------------------*/
 
 /* local variables */
-static char rcs_id[] = "$Id$";
 
 /*------------------------------------------------------------------------------*/
 int mbview_setprimarygrid(int verbose, size_t instance, int primary_grid_projection_mode, char *primary_grid_projection_id,
@@ -82,15 +84,13 @@ int mbview_setprimarygrid(int verbose, size_t instance, int primary_grid_project
 
 {
 	/* local variables */
-	char *function_name = "mbview_setprimarygrid";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                      %d\n", verbose);
@@ -159,7 +159,7 @@ int mbview_setprimarygrid(int verbose, size_t instance, int primary_grid_project
 		status = mb_mallocd(verbose, __FILE__, __LINE__, (data->primary_nxy / 8) + 1, (void **)&data->primary_stat_z, error);
 	if (status != MB_SUCCESS) {
 		fprintf(stderr, "\nUnable to allocate memory to store primary grid data\n");
-		fprintf(stderr, "\nProgram terminated in function <%s>.\n", function_name);
+		fprintf(stderr, "\nProgram terminated in function <%s>.\n", __func__);
 		exit(*error);
 	}
 
@@ -167,11 +167,11 @@ int mbview_setprimarygrid(int verbose, size_t instance, int primary_grid_project
 	memcpy(data->primary_data, primary_data, data->primary_nxy * sizeof(float));
 
 	/* reset contours and histograms */
-	view->contourlorez = MB_NO;
-	view->contourhirez = MB_NO;
-	view->contourfullrez = MB_NO;
-	view->primary_histogram_set = MB_NO;
-	view->primaryslope_histogram_set = MB_NO;
+	view->contourlorez = false;
+	view->contourhirez = false;
+	view->contourfullrez = false;
+	view->primary_histogram_set = false;
+	view->primaryslope_histogram_set = false;
 
 	/* set status bit arrays */
 	mbview_setcolorparms(instance);
@@ -180,7 +180,7 @@ int mbview_setprimarygrid(int verbose, size_t instance, int primary_grid_project
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -196,7 +196,6 @@ int mbview_updateprimarygrid(int verbose, size_t instance, int primary_n_columns
 
 {
 	/* local variables */
-	char *function_name = "mbview_updateprimarygrid";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -205,8 +204,7 @@ int mbview_updateprimarygrid(int verbose, size_t instance, int primary_n_columns
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                      %d\n", verbose);
@@ -222,13 +220,13 @@ int mbview_updateprimarygrid(int verbose, size_t instance, int primary_n_columns
 
 	/* set value and calculate derivative */
 	if (primary_n_columns == data->primary_n_columns && primary_n_rows == data->primary_n_rows) {
-		first = MB_YES;
+		first = true;
 		for (k = 0; k < data->primary_n_columns * data->primary_n_rows; k++) {
 			data->primary_data[k] = primary_data[k];
-			if (first == MB_YES && primary_data[k] != data->primary_nodatavalue) {
+			if (first == true && primary_data[k] != data->primary_nodatavalue) {
 				data->primary_min = data->primary_data[k];
 				data->primary_max = data->primary_data[k];
-				first = MB_NO;
+				first = false;
 			}
 			else if (primary_data[k] != data->primary_nodatavalue) {
 				data->primary_min = MIN(data->primary_min, data->primary_data[k]);
@@ -248,15 +246,15 @@ int mbview_updateprimarygrid(int verbose, size_t instance, int primary_n_columns
 	mbview_colorclear(instance);
 
 	/* reset contour and histogram flags */
-	view->contourlorez = MB_NO;
-	view->contourhirez = MB_NO;
-	view->contourfullrez = MB_NO;
-	view->primary_histogram_set = MB_NO;
-	view->primaryslope_histogram_set = MB_NO;
+	view->contourlorez = false;
+	view->contourhirez = false;
+	view->contourfullrez = false;
+	view->primary_histogram_set = false;
+	view->primaryslope_histogram_set = false;
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -272,7 +270,6 @@ int mbview_updateprimarygridcell(int verbose, size_t instance, int primary_ix, i
 
 {
 	/* local variables */
-	char *function_name = "mbview_updateprimarygridcell";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
@@ -280,8 +277,7 @@ int mbview_updateprimarygridcell(int verbose, size_t instance, int primary_ix, i
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                      %d\n", verbose);
@@ -307,14 +303,14 @@ int mbview_updateprimarygridcell(int verbose, size_t instance, int primary_ix, i
 		mbview_derivative(instance, primary_ix, primary_jy);
 
 		/* reset contour flags */
-		view->contourlorez = MB_NO;
-		view->contourhirez = MB_NO;
-		view->contourfullrez = MB_NO;
+		view->contourlorez = false;
+		view->contourhirez = false;
+		view->contourfullrez = false;
 	}
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -331,15 +327,13 @@ int mbview_setprimarycolortable(int verbose, size_t instance, int primary_colort
 
 {
 	/* local variables */
-	char *function_name = "mbview_setprimarycolortable";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -362,7 +356,7 @@ int mbview_setprimarycolortable(int verbose, size_t instance, int primary_colort
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -379,15 +373,13 @@ int mbview_setslopecolortable(int verbose, size_t instance, int slope_colortable
 
 {
 	/* local variables */
-	char *function_name = "mbview_setslopecolortable";
 	int status = MB_SUCCESS;
 	struct mbview_world_struct *view;
 	struct mbview_struct *data;
 
 	/* print starting debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Version %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  MB-system Version %s\n", MB_VERSION);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:                   %d\n", verbose);
@@ -410,7 +402,7 @@ int mbview_setslopecolortable(int verbose, size_t instance, int slope_colortable
 
 	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:                     %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");

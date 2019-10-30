@@ -1,8 +1,7 @@
 /*--------------------------------------------------------------------
  *    The MB-system:	mb_spline.c	10/11/00
- *    $Id$
  *
- *    Copyright (c) 2000-2017 by
+ *    Copyright (c) 2000-2019 by
  *    David W. Caress (caress@mbari.org)
  *      Monterey Bay Aquarium Research Institute
  *      Moss Landing, CA 95039
@@ -28,28 +27,16 @@
  *
  */
 
-/* standard global include files */
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
-
-/* mbio include files */
-#include "mb_status.h"
 #include "mb_define.h"
-
-static char rcs_id[] = "$Id$";
+#include "mb_status.h"
 
 /*--------------------------------------------------------------------------*/
-int mb_spline_init(int verbose, double *x, double *y, int n, double yp1, double ypn, double *y2, int *error) {
-	char *function_name = "mb_spline_init";
-	int status = MB_SUCCESS;
-	int i, k;
-	double p, qn, sig, un, *u;
-
-	/* print input debug statements */
+int mb_spline_init(int verbose, const double *x, const double *y, int n, double yp1, double ypn, double *y2, int *error) {
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2       x:                %p\n", x);
@@ -60,6 +47,8 @@ int mb_spline_init(int verbose, double *x, double *y, int n, double yp1, double 
 		fprintf(stderr, "dbg2       y2:               %p\n", y2);
 	}
 
+	int status = MB_SUCCESS;
+
 	/* check for n > 2 */
 	if (n < 3) {
 		status = MB_FAILURE;
@@ -67,8 +56,10 @@ int mb_spline_init(int verbose, double *x, double *y, int n, double yp1, double 
 	}
 
 	/* allocate memory for working vector */
+	double *u;
 	if (status == MB_SUCCESS)
 		status = mb_mallocd(verbose, __FILE__, __LINE__, n * sizeof(double), (void **)&u, error);
+
 
 	/* set up spline interpolation coefficients */
 	if (status == MB_SUCCESS) {
@@ -78,30 +69,31 @@ int mb_spline_init(int verbose, double *x, double *y, int n, double yp1, double 
 			y2[1] = -0.5;
 			u[1] = (3.0 / (x[2] - x[1])) * ((y[2] - y[1]) / (x[2] - x[1]) - yp1);
 		}
-		for (i = 2; i <= n - 1; i++) {
-			sig = (x[i] - x[i - 1]) / (x[i + 1] - x[i - 1]);
-			p = sig * y2[i - 1] + 2.0;
+		for (int i = 2; i <= n - 1; i++) {
+			const double sig = (x[i] - x[i - 1]) / (x[i + 1] - x[i - 1]);
+			const double p = sig * y2[i - 1] + 2.0;
 			y2[i] = (sig - 1.0) / p;
 			u[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) - (y[i] - y[i - 1]) / (x[i] - x[i - 1]);
 			u[i] = (6.0 * u[i] / (x[i + 1] - x[i - 1]) - sig * u[i - 1]) / p;
 		}
-		if (ypn > 0.99e30)
-			qn = un = 0.0;
-		else {
+                double qn = 0.0;
+                double un = 0.0;
+		if (ypn > 0.99e30) {
+			/* qn = un = 0.0; */
+		} else {
 			qn = 0.5;
 			un = (3.0 / (x[n] - x[n - 1])) * (ypn - (y[n] - y[n - 1]) / (x[n] - x[n - 1]));
 		}
 		y2[n] = (un - qn * u[n - 1]) / (qn * y2[n - 1] + 1.0);
-		for (k = n - 1; k >= 1; k--)
+		for (int k = n - 1; k >= 1; k--)
 			y2[k] = y2[k] * y2[k + 1] + u[k];
 
 		/* deallocate memory for vector */
 		status = mb_freed(verbose, __FILE__, __LINE__, (void **)&u, error);
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       error:      %d\n", *error);
 		fprintf(stderr, "dbg2  Return status:\n");
@@ -111,16 +103,9 @@ int mb_spline_init(int verbose, double *x, double *y, int n, double yp1, double 
 	return (status);
 }
 /*--------------------------------------------------------------------*/
-int mb_spline_interp(int verbose, double *xa, double *ya, double *y2a, int n, double x, double *y, int *i, int *error) {
-	char *function_name = "mb_spline_interp";
-	int status = MB_SUCCESS;
-	int klo, khi, k;
-	double h, b, a;
-
-	/* print input debug statements */
+int mb_spline_interp(int verbose, const double *xa, const double *ya, double *y2a, int n, double x, double *y, int *i, int *error) {
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2       xa:               %p\n", xa);
@@ -130,6 +115,8 @@ int mb_spline_interp(int verbose, double *xa, double *ya, double *y2a, int n, do
 		fprintf(stderr, "dbg2       x:                %f\n", x);
 	}
 
+	int status = MB_SUCCESS;
+
 	/* check for n >= 1 */
 	if (n < 1) {
 		status = MB_FAILURE;
@@ -138,10 +125,10 @@ int mb_spline_interp(int verbose, double *xa, double *ya, double *y2a, int n, do
 
 	/* perform interpolation */
 	if (status == MB_SUCCESS) {
-		klo = 1;
-		khi = n;
+		int klo = 1;
+		int khi = n;
 		while (khi - klo > 1) {
-			k = (khi + klo) >> 1;
+			const int k = (khi + klo) >> 1;
 			if (xa[k] > x)
 				khi = k;
 			else
@@ -151,16 +138,15 @@ int mb_spline_interp(int verbose, double *xa, double *ya, double *y2a, int n, do
 			khi = 2;
 		if (klo == n)
 			klo = n - 1;
-		h = xa[khi] - xa[klo];
-		a = (xa[khi] - x) / h;
-		b = (x - xa[klo]) / h;
+		const double h = xa[khi] - xa[klo];
+		const double a = (xa[khi] - x) / h;
+		const double b = (x - xa[klo]) / h;
 		*y = a * ya[klo] + b * ya[khi] + ((a * a * a - a) * y2a[klo] + (b * b * b - b) * y2a[khi]) * (h * h) / 6.0;
 		*i = klo;
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       y:          %f\n", *y);
 		fprintf(stderr, "dbg2       i:          %d\n", *i);
@@ -172,16 +158,10 @@ int mb_spline_interp(int verbose, double *xa, double *ya, double *y2a, int n, do
 	return (status);
 }
 /*--------------------------------------------------------------------*/
-int mb_linear_interp(int verbose, double *xa, double *ya, int n, double x, double *y, int *i, int *error) {
-	char *function_name = "mb_linear_interp";
-	int status = MB_SUCCESS;
-	int klo, khi, k;
-	double h, b;
-
-	/* print input debug statements */
+// TODO(schwehr): What is the semantic meaning of the args?  i appears to be output only.
+int mb_linear_interp(int verbose, const double *xa, const double *ya, int n, double x, double *y, int *i, int *error) {
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2       xa:               %p\n", xa);
@@ -189,6 +169,8 @@ int mb_linear_interp(int verbose, double *xa, double *ya, int n, double x, doubl
 		fprintf(stderr, "dbg2       n:                %d\n", n);
 		fprintf(stderr, "dbg2       x:                %f\n", x);
 	}
+
+	int status = MB_SUCCESS;
 
 	/* check for n >= 1 */
 	if (n < 1) {
@@ -212,10 +194,10 @@ int mb_linear_interp(int verbose, double *xa, double *ya, int n, double x, doubl
 		}
 		/* in range of model so linearly interpolate */
 		else {
-			klo = 1;
-			khi = n;
+			int klo = 1;
+			int khi = n;
 			while (khi - klo > 1) {
-				k = (khi + klo) >> 1;
+				const int k = (khi + klo) >> 1;
 				if (xa[k] > x)
 					khi = k;
 				else
@@ -225,16 +207,15 @@ int mb_linear_interp(int verbose, double *xa, double *ya, int n, double x, doubl
 				khi = 2;
 			if (klo == n)
 				klo = n - 1;
-			h = xa[khi] - xa[klo];
-			b = (ya[khi] - ya[klo]) / h;
+			const double h = xa[khi] - xa[klo];
+			const double b = (ya[khi] - ya[klo]) / h;
 			*y = ya[klo] + b * (x - xa[klo]);
 			*i = klo;
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       y:          %f\n", *y);
 		fprintf(stderr, "dbg2       i:          %d\n", *i);
@@ -246,17 +227,9 @@ int mb_linear_interp(int verbose, double *xa, double *ya, int n, double x, doubl
 	return (status);
 }
 /*--------------------------------------------------------------------*/
-int mb_linear_interp_longitude(int verbose, double *xa, double *ya, int n, double x, double *y, int *i, int *error) {
-	char *function_name = "mb_linear_interp_longitude";
-	int status = MB_SUCCESS;
-	int klo, khi, k;
-	double h, b;
-	double yahi, yalo;
-
-	/* print input debug statements */
+int mb_linear_interp_longitude(int verbose, const double *xa, const double *ya, int n, double x, double *y, int *i, int *error) {
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2       xa:               %p\n", xa);
@@ -264,6 +237,8 @@ int mb_linear_interp_longitude(int verbose, double *xa, double *ya, int n, doubl
 		fprintf(stderr, "dbg2       n:                %d\n", n);
 		fprintf(stderr, "dbg2       x:                %f\n", x);
 	}
+
+	int status = MB_SUCCESS;
 
 	/* check for n >= 1 */
 	if (n < 1) {
@@ -285,10 +260,10 @@ int mb_linear_interp_longitude(int verbose, double *xa, double *ya, int n, doubl
 		}
 		/* in range of model so linearly interpolate */
 		else {
-			klo = 1;
-			khi = n;
+			int klo = 1;
+			int khi = n;
 			while (khi - klo > 1) {
-				k = (khi + klo) >> 1;
+				const int k = (khi + klo) >> 1;
 				if (xa[k] > x)
 					khi = k;
 				else
@@ -298,14 +273,14 @@ int mb_linear_interp_longitude(int verbose, double *xa, double *ya, int n, doubl
 				khi = 2;
 			if (klo == n)
 				klo = n - 1;
-			h = xa[khi] - xa[klo];
-			yahi = ya[khi];
-			yalo = ya[klo];
+			const double h = xa[khi] - xa[klo];
+			double yahi = ya[khi];
+			const double yalo = ya[klo];
 			if (yahi - yalo > 180.0)
 				yahi -= 360.0;
 			else if (yahi - yalo < -180.0)
 				yahi += 360.0;
-			b = (yahi - yalo) / h;
+			const double b = (yahi - yalo) / h;
 			*y = ya[klo] + b * (x - xa[klo]);
 			if (*y >= 180.0)
 				*y -= 360.0;
@@ -315,9 +290,8 @@ int mb_linear_interp_longitude(int verbose, double *xa, double *ya, int n, doubl
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       y:          %f\n", *y);
 		fprintf(stderr, "dbg2       i:          %d\n", *i);
@@ -329,17 +303,9 @@ int mb_linear_interp_longitude(int verbose, double *xa, double *ya, int n, doubl
 	return (status);
 }
 /*--------------------------------------------------------------------*/
-int mb_linear_interp_latitude(int verbose, double *xa, double *ya, int n, double x, double *y, int *i, int *error) {
-	char *function_name = "mb_linear_interp_latitude";
-	int status = MB_SUCCESS;
-	int klo, khi, k;
-	double h, b;
-	double yahi, yalo;
-
-	/* print input debug statements */
+int mb_linear_interp_latitude(int verbose, const double *xa, const double *ya, int n, double x, double *y, int *i, int *error) {
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2       xa:               %p\n", xa);
@@ -347,6 +313,8 @@ int mb_linear_interp_latitude(int verbose, double *xa, double *ya, int n, double
 		fprintf(stderr, "dbg2       n:                %d\n", n);
 		fprintf(stderr, "dbg2       x:                %f\n", x);
 	}
+
+	int status = MB_SUCCESS;
 
 	/* check for n >= 1 */
 	if (n < 1) {
@@ -368,10 +336,10 @@ int mb_linear_interp_latitude(int verbose, double *xa, double *ya, int n, double
 		}
 		/* in range of model so linearly interpolate */
 		else {
-			klo = 1;
-			khi = n;
+			int klo = 1;
+			int khi = n;
 			while (khi - klo > 1) {
-				k = (khi + klo) >> 1;
+				const int k = (khi + klo) >> 1;
 				if (xa[k] > x)
 					khi = k;
 				else
@@ -381,10 +349,10 @@ int mb_linear_interp_latitude(int verbose, double *xa, double *ya, int n, double
 				khi = 2;
 			if (klo == n)
 				klo = n - 1;
-			h = xa[khi] - xa[klo];
-			yahi = ya[khi];
-			yalo = ya[klo];
-			b = (yahi - yalo) / h;
+			const double h = xa[khi] - xa[klo];
+			const double yahi = ya[khi];
+			const double yalo = ya[klo];
+			const double b = (yahi - yalo) / h;
 			*y = ya[klo] + b * (x - xa[klo]);
 			if (*y > 90.0)
 				*y = 90.0;
@@ -394,9 +362,8 @@ int mb_linear_interp_latitude(int verbose, double *xa, double *ya, int n, double
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       y:          %f\n", *y);
 		fprintf(stderr, "dbg2       i:          %d\n", *i);
@@ -408,17 +375,9 @@ int mb_linear_interp_latitude(int verbose, double *xa, double *ya, int n, double
 	return (status);
 }
 /*--------------------------------------------------------------------*/
-int mb_linear_interp_heading(int verbose, double *xa, double *ya, int n, double x, double *y, int *i, int *error) {
-	char *function_name = "mb_linear_interp_heading";
-	int status = MB_SUCCESS;
-	int klo, khi, k;
-	double h, b;
-	double yahi, yalo;
-
-	/* print input debug statements */
+int mb_linear_interp_heading(int verbose, const double *xa, const double *ya, int n, double x, double *y, int *i, int *error) {
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBBA function <%s> called\n", function_name);
-		fprintf(stderr, "dbg2  Revision id: %s\n", rcs_id);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
 		fprintf(stderr, "dbg2       verbose:          %d\n", verbose);
 		fprintf(stderr, "dbg2       xa:               %p\n", xa);
@@ -426,6 +385,8 @@ int mb_linear_interp_heading(int verbose, double *xa, double *ya, int n, double 
 		fprintf(stderr, "dbg2       n:                %d\n", n);
 		fprintf(stderr, "dbg2       x:                %f\n", x);
 	}
+
+	int status = MB_SUCCESS;
 
 	/* check for n >= 1 */
 	if (n < 1) {
@@ -447,10 +408,10 @@ int mb_linear_interp_heading(int verbose, double *xa, double *ya, int n, double 
 		}
 		/* in range of model so linearly interpolate */
 		else {
-			klo = 1;
-			khi = n;
+			int klo = 1;
+			int khi = n;
 			while (khi - klo > 1) {
-				k = (khi + klo) >> 1;
+				const int k = (khi + klo) >> 1;
 				if (xa[k] > x)
 					khi = k;
 				else
@@ -460,14 +421,14 @@ int mb_linear_interp_heading(int verbose, double *xa, double *ya, int n, double 
 				khi = 2;
 			if (klo == n)
 				klo = n - 1;
-			h = xa[khi] - xa[klo];
-			yahi = ya[khi];
-			yalo = ya[klo];
+			const double h = xa[khi] - xa[klo];
+			double yahi = ya[khi];
+			const double yalo = ya[klo];
 			if (yahi - yalo > 180.0)
 				yahi -= 360.0;
 			else if (yahi - yalo < -180.0)
 				yahi += 360.0;
-			b = (yahi - yalo) / h;
+			const double b = (yahi - yalo) / h;
 			*y = ya[klo] + b * (x - xa[klo]);
 			if (*y >= 360.0)
 				*y -= 360.0;
@@ -477,9 +438,8 @@ int mb_linear_interp_heading(int verbose, double *xa, double *ya, int n, double 
 		}
 	}
 
-	/* print output debug statements */
 	if (verbose >= 2) {
-		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", function_name);
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
 		fprintf(stderr, "dbg2  Return values:\n");
 		fprintf(stderr, "dbg2       y:          %f\n", *y);
 		fprintf(stderr, "dbg2       i:          %d\n", *i);
