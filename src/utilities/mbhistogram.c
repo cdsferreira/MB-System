@@ -33,16 +33,19 @@
 #include "mb_define.h"
 #include "mb_status.h"
 
-/* mode defines */
-const int MBHISTOGRAM_BATH = 0;
-const int MBHISTOGRAM_AMP = 1;
-const int MBHISTOGRAM_SS = 2;
+typedef enum {
+    MBHISTOGRAM_BATH = 0,
+    MBHISTOGRAM_AMP = 1,
+    MBHISTOGRAM_SS = 2,
+} histogram_mode_t;
 
 static const char program_name[] = "MBHISTOGRAM";
 static const char help_message[] =
-    "MBHISTOGRAM reads a swath sonar data file and generates a histogram\n\tof the bathymetry,  amplitude, "
-    " or sidescan values. Alternatively, \n\tmbhistogram can output a list of values which break up "
-    "the\n\tdistribution into equal sized regions.\n\tThe results are dumped to stdout.";
+    "MBHISTOGRAM reads a swath sonar data file and generates a histogram\n"
+    "\tof the bathymetry,  amplitude, or sidescan values. Alternatively,\n"
+    "\tmbhistogram can output a list of values which break up the\n"
+    "\tdistribution into equal sized regions.\n"
+    "\tThe results are dumped to stdout.";
 static const char usage_message[] =
     "mbhistogram [-Akind -Byr/mo/da/hr/mn/sc -Dmin/max -Eyr/mo/da/hr/mn/sc -Fformat -G -Ifile -Llonflip "
     "-Mnintervals -Nnbins -Ppings -Rw/e/s/n -Sspeed -V -H]";
@@ -102,24 +105,25 @@ double qsnorm(double p) {
 
 int main(int argc, char **argv) {
 	int verbose = 0;
-	int error = MB_ERROR_NO_ERROR;
-	char *message;
-
-	/* MBIO read control parameters */
-	char read_file[MB_PATH_MAXLINE];
-	void *datalist;
-	int look_processed = MB_DATALIST_LOOK_UNSET;
-	double file_weight;
 	int format;
 	int pings;
 	int lonflip;
 	double bounds[4];
 	int btime_i[7];
 	int etime_i[7];
-	double btime_d;
-	double etime_d;
 	double speedmin;
 	double timegap;
+	int status = mb_defaults(verbose, &format, &pings, &lonflip, bounds, btime_i, etime_i, &speedmin, &timegap);
+
+	int error = MB_ERROR_NO_ERROR;
+
+	/* MBIO read control parameters */
+	char read_file[MB_PATH_MAXLINE];
+	void *datalist;
+	int look_processed = MB_DATALIST_LOOK_UNSET;
+	double file_weight;
+	double btime_d;
+	double etime_d;
 	char file[MB_PATH_MAXLINE];
 	char dfile[MB_PATH_MAXLINE];
 	int beams_bath;
@@ -149,7 +153,7 @@ int main(int argc, char **argv) {
 	char comment[MB_COMMENT_MAXLINE];
 
 	/* histogram variables */
-	int mode = MBHISTOGRAM_SS;
+	histogram_mode_t mode = MBHISTOGRAM_SS;
 	bool gaussian = false;
 	int nbins = 0;
 	int nintervals = 0;
@@ -180,9 +184,6 @@ int main(int argc, char **argv) {
 	int nrectot = 0;
 	int nvaluetot = 0;
 
-	/* get current default values */
-	int status = mb_defaults(verbose, &format, &pings, &lonflip, bounds, btime_i, etime_i, &speedmin, &timegap);
-
 	/* set default input to stdin */
 	strcpy(read_file, "stdin");
 
@@ -196,8 +197,13 @@ int main(int argc, char **argv) {
 			switch (c) {
 			case 'A':
 			case 'a':
+			{
+				int tmp;
 				sscanf(optarg, "%d", &mode);
+				// TODO(schwehr): Range check.
+				mode = (histogram_mode_t)tmp;
 				break;
+			}
 			case 'B':
 			case 'b':
 				sscanf(optarg, "%d/%d/%d/%d/%d/%d", &btime_i[0], &btime_i[1], &btime_i[2], &btime_i[3], &btime_i[4], &btime_i[5]);
@@ -344,6 +350,7 @@ int main(int argc, char **argv) {
 
 	/* if error initializing memory then quit */
 	if (error != MB_ERROR_NO_ERROR) {
+		char *message;
 		mb_error(verbose, error, &message);
 		fprintf(output, "\nMBIO Error allocating histogram arrays:\n%s\n", message);
 		fprintf(output, "\nProgram <%s> Terminated\n", program_name);
@@ -406,6 +413,7 @@ int main(int argc, char **argv) {
 		/* initialize reading the swath sonar data file */
 		if ((status = mb_read_init(verbose, file, format, pings, lonflip, bounds, btime_i, etime_i, speedmin, timegap, &mbio_ptr,
 		                           &btime_d, &etime_d, &beams_bath, &beams_amp, &pixels_ss, &error)) != MB_SUCCESS) {
+			char *message;
 			mb_error(verbose, error, &message);
 			fprintf(output, "\nMBIO Error returned from function <mb_read_init>:\n%s\n", message);
 			fprintf(output, "\nMultibeam File <%s> not initialized for reading\n", file);
@@ -435,6 +443,7 @@ int main(int argc, char **argv) {
 
 		/* if error initializing memory then quit */
 		if (error != MB_ERROR_NO_ERROR) {
+			char *message;
 			mb_error(verbose, error, &message);
 			fprintf(output, "\nMBIO Error allocating data arrays:\n%s\n", message);
 			fprintf(output, "\nProgram <%s> Terminated\n", program_name);

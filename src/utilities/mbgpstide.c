@@ -77,12 +77,19 @@ static const char usage_message[] =
 /*--------------------------------------------------------------------*/
 
 int main(int argc, char **argv) {
-	int option_index;
-
-	/* MBIO status variables */
 	int verbose = 0;
+	int format;
+	int pings;
+	int lonflip;
+	double bounds[4];
+	int btime_i[7];
+	int etime_i[7];
+	double speedmin;
+	double timegap;
+	int status = mb_defaults(verbose, &format, &pings, &lonflip, bounds, btime_i, etime_i, &speedmin, &timegap);
+
+	int option_index;
 	int error = MB_ERROR_NO_ERROR;
-	char *message;
 
 	/* MBIO read control parameters */
 	mb_path read_file;
@@ -92,12 +99,6 @@ int main(int argc, char **argv) {
 	mb_path swath_file;
 	mb_path file;
 	mb_path dfile;
-	int format;
-	int pings;
-	int lonflip;
-	double bounds[4];
-	double speedmin;
-	double timegap;
 	int beams_bath;
 	int beams_amp;
 	int pixels_ss;
@@ -129,8 +130,6 @@ int main(int argc, char **argv) {
 	double tidelat;
 	double btime_d;
 	double etime_d;
-	int btime_i[7];
-	int etime_i[7];
 	double interval = 300.0;
 	mb_path tide_file;
 	mb_path nav_file;
@@ -175,9 +174,6 @@ int main(int argc, char **argv) {
 #ifdef ENABLE_GSF
 	struct mbsys_gsf_struct *gsf_ptr;
 #endif
-
-	/* get current default values */
-	int status = mb_defaults(verbose, &format, &pings, &lonflip, bounds, btime_i, etime_i, &speedmin, &timegap);
 
 	/* set default input to datalist.mb-1 */
 	strcpy(read_file, "datalist.mb-1");
@@ -495,6 +491,7 @@ int main(int argc, char **argv) {
 			if ((status = mb_read_init(verbose, file, format, pings, lonflip, bounds, btime_i, etime_i, speedmin, timegap,
 										&mbio_ptr, &btime_d, &etime_d, &beams_bath, &beams_amp, &pixels_ss, &error)) !=
 				MB_SUCCESS) {
+				char *message;
 				mb_error(verbose, error, &message);
 				fprintf(stderr, "\nMBIO Error returned from function <mb_read_init>:\n%s\n", message);
 				fprintf(stderr, "\nMultibeam File <%s> not initialized for reading\n", file);
@@ -526,6 +523,7 @@ int main(int argc, char **argv) {
 
 			/* if error initializing memory then quit */
 			if (error != MB_ERROR_NO_ERROR) {
+				char *message;
 				mb_error(verbose, error, &message);
 				fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 				fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);

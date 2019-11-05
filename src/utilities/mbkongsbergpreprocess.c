@@ -40,38 +40,54 @@
 #include "mbsys_simrad3.h"
 
 const int MBKONSBERGPREPROCESS_ALLOC_CHUNK = 1000;
-const int MBKONSBERGPREPROCESS_PROCESS = 1;
-const int MBKONSBERGPREPROCESS_TIMESTAMPLIST = 2;
-const int MBKONSBERGPREPROCESS_TIMELAG_OFF = 0;
-const int MBKONSBERGPREPROCESS_TIMELAG_CONSTANT = 1;
-const int MBKONSBERGPREPROCESS_TIMELAG_MODEL = 2;
 
-const int MBKONSBERGPREPROCESS_SONAR_OFFSET_NONE = 0;
-const int MBKONSBERGPREPROCESS_SONAR_OFFSET_SONAR = 1;
-const int MBKONSBERGPREPROCESS_SONAR_OFFSET_MRU = 2;
-const int MBKONSBERGPREPROCESS_SONAR_OFFSET_NAVIGATION = 3;
+typedef enum {
+    MBKONSBERGPREPROCESS_PROCESS = 1,
+    MBKONSBERGPREPROCESS_TIMESTAMPLIST = 2,
+} konsberg_mode_t;
+
+typedef enum {
+    MBKONSBERGPREPROCESS_TIMELAG_OFF = 0,
+    MBKONSBERGPREPROCESS_TIMELAG_CONSTANT = 1,
+    MBKONSBERGPREPROCESS_TIMELAG_MODEL = 2,
+} timelag_t;
+
+// typedef enum {
+//     MBKONSBERGPREPROCESS_SONAR_OFFSET_NONE = 0,
+//     MBKONSBERGPREPROCESS_SONAR_OFFSET_SONAR = 1,
+//     MBKONSBERGPREPROCESS_SONAR_OFFSET_MRU = 2,
+//     MBKONSBERGPREPROCESS_SONAR_OFFSET_NAVIGATION = 3,
+// } sonar_offset_t;
 
 const int MBKONSBERGPREPROCESS_OFFSET_MAX = 12;
 
-const int MBKONSBERGPREPROCESS_NAVFORMAT_NONE = 0;
-const int MBKONSBERGPREPROCESS_NAVFORMAT_OFG = 1;
+// typedef enum {
+//     MBKONSBERGPREPROCESS_NAVFORMAT_NONE = 0,
+//     MBKONSBERGPREPROCESS_NAVFORMAT_OFG = 1,
+// } navformat_t;
 
 /* set precision of iterative raytracing depth & distance matching */
 const double MBKONSBERGPREPROCESS_BATH_RECALC_PRECISION = 0.0001;
 const int MBKONSBERGPREPROCESS_BATH_RECALC_NCALCMAX = 50;
 const int MBKONSBERGPREPROCESS_BATH_RECALC_ANGLEMODE = 0;
 
-const int MBKONSBERGPREPROCESS_ZMODE_UNKNOWN = 0;
-const int MBKONSBERGPREPROCESS_ZMODE_USE_HEAVE_ONLY = 1;
-const int MBKONSBERGPREPROCESS_ZMODE_USE_SENSORDEPTH_ONLY = 2;
-const int MBKONSBERGPREPROCESS_ZMODE_USE_SENSORDEPTH_AND_HEAVE = 3;
+typedef enum {
+    MBKONSBERGPREPROCESS_ZMODE_UNKNOWN = 0,
+    MBKONSBERGPREPROCESS_ZMODE_USE_HEAVE_ONLY = 1,
+    MBKONSBERGPREPROCESS_ZMODE_USE_SENSORDEPTH_ONLY = 2,
+    MBKONSBERGPREPROCESS_ZMODE_USE_SENSORDEPTH_AND_HEAVE = 3,
+} zmode_t;
 
-const int MBKONSBERGPREPROCESS_WATERCOLUMN_IGNORE = 0;
-const int MBKONSBERGPREPROCESS_WATERCOLUMN_OUTPUT = 1;
+typedef enum {
+    MBKONSBERGPREPROCESS_WATERCOLUMN_IGNORE = 0,
+    MBKONSBERGPREPROCESS_WATERCOLUMN_OUTPUT = 1,
+} watercolumn_t;
 
-const int MBKONSBERGPREPROCESS_FILTER_NONE = 0;
-const int MBKONSBERGPREPROCESS_FILTER_MEAN = 1;
-const int MBKONSBERGPREPROCESS_FILTER_MEDIAN = 2;
+typedef enum {
+    MBKONSBERGPREPROCESS_FILTER_NONE = 0,
+    MBKONSBERGPREPROCESS_FILTER_MEAN = 1,
+    MBKONSBERGPREPROCESS_FILTER_MEDIAN = 2,
+} filter_t;
 
 static const char program_name[] = "mbkongsbergpreprocess";
 static const char help_message[] =
@@ -85,26 +101,26 @@ static const char usage_message[] =
 /*--------------------------------------------------------------------*/
 
 int main(int argc, char **argv) {
-	/* MBIO status variables */
 	int verbose = 0;
-	int error = MB_ERROR_NO_ERROR;
-	char *message;
-
-	/* MBIO read control parameters */
-	char read_file[MB_PATH_MAXLINE] = "";
-	void *datalist;
-	int look_processed = MB_DATALIST_LOOK_UNSET;
-	double file_weight;
 	int format = 0;
 	int pings;
 	int lonflip;
 	double bounds[4];
 	int btime_i[7];
 	int etime_i[7];
-	double btime_d;
-	double etime_d;
 	double speedmin;
 	double timegap;
+	int status = mb_defaults(verbose, &format, &pings, &lonflip, bounds, btime_i, etime_i, &speedmin, &timegap);
+
+	int error = MB_ERROR_NO_ERROR;
+
+	/* MBIO read control parameters */
+	char read_file[MB_PATH_MAXLINE] = "";
+	void *datalist;
+	int look_processed = MB_DATALIST_LOOK_UNSET;
+	double file_weight;
+	double btime_d;
+	double etime_d;
 	char ifile[MB_PATH_MAXLINE] = "";
 	char dfile[MB_PATH_MAXLINE] = "";
 	char ofile[MB_PATH_MAXLINE] = "";
@@ -152,7 +168,7 @@ int main(int argc, char **argv) {
 	char comment[MB_COMMENT_MAXLINE];
 
 	/* program mode */
-	int mode = MBKONSBERGPREPROCESS_PROCESS;
+	konsberg_mode_t mode = MBKONSBERGPREPROCESS_PROCESS;
 	int nav_source = MB_DATA_NAV;
 	int attitude_source = MB_DATA_NONE; // usually MB_DATA_ATTITUDE but let this be set by active sensor
 	int heading_source = MB_DATA_NAV;
@@ -273,7 +289,7 @@ int main(int argc, char **argv) {
 	double *dat_rph_heave = NULL;
 
 	/* timelag parameters */
-	int timelagmode = MBKONSBERGPREPROCESS_TIMELAG_OFF;
+	timelag_t timelagmode = MBKONSBERGPREPROCESS_TIMELAG_OFF;
 	double timelag = 0.0;
 	double timelagconstant = 0.0;
 	char timelagfile[MB_PATH_MAXLINE] = "";
@@ -282,7 +298,7 @@ int main(int argc, char **argv) {
 	double *timelag_model = NULL;
 
 	/* depth sensor filtering */
-	int sonardepthfilter = MBKONSBERGPREPROCESS_FILTER_NONE;
+	filter_t sonardepthfilter = MBKONSBERGPREPROCESS_FILTER_NONE;
 	double sonardepthfilterlength = 20.0;
 	double sonardepthfilterdepth = 20.0;
 
@@ -304,7 +320,7 @@ int main(int argc, char **argv) {
 	FILE *stafp;
 
 	/* handling water column records */
-	int watercolumnmode = MBKONSBERGPREPROCESS_WATERCOLUMN_IGNORE;
+	const watercolumn_t watercolumnmode = MBKONSBERGPREPROCESS_WATERCOLUMN_IGNORE;
 
 	/* processing kluge modes */
 	int klugemode;
@@ -372,9 +388,6 @@ int main(int argc, char **argv) {
 
 	int nscan;
 	int j1, j2;
-
-	/* get current default values */
-	int status = mb_defaults(verbose, &format, &pings, &lonflip, bounds, btime_i, etime_i, &speedmin, &timegap);
 
 	/* set default input to datalist.mb-1 */
 	strcpy(read_file, "datalist.mb-1");
@@ -613,6 +626,7 @@ int main(int argc, char **argv) {
 				status = mb_mallocd(verbose, __FILE__, __LINE__, nsonardepth * sizeof(double),
 				                    (void **)&sonardepth_sonardepthfilter, &error);
 			if (error != MB_ERROR_NO_ERROR) {
+				char *message;
 				mb_error(verbose, error, &message);
 				fprintf(stderr, "\nMBIO Error allocating sonardepth data arrays:\n%s\n", message);
 				fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -673,6 +687,7 @@ int main(int argc, char **argv) {
 			if (error == MB_ERROR_NO_ERROR)
 				status = mb_mallocd(verbose, __FILE__, __LINE__, ntimelag * sizeof(double), (void **)&timelag_model, &error);
 			if (error != MB_ERROR_NO_ERROR) {
+				char *message;
 				mb_error(verbose, error, &message);
 				fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 				fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -744,6 +759,7 @@ int main(int argc, char **argv) {
 		/* initialize reading the swath file */
 		if ((status = mb_read_init(verbose, ifile, format, pings, lonflip, bounds, btime_i, etime_i, speedmin, timegap,
 		                           &imbio_ptr, &btime_d, &etime_d, &beams_bath, &beams_amp, &pixels_ss, &error)) != MB_SUCCESS) {
+			char *message;
 			mb_error(verbose, error, &message);
 			fprintf(stderr, "\nMBIO Error returned from function <mb_read_init>:\n%s\n", message);
 			fprintf(stderr, "\nMultibeam File <%s> not initialized for reading\n", ifile);
@@ -787,6 +803,7 @@ int main(int argc, char **argv) {
 
 		/* if error initializing memory then quit */
 		if (error != MB_ERROR_NO_ERROR) {
+			char *message;
 			mb_error(verbose, error, &message);
 			fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 			fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -1008,6 +1025,7 @@ int main(int argc, char **argv) {
 						status = mb_reallocd(verbose, __FILE__, __LINE__, ndat_nav_alloc * sizeof(double), (void **)&dat_nav_lat,
 						                     &error);
 						if (error != MB_ERROR_NO_ERROR) {
+							char *message;
 							mb_error(verbose, error, &message);
 							fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 							fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -1047,6 +1065,7 @@ int main(int argc, char **argv) {
 						status = mb_reallocd(verbose, __FILE__, __LINE__, ndat_heading_alloc * sizeof(double),
 						                     (void **)&dat_heading_heading, &error);
 						if (error != MB_ERROR_NO_ERROR) {
+							char *message;
 							mb_error(verbose, error, &message);
 							fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 							fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -1101,6 +1120,7 @@ int main(int argc, char **argv) {
 					status = mb_reallocd(verbose, __FILE__, __LINE__, ndat_sonardepth_alloc * sizeof(double),
 					                     (void **)&dat_sonardepth_sonardepthfilter, &error);
 					if (error != MB_ERROR_NO_ERROR) {
+						char *message;
 						mb_error(verbose, error, &message);
 						fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 						fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -1160,6 +1180,7 @@ int main(int argc, char **argv) {
 					status = mb_reallocd(verbose, __FILE__, __LINE__, ndat_rph_alloc * sizeof(double), (void **)&dat_rph_heave,
 					                     &error);
 					if (error != MB_ERROR_NO_ERROR) {
+						char *message;
 						mb_error(verbose, error, &message);
 						fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 						fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -1223,6 +1244,7 @@ int main(int argc, char **argv) {
 					status = mb_reallocd(verbose, __FILE__, __LINE__, ndat_rph_alloc * sizeof(double), (void **)&dat_rph_heave,
 					                     &error);
 					if (error != MB_ERROR_NO_ERROR) {
+						char *message;
 						mb_error(verbose, error, &message);
 						fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 						fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -1281,6 +1303,7 @@ int main(int argc, char **argv) {
 					status = mb_reallocd(verbose, __FILE__, __LINE__, ndat_heading_alloc * sizeof(double),
 					                     (void **)&dat_heading_heading, &error);
 					if (error != MB_ERROR_NO_ERROR) {
+						char *message;
 						mb_error(verbose, error, &message);
 						fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 						fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -1337,6 +1360,7 @@ int main(int argc, char **argv) {
 					status = mb_reallocd(verbose, __FILE__, __LINE__, ndat_heading_alloc * sizeof(double),
 					                     (void **)&dat_heading_heading, &error);
 					if (error != MB_ERROR_NO_ERROR) {
+						char *message;
 						mb_error(verbose, error, &message);
 						fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 						fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -1393,6 +1417,7 @@ int main(int argc, char **argv) {
 					status = mb_reallocd(verbose, __FILE__, __LINE__, ndat_sonardepth_alloc * sizeof(double),
 					                     (void **)&dat_sonardepth_sonardepthfilter, &error);
 					if (error != MB_ERROR_NO_ERROR) {
+						char *message;
 						mb_error(verbose, error, &message);
 						fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 						fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -1814,6 +1839,7 @@ int main(int argc, char **argv) {
 			if ((status = mb_read_init(verbose, ifile, format, pings, lonflip, bounds, btime_i, etime_i, speedmin, timegap,
 			                           &imbio_ptr, &btime_d, &etime_d, &beams_bath, &beams_amp, &pixels_ss, &error)) !=
 			    MB_SUCCESS) {
+				char *message;
 				mb_error(verbose, error, &message);
 				fprintf(stderr, "\nMBIO Error returned from function <mb_read_init>:\n%s\n", message);
 				fprintf(stderr, "\nMultibeam File <%s> not initialized for reading\n", ifile);
@@ -1828,6 +1854,7 @@ int main(int argc, char **argv) {
 				/* initialize writing the output swath sonar file */
 				if ((status = mb_write_init(verbose, ofile, MBF_EM710MBA, &ombio_ptr, &obeams_bath, &obeams_amp, &opixels_ss,
 				                            &error)) != MB_SUCCESS) {
+					char *message;
 					mb_error(verbose, error, &message);
 					fprintf(stderr, "\nMBIO Error returned from function <mb_write_init>:\n%s\n", message);
 					fprintf(stderr, "\nMultibeam File <%s> not initialized for writing\n", ofile);
@@ -1883,6 +1910,7 @@ int main(int argc, char **argv) {
 
 			/* if error initializing memory then quit */
 			if (error != MB_ERROR_NO_ERROR) {
+				char *message;
 				mb_error(verbose, error, &message);
 				fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 				fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
@@ -2559,6 +2587,7 @@ int main(int argc, char **argv) {
 					                    heading, obeams_bath, obeams_amp, opixels_ss, beamflag, bath, amp, bathacrosstrack,
 					                    bathalongtrack, ss, ssacrosstrack, ssalongtrack, comment, &error);
 					if (status != MB_SUCCESS) {
+						char *message;
 						mb_error(verbose, error, &message);
 						fprintf(stderr, "\nMBIO Error returned from function <mb_put>:\n%s\n", message);
 						fprintf(stderr, "\nMultibeam Data Not Written To File <%s>\n", ofile);

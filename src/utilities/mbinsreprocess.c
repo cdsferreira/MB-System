@@ -47,11 +47,13 @@
 
 const int NFIELDSMAX = 50;
 const int MAX_OPTIONS = 50;
-const int TYPE_UNKNOWN = 0;
-const int TYPE_TIMETAG = 1;
-const int TYPE_INTEGER = 2;
-const int TYPE_DOUBLE = 3;
-const int TYPE_ANGLE = 4;
+typedef enum {
+    TYPE_UNKNOWN = 0,
+    TYPE_TIMETAG = 1,
+    TYPE_INTEGER = 2,
+    TYPE_DOUBLE = 3,
+    TYPE_ANGLE = 4,
+} field_type_t;
 // TODO(schwehr): Should these be unsigned values for flags?
 // const int KEARFOTT_MONITOR_VALID_DVL = 0x01;
 // const int KEARFOTT_MONITOR_RESERVED = 0x02;
@@ -75,16 +77,7 @@ static const char usage_message[] =
 /*--------------------------------------------------------------------*/
 
 int main(int argc, char **argv) {
-	int option_index;
 	int verbose = 0;
-	int error = MB_ERROR_NO_ERROR;
-	char *message;
-
-	/* Files and formats */
-	char ifile[MB_PATH_MAXLINE];
-	char ofile[MB_PATH_MAXLINE];
-	FILE *fp;
-
 	/* MBIO default parameters - only use lonflip */
 	int format;
 	int pings;
@@ -94,10 +87,19 @@ int main(int argc, char **argv) {
 	int etime_i[7];
 	double speedmin;
 	double timegap;
+	int status = mb_defaults(verbose, &format, &pings, &lonflip, bounds, btime_i, etime_i, &speedmin, &timegap);
+
+	int option_index;
+	int error = MB_ERROR_NO_ERROR;
+
+	/* Files and formats */
+	char ifile[MB_PATH_MAXLINE];
+	char ofile[MB_PATH_MAXLINE];
+	FILE *fp;
 
 	/* auv log data */
 	struct field {
-		int type;
+		field_type_t type;
 		int size;
 		int index;
 		char name[MB_PATH_MAXLINE];
@@ -150,9 +152,6 @@ int main(int argc, char **argv) {
 	int ivalue;
 	char dvl_char, jump_char;
 	double dx, dy, rr;
-
-	/* get current default values - only interested in lonflip */
-	int status = mb_defaults(verbose, &format, &pings, &lonflip, bounds, btime_i, etime_i, &speedmin, &timegap);
 
 	/* set default input and output */
 	strcpy(ifile, "stdin");
@@ -361,6 +360,7 @@ int main(int argc, char **argv) {
 
 		/* if error initializing memory then quit */
 		if (error != MB_ERROR_NO_ERROR) {
+			char *message;
 			mb_error(verbose, error, &message);
 			fprintf(stderr, "\nMBIO Error allocating data arrays:\n%s\n", message);
 			fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
