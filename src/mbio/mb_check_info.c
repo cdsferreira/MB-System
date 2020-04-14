@@ -537,10 +537,10 @@ bool mb_should_make_fbt(int verbose, int format) {
     || format == MBF_SBURICEN || format == MBF_SBURIVAX || format == MBF_SBSIOSWB
     || format == MBF_HSLDEDMB || format == MBF_HSURICEN || format == MBF_HSURIVAX
     || format == MBF_SB2000SS || format == MBF_SB2000SB || format == MBF_MSTIFFSS
-    || format == MBF_MBLDEOIH || format == MBF_MBNETCDF || format == MBF_ASCIIXYZ
-    || format == MBF_ASCIIYXZ || format == MBF_ASCIIXYT || format == MBF_ASCIIYXT
-    || format == MBF_HYDROB93 || format == MBF_SEGYSEGY || format == MBF_MGD77DAT
-    || format == MBF_MBARIROV || format == MBF_MBARROV2 || format == MBF_MBPRONAV)
+    || format == MBF_MBLDEOIH || format == MBF_ASCIIXYZ || format == MBF_ASCIIYXZ 
+    || format == MBF_ASCIIXYT || format == MBF_ASCIIYXT || format == MBF_HYDROB93 
+    || format == MBF_SEGYSEGY || format == MBF_MGD77DAT || format == MBF_MBARIROV 
+    || format == MBF_MBARROV2 || format == MBF_MBPRONAV)
     result = false;
 
 	if (verbose >= 2) {
