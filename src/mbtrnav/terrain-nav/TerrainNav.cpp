@@ -38,10 +38,18 @@ trn_server.cpp calls getFilterState() which currently only returns 0
  Trigger 5: Windowed NIS maximum has been exceeded
 ******************************************************************************/
 //static int transitionMatrix[5][3] = {{0, 0, 1}, {1, 1, 1}, {1, 2, 2}, {2, 2, 2}, {2, 2, 2}};
+TerrainNav::TerrainNav()
+: tNavFilter(NULL),allowFilterReinits(true),numReinits(0),
+saveDirectory(NULL), vehicleSpecFile(NULL),
+particlesFile(NULL), mapFile(NULL),
+filterType(1),mapType(1),
+terrainMap(NULL),_trnLog(NULL)
+{
 
+}
 TerrainNav::TerrainNav(char* mapName) {
 	//initialize pointers
-	this->mapFile = strdup(mapName);
+	this->mapFile = STRDUPNULL(mapName);
 	this->vehicleSpecFile = (char*)"mappingAUV_specs.cfg";
 	this->particlesFile = NULL;
 	this->saveDirectory = NULL;
@@ -64,8 +72,8 @@ TerrainNav::TerrainNav(char* mapName) {
 
 TerrainNav::TerrainNav(char* mapName, char* vehicleSpecs) {
 	//initialize pointers
-	this->mapFile = strdup(mapName);
-	this->vehicleSpecFile = strdup(vehicleSpecs);
+	this->mapFile = STRDUPNULL(mapName);
+	this->vehicleSpecFile = STRDUPNULL(vehicleSpecs);
 	this->particlesFile = NULL;
 	this->saveDirectory = NULL;
 	this->tNavFilter = NULL;
@@ -88,8 +96,8 @@ TerrainNav::TerrainNav(char* mapName, char* vehicleSpecs) {
 TerrainNav::TerrainNav(char* mapName, char* vehicleSpecs,
 					   const int& filterType) {
 	//initialize pointers
-	this->mapFile = strdup(mapName);
-	this->vehicleSpecFile = strdup(vehicleSpecs);
+	this->mapFile = STRDUPNULL(mapName);
+	this->vehicleSpecFile = STRDUPNULL(vehicleSpecs);
 	this->particlesFile = NULL;
 	this->saveDirectory = NULL;
 	this->tNavFilter = NULL;
@@ -112,9 +120,9 @@ TerrainNav::TerrainNav(char* mapName, char* vehicleSpecs,
 TerrainNav::TerrainNav(char* mapName, char* vehicleSpecs,
 					   const int& filterType, char* directory) {
 	//initialize pointers
-	this->mapFile = strdup(mapName);
-	this->vehicleSpecFile = strdup(vehicleSpecs);
-	this->saveDirectory = strdup(directory);
+	this->mapFile = STRDUPNULL(mapName);
+	this->vehicleSpecFile = STRDUPNULL(vehicleSpecs);
+	this->saveDirectory = STRDUPNULL(directory);
 	this->particlesFile = NULL;
 	this->tNavFilter = NULL;
 	this->terrainMap = NULL;
@@ -136,8 +144,8 @@ TerrainNav::TerrainNav(char* mapName, char* vehicleSpecs,
 TerrainNav::TerrainNav(char* mapName, char* vehicleSpecs,
 					   const int& filterType, const int& mapType) {
 	//initialize pointers
-	this->mapFile = strdup(mapName);
-	this->vehicleSpecFile = strdup(vehicleSpecs);
+	this->mapFile = STRDUPNULL(mapName);
+	this->vehicleSpecFile = STRDUPNULL(vehicleSpecs);
 	this->saveDirectory = NULL;
 	this->particlesFile = NULL;
 	this->tNavFilter = NULL;
@@ -159,9 +167,9 @@ TerrainNav::TerrainNav(char* mapName, char* vehicleSpecs,
 TerrainNav::TerrainNav(char* mapName, char* vehicleSpecs,
 					   const int& filterType, const int& mapType, char* directory) {
 	//initialize pointers
-	this->mapFile = strdup(mapName);
-	this->vehicleSpecFile = strdup(vehicleSpecs);
-	this->saveDirectory = strdup(directory);
+	this->mapFile = STRDUPNULL(mapName);
+	this->vehicleSpecFile = STRDUPNULL(vehicleSpecs);
+	this->saveDirectory = STRDUPNULL(directory);
 	this->particlesFile = NULL;
 	this->tNavFilter = NULL;
 	this->terrainMap = NULL;
@@ -184,10 +192,10 @@ TerrainNav::TerrainNav(char* mapName, char* vehicleSpecs, char* particles,
 							  const int& filterType, const int& mapType, char* directory) {
 
 	//initialize pointers
-	this->mapFile = strdup(mapName);
-	this->vehicleSpecFile = strdup(vehicleSpecs);
-	this->saveDirectory = strdup(directory);
-	this->particlesFile = strdup(particles);
+	this->mapFile = STRDUPNULL(mapName);
+	this->vehicleSpecFile = STRDUPNULL(vehicleSpecs);
+	this->saveDirectory = STRDUPNULL(directory);
+	this->particlesFile = STRDUPNULL(particles);
 	this->tNavFilter = NULL;
 	this->terrainMap = NULL;
 	this->filterType = filterType;
@@ -249,7 +257,7 @@ void TerrainNav::estimatePose(poseT* estimate, const int& type) {
 			estimate->vn_x = tNavFilter->lastNavPose->x;
 			estimate->vn_y = tNavFilter->lastNavPose->y;
 			estimate->vn_z = tNavFilter->lastNavPose->z;
-	
+
 
 			//If using a PMF, add on prior estNavOffset for attitude
 			if(this->filterType == 1 && ALLOW_ATTITUDE_SEARCH) {
@@ -288,7 +296,7 @@ void TerrainNav::estimatePose(poseT* estimate, const int& type) {
 	//*estimate += this->estNavOffset;
 	////*estimate += estNavOffset;
 
-	if(isnan(estimate->x) || isnan(estimate->y)){
+	if(std::isnan(estimate->x) || std::isnan(estimate->y)){
 		estimate->covariance[0] = X_STDDEV_INIT*X_STDDEV_INIT;
 		estimate->covariance[2] = Y_STDDEV_INIT*Y_STDDEV_INIT;
 	}
@@ -296,7 +304,7 @@ void TerrainNav::estimatePose(poseT* estimate, const int& type) {
 	/* Log to a data file */
    logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG),"\n variances([0], [2], and psi_berg) = "
    	"%f  %f  %f\n",
-   	estimate->covariance[0], 
+   	estimate->covariance[0],
    	estimate->covariance[2],
     estimate->covariance[44]);
 
@@ -405,11 +413,11 @@ void TerrainNav::measUpdate(measT* incomingMeas, const int& type) {
 void TerrainNav::motionUpdate(poseT* incomingNav) {
 
 	// Log position data
-	// 
+	//
 //	_posLog->log(incomingNav);
 
 	// Maintain a copy of the latest incoming nav
-	// 
+	//
 	_incomingNav = *incomingNav;
 
 	poseT currEstimate;
@@ -486,12 +494,12 @@ void TerrainNav::motionUpdate(poseT* incomingNav) {
 
 	   double deltat = currEstimate.time - tNavFilter->lastNavPose->time;
 
-//         Trapezoidal:	   
+//         Trapezoidal:
 //	   currEstimate.x = tNavFilter->lastNavPose->x + (prevVelMap(1,1) + currVelMap(1,1))*deltat/2.;
 //	   currEstimate.y = tNavFilter->lastNavPose->y + (prevVelMap(2,1) + currVelMap(2,1))*deltat/2.;
 //	   currEstimate.z = tNavFilter->lastNavPose->z + (prevVelMap(3,1) + currVelMap(3,1))*deltat/2.;
 //
-//         Forward Euler:	   
+//         Forward Euler:
 	   currEstimate.x = tNavFilter->lastNavPose->x + (prevVelMap(1,1) )*deltat;
 	   currEstimate.y = tNavFilter->lastNavPose->y + (prevVelMap(2,1) )*deltat;
 	   currEstimate.z = tNavFilter->lastNavPose->z + (prevVelMap(3,1) )*deltat;
@@ -603,7 +611,7 @@ void TerrainNav::motionUpdate(poseT* incomingNav) {
 					//update lastNavPose variable
 					*tNavFilter->lastNavPose = measPose;
 
-					//incoporate measurement
+					//incorporate measurement
 					this->lastMeasSuccess = tNavFilter->measUpdate(waitingMeas[i]);
 
 					if(this->lastMeasSuccess) {
@@ -652,7 +660,7 @@ void TerrainNav::createFilter(const int filterType, const double* windowVar) {
 			tNavFilter = new TNavParticleFilter(this->terrainMap, this->vehicleSpecFile,
 												this->saveDirectory, windowVar, this->mapType);
 			break;
-		case 3: 
+		case 3:
 			tNavFilter = new TNavBankFilter(this->terrainMap, this->vehicleSpecFile,
 												this->saveDirectory, windowVar, this->mapType);
 			break;
@@ -688,7 +696,7 @@ void TerrainNav::initVariables() {
 
 	//create log objects
 	_trnLog = new TerrainNavLog(DataLog::BinaryFormat);
-  tl_new_logfile(dirname(strdup(_trnLog->fileName())));
+  tl_new_logfile(dirname(STRDUPNULL(_trnLog->fileName())));
 
 	// Initialize TNavConfig
 	TNavConfig::instance()->setMapFile(this->mapFile);
@@ -700,7 +708,7 @@ void TerrainNav::initVariables() {
 	// Shut off measWeights.txt debug.  It is too large.
 	this->saveDirectory = NULL;
 
-	
+
 	//logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG),"TerrainNav::TNavFilter initialized with Z variance %.2f\n", windowVar[5]);
 
 	//create filter object
@@ -762,7 +770,7 @@ void TerrainNav::attemptInitFilter(poseT& initEstimate) {
         // Added a switch to essentially skip the gpsValid check
         //
 	if(withinMap && initEstimate.bottomLock && lastMeasValid &&
-	    initEstimate.dvlValid && initEstimate.z > 1 && 
+	    initEstimate.dvlValid && initEstimate.z > 1 &&
             (!initEstimate.gpsValid || TNavConfig::instance()->getIgnoreGps())) {
 		//Incorporate increased search window to account for large initialization
 		//waiting times
@@ -884,7 +892,7 @@ void TerrainNav::computeMeasVariance(measT& currMeas) {
 	}
 	perError = tNavFilter->vehicle->sensors[sensorIdx].percentRangeError;
 
-	//if covariance vector not already intialized, intialize it
+	//if covariance vector not already initialized, initialize it
 	if(currMeas.covariance == NULL) {
 		currMeas.covariance = new double[currMeas.numMeas];
 	}
@@ -933,7 +941,7 @@ void TerrainNav::checkRangeValidity(measT& currMeas) {
 	int i, j;
 	int numEqual = 0;
 	double alpha, dr, dt;
-#if MBTRN_DEBUG	
+#if MBTRN_DEBUG
 
 	logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG),"measT type:%d\n", currMeas.dataType);
 	logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG),"measT time:%.3f\n", currMeas.time);
@@ -971,7 +979,7 @@ void TerrainNav::checkRangeValidity(measT& currMeas) {
 					for(j = 0; j < currMeas.numMeas; j++) {
 						currMeas.measStatus[j] = false;
 					}
-					logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG),"TerrainNav:: Throwing out all beams beacause more "
+					logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG),"TerrainNav:: Throwing out all beams because more "
 					       "than two are equal to %.3f at t=%.2f, ping # %u.\n",
 					       alpha, currMeas.time, currMeas.ping_number);
 					return;
@@ -979,7 +987,7 @@ void TerrainNav::checkRangeValidity(measT& currMeas) {
 			}
 
 			//check validity of each beam based on NaN or range value
-			if(isnan(currMeas.ranges[i]) || (currMeas.ranges[i] >= MAX_RANGE)
+			if(std::isnan(currMeas.ranges[i]) || (currMeas.ranges[i] >= MAX_RANGE)
 					|| (currMeas.ranges[i] <= MIN_RANGE)) {
 				currMeas.measStatus[i] = false;
 			}
@@ -1007,7 +1015,7 @@ void TerrainNav::checkRangeValidity(measT& currMeas) {
 		for(i = 0; i < currMeas.numMeas; i++) {
 			//check validity of each beam based on NaN or range value
 		        // Use only the middle 60 of 120 beams
-			if(isnan(currMeas.ranges[i]) || (currMeas.ranges[i] >= MAX_RANGE)
+			if(std::isnan(currMeas.ranges[i]) || (currMeas.ranges[i] >= MAX_RANGE)
 			   //		|| (currMeas.ranges[i] <= MIN_RANGE) || ((i < 30) || (i >= 90)) )
 			   		|| (currMeas.ranges[i] <= MIN_RANGE) || ((i < 30) || (i >  90)) )
 			{
@@ -1018,7 +1026,7 @@ void TerrainNav::checkRangeValidity(measT& currMeas) {
 			   //currMeas.measStatus[i] = true;
 			   //Further pare the center 60 down to only 5
 			   //if( i==30 || i==44 || i==59 || i==74 || i==89 )
-			   
+
 			   //Try paring down to every 6th for 11 total.
 			   if( i%6 == 0 )
 			      currMeas.measStatus[i] = true;
@@ -1043,6 +1051,7 @@ void TerrainNav::reinitFilter(bool lowInfoTransition) {
 	int interpMapMethod = 1;
 	bool interpMeasAttitude = true;
 	double driftRate = 1;
+	unsigned int distrib_type = 0;
 	int useModWeight = useModifiedWeighting;
 
 	//Default initialization window --> mainly used for broad area reinitializations
@@ -1066,8 +1075,11 @@ void TerrainNav::reinitFilter(bool lowInfoTransition) {
 		interpMapMethod = tNavFilter->GetInterpMapMethod();
 		interpMeasAttitude = tNavFilter->interpMeasAttitude;
 		driftRate = tNavFilter->vehicle->driftRate;
+		distrib_type = tNavFilter->getDistribToSave();
+                logs(TL_OMASK(TL_TERRAIN_NAV, TL_BOTH), "reinitFilter: getDistribToSave == %d\n", distrib_type);
+
 		// More than one setting is encoded in the useModifiedSetting value,
-		// so always use the one recevied from the client through the setModifiedWeighting() call
+		// so always use the one received from the client through the setModifiedWeighting() call
 		//useModWeight = tNavFilter->useModifiedWeighting;  // RGH: Use the value received from the client
 
 		//If keeping mean and covariance
@@ -1106,7 +1118,7 @@ void TerrainNav::reinitFilter(bool lowInfoTransition) {
 				}
 			}
 			if(this->mapType == 2) {
-				//Create Particle Fitler from windowVar  TODO: don't only use PF with octree, but allow PMF too
+				//Create Particle Filter from windowVar  TODO: don't only use PF with octree, but allow PMF too
 				createFilter(2, windowVar);
 			} else {
 				//Create Point Mass Filter from windowVar  TODO: fix PMF so that it can be used here for both cases
@@ -1136,10 +1148,10 @@ void TerrainNav::reinitFilter(bool lowInfoTransition) {
 
 	//reset filter and terrainNav parameters
 	setMapInterpMethod(interpMapMethod);
-
 	setVehicleDriftRate(driftRate);
 	setInterpMeasAttitude(interpMeasAttitude);
 	setModifiedWeighting(useModWeight);
+	if (tNavFilter != NULL) tNavFilter->setDistribToSave(distrib_type);
 
 	numWaitingMeas = 0;
 	lastMeasSuccessTime = -1.0;
@@ -1193,7 +1205,7 @@ bool TerrainNav::checkFilterHealth() {
 	/*//old state machine version:
 	//check if x/y uncertainty of the filter is below a set minimum.
 	//potentially for switching filters in the future.
-	// force reinit is for testing the fitler reinitialization only
+	// force reinit is for testing the filter reinitialization only
 	if(healthy && currVarArea < MIN_FILTER_VAR)
 		//if(healthy && larger < MIN_FILTER_VAR)
 	{
@@ -1289,7 +1301,6 @@ bool TerrainNav::checkFilterHealth() {
 
 }
 
-
 /* Function: copyToLogDir() - copies configuration files to the log directory
 *			     for future reference
 *  A log directory (saveDirectory) must be specified in the initialization
@@ -1302,7 +1313,6 @@ void TerrainNav::copyToLogDir()
 
 	// Copy only if there is a place for the files to land
 	//
-	int sys_return;
 	char *slash = NULL;
 	if (NULL != this->saveDirectory)
 	{
@@ -1324,7 +1334,7 @@ void TerrainNav::copyToLogDir()
        if ( errno != EEXIST )
        {
           // If the error is about something other than EEXIST
-          // 
+          //
           fprintf(stderr,"\n\n\t\tTerrainNav::copyToLogDir() - ERR: mkdir(%s) failed"
           " [%d,%s]\n\n", dir_spec, errno, strerror(errno));
           trnLogDir = dot;
@@ -1334,16 +1344,20 @@ void TerrainNav::copyToLogDir()
 		}
 
 		free(this->saveDirectory);
-		this->saveDirectory = strdup(dir_spec);
+		this->saveDirectory = STRDUPNULL(dir_spec);
 		logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG), "TRN log directory is %s\n", this->saveDirectory);
-		
+
 
 		// Create a latest link that points to the log directory
 		//
 		sprintf(dir_spec, "%s/%s", trnLogDir, LatestLogDirName);
-		logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG), "symlink %s is linked to %s\n", dir_spec, this->saveDirectory);
 		remove(dir_spec);
-		sys_return = symlink(this->saveDirectory, dir_spec);
+		if (0 != symlink(this->saveDirectory, dir_spec))
+			logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG), "symlink %s to %s failed:%s\n",
+				dir_spec, this->saveDirectory, strerror(errno));
+		else
+			logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG), "symlink %s to %s OK\n",
+				dir_spec, this->saveDirectory);
 	}
 	else
 		return;
@@ -1353,14 +1367,18 @@ void TerrainNav::copyToLogDir()
 	{
 		sprintf(copybuf, "cp %s %s/.", this->vehicleSpecFile,
 						    this->saveDirectory);
-		sys_return = system(copybuf);
+		if (0 != system(copybuf))
+			logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG), "command \'%s\' failed:%s\n",
+				copybuf, strerror(errno));
 	}
 
 	if (NULL != this->particlesFile)
 	{
 		sprintf(copybuf, "cp %s %s/.", this->particlesFile,
 						    this->saveDirectory);
-		sys_return = system(copybuf);
+		if (0 != system(copybuf))
+			logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG), "command \'%s\' failed:%s\n",
+				copybuf, strerror(errno));
 	}
 
 	// Create a vehicleT object just to get the sensor spec files to copy
@@ -1370,7 +1388,9 @@ void TerrainNav::copyToLogDir()
 	{
 		sprintf(copybuf, "cp %s %s/.", v->sensors[i].filename,
 						       this->saveDirectory);
-		sys_return = system(copybuf);
+		if (0 != system(copybuf))
+			logs(TL_OMASK(TL_TERRAIN_NAV, TL_LOG), "command \'%s\' failed:%s\n",
+				copybuf, strerror(errno));
 	}
 	delete v;
 }

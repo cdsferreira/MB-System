@@ -1,23 +1,23 @@
-lib_LTLIBRARIES = libr7kr.la
+lib_LTLIBRARIES = libmframe.la libr7kr.la
 
 include_HEADERS = \
-				mframe/src/mframe.h \
-				mframe/src/mcbuf.h \
-                mframe/src/msocket.h \
-                mframe/src/mthread.h \
-				mframe/src/mfile.h \
-				mframe/src/mtime.h\
-                mframe/src/medebug.h \
-                mframe/src/mmdebug.h \
-				mframe/src/merror.h \
-				mframe/src/mlog.h \
-                mframe/src/mlist.h \
-                mframe/src/mstats.h \
-                utils/mconfig.h \
-                utils/mb1_msg.h \
-                utils/mb71_msg.h \
-                r7kr/r7k-reader.h \
-				r7kr/r7kc.h
+        mframe/src/mframe.h \
+        mframe/src/mcbuf.h \
+        mframe/src/msocket.h \
+        mframe/src/mthread.h \
+        mframe/src/mfile.h \
+        mframe/src/mtime.h\
+        mframe/src/medebug.h \
+        mframe/src/mmdebug.h \
+        mframe/src/merror.h \
+        mframe/src/mlog.h \
+        mframe/src/mlist.h \
+        mframe/src/mstats.h \
+        utils/mconfig.h \
+        utils/mb1_msg.h \
+        utils/mb71_msg.h \
+        r7kr/r7k-reader.h \
+        r7kr/r7kc.h
 
 AM_CFLAGS = ${libgmt_CFLAGS} ${libnetcdf_CFLAGS}
 
@@ -28,35 +28,39 @@ MFRAME_TESTS=-DWITH_TESTS -DWITH_R7KR_TEST
 MFRAME_FEATURES=-DWITH_MST_MSTATS -DMST_STATS_EN -DWITH_PDEBUG -DWITH_MMDEBUG
 MFRAME_OPTS=$(MFRAME_VERSIONS) $(MFRAME_FEATURES) $(MFRAME_TESTS)
 
-AM_CPPFLAGS = -g -O0 -I${top_srcdir}/src/mbtrn/r7kr -I${top_srcdir}/src/mbtrn/utils -I${top_srcdir}/src/mbtrn/mframe/src \
+AM_CPPFLAGS = -g -O0 -I${top_srcdir}/src/mbtrn/r7kr -I${top_srcdir}/src/mbtrn/utils -I${top_srcdir}/src/mbtrn/mframe/src -I${top_srcdir}/src/mbtrnav/trnw \
  -DHAVE_CONFIG_H  -D_GNU_SOURCE $(MFRAME_OPTS)
 
+libmframe_la_LDFLAGS =  -no-undefined -version-info 0:0:0
+
+libmframe_la_SOURCES = mframe/src/mframe.c \
+        mframe/src/mcbuf.c \
+        mframe/src/msocket.c \
+        mframe/src/mthread.c \
+        mframe/src/mfile.c \
+        mframe/src/mtime.c\
+        mframe/src/mmdebug.c \
+        mframe/src/merror.c \
+        mframe/src/mlog.c \
+        mframe/src/mlist.c \
+        mframe/src/mstats.c \
+        mframe/src/mswap.c \
+        mframe/src/mutils.c \
+        utils/mconfig.c
+
+libmframe_la_LIBADD =
 
 libr7kr_la_LDFLAGS =  -no-undefined -version-info 0:0:0
 
-libr7kr_la_SOURCES =  mframe/src/mframe.c \
-                mframe/src/mcbuf.c \
-                mframe/src/msocket.c \
-                mframe/src/mthread.c \
-                mframe/src/mfile.c \
-                mframe/src/mtime.c\
-                mframe/src/mmdebug.c \
-                mframe/src/merror.c \
-                mframe/src/mlog.c \
-                mframe/src/mlist.c \
-                mframe/src/mstats.c \
-                mframe/src/mswap.c \
-                mframe/src/mutils.c \
-				utils/mconfig.c \
-				utils/mb1_msg.c \
-				utils/mb71_msg.c \
-                r7kr/r7k-reader.c \
-                r7kr/r7kc.c
+libr7kr_la_SOURCES =  utils/mconfig.c \
+        utils/mb1_msg.c \
+        utils/mb71_msg.c \
+        r7kr/r7k-reader.c \
+        r7kr/r7kc.c
 
+libr7kr_la_LIBADD = libmframe.la -lpthread
 
-libr7kr_la_LIBADD = -lpthread
-
-bin_PROGRAMS =  stream7k frames7k emu7k trnc tbinx udps udpc mb1conv r7kr_test
+bin_PROGRAMS =  stream7k frames7k emu7k trnc tbinx udps udpc mb1conv r7kr_test mbtnav-cli
 
 stream7k_SOURCES = utils/stream7k.c
 stream7k_LDADD = libr7kr.la
@@ -85,7 +89,11 @@ mb1conv_LDADD = libr7kr.la
 r7kr_test_SOURCES = r7kr/r7kr-test.c
 r7kr_test_LDADD = libr7kr.la
 
+mbtnav_cli_SOURCES = utils/mbtnav_cli.c
+mbtnav_cli_LDADD = libr7kr.la
+
 dist_bin_SCRIPTS = mbtrnpp.sh emu7k.sh
+bin_SCRIPTS = mbtrnpp.sh
 
 CLEANFILES =
 DISTCLEANFILES =

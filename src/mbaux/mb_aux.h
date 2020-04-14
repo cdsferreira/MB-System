@@ -21,8 +21,6 @@
  *
  * Name change:  mb_countour.h changed to mb_aux.h
  * Date:  October 13, 2009
- *
- *
  */
 
 #ifndef MB_AUX_H_
@@ -178,6 +176,10 @@ struct mb_topogrid_struct {
   float *data;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* mb_contour and mb_track function prototypes */
 int mb_triangulate(int verbose, struct swath *data, int *error);
 int mb_contour_init(int verbose, struct swath **data, int npings_max, int beams_bath, int contour_algorithm, int plot_contours,
@@ -210,9 +212,9 @@ void mb_plot_string(double x, double y, double hgt, double angle, char *label);
 int mb_surface(int verbose, int ndat, float *xdat, float *ydat, float *zdat, double xxmin, double xxmax, double yymin,
                double yymax, double xxinc, double yyinc, double ttension, float *sgrid);
 int mb_zgrid(float *z, int *n_columns, int *n_rows, float *x1, float *y1, float *dx, float *dy, float *xyz, int *n, float *zpij, int *knxt,
-             int *imnew, float *cay, int *nrng);
+             bool *imnew, float *cay, int *nrng);
 int mb_zgrid2(float *z, int *n_columns, int *n_rows, float *x1, float *y1, float *dx, float *dy, float *xyz, int *n, float *zpij, int *knxt,
-              int *imnew, float *cay, int *nrng);
+              bool *imnew, float *cay, int *nrng);
 
 /* mb_delaun function prototypes */
 int mb_delaun(int verbose, int npts, double *p1, double *p2, int *ed, int *ntri, int *iv1, int *iv2, int *iv3, int *ct1, int *ct2,
@@ -223,9 +225,13 @@ int mb_delaun(int verbose, int npts, double *p1, double *p2, int *ed, int *ntri,
 int mb_read_gmt_grd(int verbose, char *grdfile, int *grid_projection_mode, char *grid_projection_id, float *nodatavalue, int *nxy,
                     int *n_columns, int *n_rows, double *min, double *max, double *xmin, double *xmax, double *ymin, double *ymax,
                     double *dx, double *dy, float **data, float **data_dzdx, float **data_dzdy, int *error);
-int mb_write_gmt_grd(int verbose, char *grdfile, float *grid, float nodatavalue, int n_columns, int n_rows, double xmin, double xmax,
-                     double ymin, double ymax, double zmin, double zmax, double dx, double dy, char *xlab, char *ylab, char *zlab,
-                     char *titl, char *projection, int argc, char **argv, int *error);
+int mb_write_gmt_grd(int verbose, const char *grdfile, float *grid,
+                      float nodatavalue, int n_columns, int n_rows,
+                      double xmin, double xmax, double ymin, double ymax,
+                      double zmin, double zmax, double dx, double dy,
+                      const char *xlab, const char *ylab, const char *zlab,
+                     const char *titl, const char *projection,
+                     int argc, char **argv, int *error);
 
 /* mb_cheb function prototypes */
 void lsqup(const double *a, const int *ia, const int *nia, int nnz, int nc, int nr, double *x, double *dx, const double *d, int nfix, const int *ifix,
@@ -321,5 +327,9 @@ void mbcblas_dscal(const int N, const double alpha, double *X, const int incX);
 void mbcblas_dgemv(const enum MBCBLAS_ORDER order, const enum MBCBLAS_TRANSPOSE TransA, const int M, const int N,
                    const double alpha, const double *A, const int lda, const double *X, const int incX, const double beta,
                    double *Y, const int incY);
+
+#ifdef __cplusplus
+}  /* extern "C" */
+#endif
 
 #endif  /* MB_AUX_H_ */

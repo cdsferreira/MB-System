@@ -952,9 +952,15 @@ struct mb_esf_struct {
   int startnextsearch;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int mb_pr_checkstatus(int verbose, char *file, int *prstatus, int *error);
 int mb_pr_readpar(int verbose, char *file, int lookforfiles, struct mb_process_struct *process, int *error);
 int mb_pr_writepar(int verbose, char *file, struct mb_process_struct *process, int *error);
+int mb_pr_compare(int verbose, struct mb_process_struct *process1,
+                  struct mb_process_struct *process2, int *num_difference, int *error);
 int mb_pr_bathmode(int verbose, struct mb_process_struct *process, int *error);
 int mb_pr_default_output(int verbose, struct mb_process_struct *process, int *error);
 int mb_pr_get_output(int verbose, int *format, char *ifile, char *ofile, int *error);
@@ -1077,9 +1083,13 @@ int mb_esf_save(int verbose, struct mb_esf_struct *esf, double time_d, int beam,
 int mb_ess_save(int verbose, struct mb_esf_struct *esf, double time_d, int beam, int action, int *error);
 int mb_esf_close(int verbose, struct mb_esf_struct *esf, int *error);
 
-int mb_pr_lockswathfile(int verbose, char *file, int purpose, const char *program_name, int *error);
-int mb_pr_unlockswathfile(int verbose, char *file, int purpose, const char *program_name, int *error);
-int mb_pr_lockinfo(int verbose, char *file, int *locked, int *purpose, char *program, char *user, char *cpu, char *date,
-                   int *error);
+int mb_pr_lockswathfile(int verbose, const char *file, int purpose, const char *program_name, int *error);
+int mb_pr_unlockswathfile(int verbose, const char *file, int purpose, const char *program_name, int *error);
+int mb_pr_lockinfo(int verbose, const char *file, bool *locked, int *purpose,
+                   char *program, char *user, char *cpu, char *date, int *error);
+
+#ifdef __cplusplus
+}  /* extern "C" */
+#endif
 
 #endif  /* MB_PROCESS_H_ */

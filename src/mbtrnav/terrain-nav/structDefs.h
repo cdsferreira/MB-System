@@ -26,6 +26,10 @@
 #include <newmatap.h>
 #include <newmatio.h>
 
+// Define safer versions of strdup(char*)
+// If original is NULL, copy is null
+#define  STRDUPNULL(char_star) (char_star != NULL ? strdup(char_star) : NULL)
+
 #ifndef PI
 #define PI 3.14159265358979
 #endif
@@ -76,12 +80,13 @@ struct poseT {
 
   double time;		  		 				 //Time (s)
 
-  bool dvlValid;							  //Validity flag for dvl motion measurment
+  bool dvlValid;							  //Validity flag for dvl motion measurement
   bool gpsValid;							  //Validity flag for GPS measurement
   bool bottomLock;						  //Validity flag for DVL lock onto seafloor
 
   double covariance[N_COVAR];   //XYZ, phi, theta, psi, wy, wz covariance (passively stable in roll) (see above units)
   
+
   poseT();
   poseT& operator=(poseT& rhs);
   poseT& operator-=(poseT& rhs);
@@ -112,6 +117,7 @@ struct measT {
   int* beamNums;
 
   measT();
+  measT(unsigned int nummeas, int datatype);
   ~measT();
   void clean();
   measT& operator=(measT& rhs);
@@ -195,8 +201,8 @@ struct commsT
   char msg_type;
   int  parameter;
   float vdr;
-  poseT pt;
-  measT mt;
+    poseT pt;
+    measT mt;
   char *mapname;
   char *cfgname;
   char *particlename;

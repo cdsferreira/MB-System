@@ -40,6 +40,15 @@ class TerrainNavClient : public TerrainNav
 {
  public:
 
+  /* Default Constructor:
+   */
+  TerrainNavClient();
+
+  /* Server constructor: Just establish a connection to a server.
+   */
+  TerrainNavClient(char *server_ip, int server_port);
+
+
   /* Constructor: TerrainNavClient(mapName)
    * Usage: tercom = new TerrainNavClient("canyonmap");
    * -------------------------------------------------------------------------*/
@@ -276,6 +285,7 @@ class TerrainNavClient : public TerrainNav
   //////////////////////////////////////////////////////////////////////
   // Initialize connection to server and send state
   bool _connected;
+  bool _mbtrn_server_type;
   char *_server_ip;
   int _sockfd;
   int _sockport;
@@ -289,7 +299,7 @@ class TerrainNavClient : public TerrainNav
 
   /////////////////////////////////////////////////////////////////////
   // Communication functions
-  int  send_msg(commsT& msg); // Pack and send the message
+  size_t  send_msg(commsT& msg); // Pack and send the message
   char get_msg();       // Returns the type of message as defined in
                         // structDefs.h, message placed in _server_msg
   bool requestAndConfirm(commsT& msg, char expected_ret_type);

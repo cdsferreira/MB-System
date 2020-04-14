@@ -109,6 +109,12 @@ typedef struct emu7k_stats_s{
     /// @var emu7k_stats_s::pub_cycle
     /// @brief number records published in current cycle
     uint64_t pub_cycle;
+    /// @var emu7k_stats_s::frame_err
+    /// @brief number frame errors
+    uint64_t frame_err;
+    /// @var emu7k_stats_s::sync_bytes
+    /// @brief number sync bytes
+    uint64_t sync_bytes;
 }emu7k_stat_t;
 
 /// @typedef struct app_cfg_s app_cfg_t
@@ -129,6 +135,9 @@ typedef struct app_cfg_s{
     /// @var app_cfg_s::min_delay
     /// @brief minimum publish delay
     int32_t min_delay;
+    /// @var app_cfg_s::max_delay
+    /// @brief maximum publish delay
+    int32_t max_delay;
     /// @var app_cfg_s::restart
     /// @brief restart at file end
     bool restart;
@@ -238,6 +247,10 @@ typedef struct emu7k_s
 /// @def MIN_DELAY_DFL_SEC
 /// @brief min inter-packet delay
 #define MIN_DELAY_DFL_MSEC 0
+
+/// @def MAX_DELAY_DFL_SEC
+/// @brief max inter-packet delay
+#define MAX_DELAY_DFL_MSEC 3000
 
 /// @def STATN_DFL_RECORDS
 /// @brief default stats output interval

@@ -106,15 +106,18 @@ typedef struct mtime_stopwatch_s
 // OSX clocks
 // CALENDAR_CLOCK, HIGHRES_CLOCK
 #define MTIME_DTIME_CLOCK CALENDAR_CLOCK
+#define MTIME_ETIME_CLOCK CALENDAR_CLOCK
 #elif defined(__QNX__)
 // QNX clocks
 // CLOCK_REALTIME
 #define MTIME_DTIME_CLOCK CLOCK_REALTIME
+#define MTIME_ETIME_CLOCK CLOCK_REALTIME
 #else
 // linux clocks
 // CLOCK_MONOTONIC, CLOCK_REALTIME, CLOCK_MONOTONIC_RAW
 // CLOCK_PROCESS_CPUTIME_ID
 #define MTIME_DTIME_CLOCK CLOCK_MONOTONIC
+#define MTIME_ETIME_CLOCK CLOCK_REALTIME
 #endif
 
 
@@ -225,18 +228,22 @@ extern "C" {
     /// @return system time as double, with usec precision
     ///  if supported by platform
 	double mtime_dtime();
+    /// @fn double mtime_etime()
+    /// @brief get epoch time as a double
+    /// @return system time as double, with precision of real time clock
+    double mtime_etime();
     /// @fn double mtime_mdtime(double mod)
     /// @brief get system time as a double
     /// @return system time as double, with usec precision
     ///  if supported by platform
     double mtime_mdtime(double mod);
     /// @fn void mtime_delay_ns(uint32_t nsec)
-    /// @brief delay for specied period
+    /// @brief delay for specified period
     /// @param[in] nsec delay period (nsec)
     /// @return none
     void mtime_delay_ns(uint32_t nsec);
     /// @fn void mtime_delay_ms(uint32_t msec)
-    /// @brief delay for specied period
+    /// @brief delay for specified period
     /// @param[in] msec delay period (msec)
     /// @return none
     void mtime_delay_ms(uint32_t msec);

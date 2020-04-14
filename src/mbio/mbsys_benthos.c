@@ -45,7 +45,7 @@ int mbsys_benthos_alloc(int verbose, void *mbio_ptr, void **store_ptr, int *erro
 	}
 
 	/* get mbio descriptor */
-	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	// struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* allocate memory for data structure */
 	const int status = mb_mallocd(verbose, __FILE__, __LINE__, sizeof(struct mbsys_benthos_struct), store_ptr, error);
@@ -177,7 +177,7 @@ int mbsys_benthos_dimensions(int verbose, void *mbio_ptr, void *store_ptr, int *
 	}
 
 	/* get mbio descriptor */
-	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	// struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
 	struct mbsys_benthos_struct *store = (struct mbsys_benthos_struct *)store_ptr;
@@ -411,6 +411,11 @@ int mbsys_benthos_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind,
                          double navlat, double speed, double heading, int nbath, int namp, int nss, char *beamflag, double *bath,
                          double *amp, double *bathacrosstrack, double *bathalongtrack, double *ss, double *ssacrosstrack,
                          double *ssalongtrack, char *comment, int *error) {
+	(void)nss;  // Unused arg
+	(void)ss;  // Unused arg
+	(void)ssacrosstrack;  // Unused arg
+	(void)ssalongtrack;  // Unused arg
+
 	if (verbose >= 2) {
 		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
@@ -450,7 +455,7 @@ int mbsys_benthos_insert(int verbose, void *mbio_ptr, void *store_ptr, int kind,
 	}
 
 	/* get mbio descriptor */
-	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	// struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
 	struct mbsys_benthos_struct *store = (struct mbsys_benthos_struct *)store_ptr;
@@ -497,7 +502,7 @@ int mbsys_benthos_ttimes(int verbose, void *mbio_ptr, void *store_ptr, int *kind
 	}
 
 	/* get mbio descriptor */
-	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	// struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
 	struct mbsys_benthos_struct *store = (struct mbsys_benthos_struct *)store_ptr;
@@ -565,7 +570,7 @@ int mbsys_benthos_extract_altitude(int verbose, void *mbio_ptr, void *store_ptr,
 	}
 
 	/* get mbio descriptor */
-	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	// struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
 	struct mbsys_benthos_struct *store = (struct mbsys_benthos_struct *)store_ptr;
@@ -628,7 +633,7 @@ int mbsys_benthos_extract_nav(int verbose, void *mbio_ptr, void *store_ptr, int 
 	}
 
 	/* get mbio descriptor */
-	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	// struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
 	struct mbsys_benthos_struct *store = (struct mbsys_benthos_struct *)store_ptr;
@@ -810,14 +815,13 @@ int mbsys_benthos_insert_nav(int verbose, void *mbio_ptr, void *store_ptr, int t
 	}
 
 	/* get mbio descriptor */
-	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	// struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
-	struct mbsys_benthos_struct *store = (struct mbsys_benthos_struct *)store_ptr;
+	// struct mbsys_benthos_struct *store = (struct mbsys_benthos_struct *)store_ptr;
 
 	/* insert data in structure */
-	if (store->kind == MB_DATA_DATA) {
-	}
+	// if (store->kind == MB_DATA_DATA) {}
 
 	const int status = MB_SUCCESS;
 
@@ -843,7 +847,7 @@ int mbsys_benthos_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_
 	}
 
 	/* get mbio descriptor */
-	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	// struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointers */
 	struct mbsys_benthos_struct *store = (struct mbsys_benthos_struct *)store_ptr;
@@ -865,8 +869,11 @@ int mbsys_benthos_copy(int verbose, void *mbio_ptr, void *store_ptr, void *copy_
 	return (status);
 }
 /*--------------------------------------------------------------------*/
-int mbsys_benthos_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel_size_set, double *pixel_size,
-                         int swath_width_set, double *swath_width, int *error) {
+int mbsys_benthos_makess(int verbose, void *mbio_ptr, void *store_ptr,
+                         int pixel_size_set,  // TODO(schwehr): bool
+                         double *pixel_size,
+                         int swath_width_set,  // TODO(schwehr): bool
+                         double *swath_width, int *error) {
 	if (verbose >= 2) {
 		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
@@ -880,7 +887,7 @@ int mbsys_benthos_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 	}
 
 	/* get mbio descriptor */
-	struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
+	// struct mb_io_struct *mb_io_ptr = (struct mb_io_struct *)mbio_ptr;
 
 	/* get data structure pointer */
 	struct mbsys_benthos_struct *store = (struct mbsys_benthos_struct *)store_ptr;
@@ -909,11 +916,11 @@ int mbsys_benthos_makess(int verbose, void *mbio_ptr, void *store_ptr, int pixel
 
 		const double groundrange = sqrt(pow(store->ssrawslantrange, 2) - pow(store->bath[0], 2));
 
-		if (swath_width_set == false) {
+		if (!swath_width_set) {
 			*swath_width = 2.0 * groundrange;
 		}
 
-		if (pixel_size_set == false) {
+		if (!pixel_size_set) {
 			const double pixel_size_calc = groundrange / groundsamples;
 
 			if ((*pixel_size) <= 0.0)

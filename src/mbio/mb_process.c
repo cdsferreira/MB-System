@@ -343,15 +343,15 @@ int mb_pr_readpar(int verbose, char *file, int lookforfiles, struct mb_process_s
 				if (strncmp(buffer, "EXPLICIT", 8) == 0) {
 					explicit = true;
 				}
-				else if (strncmp(buffer, "INFILE", 6) == 0 && process->mbp_ifile_specified == false) {
+				else if (strncmp(buffer, "INFILE", 6) == 0 && !process->mbp_ifile_specified) {
 					sscanf(buffer, "%s %s", dummy, process->mbp_ifile);
 					process->mbp_ifile_specified = true;
 				}
-				else if (strncmp(buffer, "OUTFILE", 7) == 0 && process->mbp_ofile_specified == false) {
+				else if (strncmp(buffer, "OUTFILE", 7) == 0 && !process->mbp_ofile_specified) {
 					sscanf(buffer, "%s %s", dummy, process->mbp_ofile);
 					process->mbp_ofile_specified = true;
 				}
-				else if (strncmp(buffer, "FORMAT", 6) == 0 && process->mbp_format_specified == false) {
+				else if (strncmp(buffer, "FORMAT", 6) == 0 && !process->mbp_format_specified) {
 					sscanf(buffer, "%s %d", dummy, &process->mbp_format);
 					process->mbp_format_specified = true;
 				}
@@ -880,7 +880,7 @@ int mb_pr_readpar(int verbose, char *file, int lookforfiles, struct mb_process_s
 	mb_get_shortest_path(verbose, process->mbp_ifile, error);
 
 	/* figure out data format or output filename if required */
-	if (process->mbp_format_specified == false || process->mbp_ofile_specified == false) {
+	if (!process->mbp_format_specified || !process->mbp_ofile_specified) {
 		mb_pr_default_output(verbose, process, error);
 	}
 
@@ -1152,8 +1152,8 @@ int mb_pr_readpar(int verbose, char *file, int lookforfiles, struct mb_process_s
 	int status = MB_SUCCESS;
 
 	/* check for error */
-	if (process->mbp_ifile_specified == false || process->mbp_ofile_specified == false ||
-	    process->mbp_format_specified == false) {
+	if (!process->mbp_ifile_specified || !process->mbp_ofile_specified ||
+	    !process->mbp_format_specified) {
 		status = MB_FAILURE;
 		*error = MB_ERROR_OPEN_FAIL;
 	}
@@ -1475,14 +1475,14 @@ int mb_pr_writepar(int verbose, char *file, struct mb_process_struct *process, i
 		fprintf(fp, "##\n## Forces explicit reading of parameter modes.\n");
 		fprintf(fp, "EXPLICIT\n");
 		fprintf(fp, "##\n## General Parameters:\n");
-		if (process->mbp_format_specified == true) {
+		if (process->mbp_format_specified) {
 			fprintf(fp, "FORMAT %d\n", process->mbp_format);
 		}
 		else {
 			fprintf(fp, "## FORMAT format\n");
 		}
 		char relative_path[MBP_FILENAMESIZE];
-		if (process->mbp_ifile_specified == true) {
+		if (process->mbp_ifile_specified) {
 			strcpy(relative_path, process->mbp_ifile);
 			status = mb_get_relative_path(verbose, relative_path, pwd, error);
 			fprintf(fp, "INFILE %s\n", relative_path);
@@ -1490,7 +1490,7 @@ int mb_pr_writepar(int verbose, char *file, struct mb_process_struct *process, i
 		else {
 			fprintf(fp, "## INFILE infile\n");
 		}
-		if (process->mbp_ofile_specified == true) {
+		if (process->mbp_ofile_specified) {
 			strcpy(relative_path, process->mbp_ofile);
 			status = mb_get_relative_path(verbose, relative_path, pwd, error);
 			fprintf(fp, "OUTFILE %s\n", relative_path);
@@ -1687,25 +1687,25 @@ int mb_pr_writepar(int verbose, char *file, struct mb_process_struct *process, i
 
 		/* processing kluges */
 		fprintf(fp, "##\n## Processing Kluges:\n");
-		if (process->mbp_kluge001 == true)
+		if (process->mbp_kluge001)
 			fprintf(fp, "KLUGE001\n");
-		if (process->mbp_kluge002 == true)
+		if (process->mbp_kluge002)
 			fprintf(fp, "KLUGE002\n");
-		if (process->mbp_kluge003 == true)
+		if (process->mbp_kluge003)
 			fprintf(fp, "KLUGE003\n");
-		if (process->mbp_kluge004 == true)
+		if (process->mbp_kluge004)
 			fprintf(fp, "KLUGE004\n");
-		if (process->mbp_kluge005 == true)
+		if (process->mbp_kluge005)
 			fprintf(fp, "KLUGE005\n");
-		if (process->mbp_kluge006 == true)
+		if (process->mbp_kluge006)
 			fprintf(fp, "KLUGE006\n");
-		if (process->mbp_kluge007 == true)
+		if (process->mbp_kluge007)
 			fprintf(fp, "KLUGE007\n");
-		if (process->mbp_kluge008 == true)
+		if (process->mbp_kluge008)
 			fprintf(fp, "KLUGE008\n");
-		if (process->mbp_kluge009 == true)
+		if (process->mbp_kluge009)
 			fprintf(fp, "KLUGE009\n");
-		if (process->mbp_kluge010 == true)
+		if (process->mbp_kluge010)
 			fprintf(fp, "KLUGE010\n");
 
 		/* close file */
@@ -1730,6 +1730,155 @@ int mb_pr_writepar(int verbose, char *file, struct mb_process_struct *process, i
 
 	return (status);
 }
+/*--------------------------------------------------------------------*/
+int mb_pr_compare(int verbose, struct mb_process_struct *process1,
+                  struct mb_process_struct *process2, int *num_difference, int *error) {
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
+		fprintf(stderr, "dbg2  Input arguments:\n");
+		fprintf(stderr, "dbg2       verbose:        %d\n", verbose);
+		fprintf(stderr, "dbg2       process1:       %p\n", (void *)process1);
+		fprintf(stderr, "dbg2       process2:       %p\n", (void *)process2);
+	}
+
+  *num_difference = 0;
+
+	if (process1->mbp_ifile_specified != process2->mbp_ifile_specified) (*num_difference)++;
+	if (strncmp(process1->mbp_ifile, process2->mbp_ifile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_ofile_specified != process2->mbp_ofile_specified) (*num_difference)++;
+	if (strncmp(process1->mbp_ofile, process2->mbp_ofile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_format_specified != process2->mbp_format_specified) (*num_difference)++;
+	if (process1->mbp_format != process2->mbp_format) (*num_difference)++;
+	if (process1->mbp_nav_mode != process2->mbp_nav_mode) (*num_difference)++;
+	if (strncmp(process1->mbp_navfile, process2->mbp_navfile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_nav_format != process2->mbp_nav_format) (*num_difference)++;
+	if (process1->mbp_nav_heading != process2->mbp_nav_heading) (*num_difference)++;
+	if (process1->mbp_nav_speed != process2->mbp_nav_speed) (*num_difference)++;
+	if (process1->mbp_nav_draft != process2->mbp_nav_draft) (*num_difference)++;
+	if (process1->mbp_nav_attitude != process2->mbp_nav_attitude) (*num_difference)++;
+	if (process1->mbp_nav_algorithm != process2->mbp_nav_algorithm) (*num_difference)++;
+	if (process1->mbp_nav_timeshift != process2->mbp_nav_timeshift) (*num_difference)++;
+	if (process1->mbp_nav_shift != process2->mbp_nav_shift) (*num_difference)++;
+	if (process1->mbp_nav_offsetx != process2->mbp_nav_offsetx) (*num_difference)++;
+	if (process1->mbp_nav_offsety != process2->mbp_nav_offsety) (*num_difference)++;
+	if (process1->mbp_nav_offsetz != process2->mbp_nav_offsetz) (*num_difference)++;
+	if (process1->mbp_nav_shiftlon != process2->mbp_nav_shiftlon) (*num_difference)++;
+	if (process1->mbp_nav_shiftlat != process2->mbp_nav_shiftlat) (*num_difference)++;
+	if (process1->mbp_nav_shiftx != process2->mbp_nav_shiftx) (*num_difference)++;
+	if (process1->mbp_nav_shifty != process2->mbp_nav_shifty) (*num_difference)++;
+	if (process1->mbp_navadj_mode != process2->mbp_navadj_mode) (*num_difference)++;
+	if (strncmp(process1->mbp_navadjfile, process2->mbp_navadjfile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_navadj_algorithm != process2->mbp_navadj_algorithm) (*num_difference)++;
+	if (process1->mbp_attitude_mode != process2->mbp_attitude_mode) (*num_difference)++;
+	if (strncmp(process1->mbp_attitudefile, process2->mbp_attitudefile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_attitude_format != process2->mbp_attitude_format) (*num_difference)++;
+	if (process1->mbp_cut_num != process2->mbp_cut_num) (*num_difference)++;
+	if (process1->mbp_sonardepth_mode != process2->mbp_sonardepth_mode) (*num_difference)++;
+	if (strncmp(process1->mbp_sonardepthfile, process2->mbp_sonardepthfile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_sonardepth_format != process2->mbp_sonardepth_format) (*num_difference)++;
+	if (process1->mbp_cut_num != process2->mbp_cut_num) (*num_difference)++;
+	for (int i = 0; i < process1->mbp_cut_num; i++) {
+		if (process1->mbp_cut_kind[i] != process2->mbp_cut_kind[i]) (*num_difference)++;
+		if (process1->mbp_cut_mode[i] != process2->mbp_cut_mode[i]) (*num_difference)++;
+		if (process1->mbp_cut_min[i] != process2->mbp_cut_min[i]) (*num_difference)++;
+		if (process1->mbp_cut_max[i] != process2->mbp_cut_max[i]) (*num_difference)++;
+		}
+	if (process1->mbp_bathrecalc_mode != process2->mbp_bathrecalc_mode) (*num_difference)++;
+	if (process1->mbp_rollbias_mode != process2->mbp_rollbias_mode) (*num_difference)++;
+	if (process1->mbp_rollbias != process2->mbp_rollbias) (*num_difference)++;
+	if (process1->mbp_rollbias_port != process2->mbp_rollbias_port) (*num_difference)++;
+	if (process1->mbp_rollbias_stbd != process2->mbp_rollbias_stbd) (*num_difference)++;
+	if (process1->mbp_pitchbias_mode != process2->mbp_pitchbias_mode) (*num_difference)++;
+	if (process1->mbp_pitchbias != process2->mbp_pitchbias) (*num_difference)++;
+	if (process1->mbp_draft_mode != process2->mbp_draft_mode) (*num_difference)++;
+	if (process1->mbp_draft != process2->mbp_draft) (*num_difference)++;
+	if (process1->mbp_draft_offset != process2->mbp_draft_offset) (*num_difference)++;
+	if (process1->mbp_draft_mult != process2->mbp_draft_mult) (*num_difference)++;
+	if (process1->mbp_heave_mode != process2->mbp_heave_mode) (*num_difference)++;
+	if (process1->mbp_heave != process2->mbp_heave) (*num_difference)++;
+	if (process1->mbp_heave_mult != process2->mbp_heave_mult) (*num_difference)++;
+	if (process1->mbp_lever_mode != process2->mbp_heave_mode) (*num_difference)++;
+	if (process1->mbp_vru_offsetx != process2->mbp_vru_offsetx) (*num_difference)++;
+	if (process1->mbp_vru_offsety != process2->mbp_vru_offsety) (*num_difference)++;
+	if (process1->mbp_vru_offsetz != process2->mbp_vru_offsetz) (*num_difference)++;
+	if (process1->mbp_sonar_offsetx != process2->mbp_sonar_offsetx) (*num_difference)++;
+	if (process1->mbp_sonar_offsety != process2->mbp_sonar_offsety) (*num_difference)++;
+	if (process1->mbp_sonar_offsetz != process2->mbp_sonar_offsetz) (*num_difference)++;
+	if (process1->mbp_ssv_mode != process2->mbp_ssv_mode) (*num_difference)++;
+	if (process1->mbp_ssv != process2->mbp_ssv) (*num_difference)++;
+	if (process1->mbp_svp_mode != process2->mbp_svp_mode) (*num_difference)++;
+	if (strncmp(process1->mbp_svpfile, process2->mbp_svpfile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_corrected != process2->mbp_corrected) (*num_difference)++;
+	if (process1->mbp_tt_mode != process2->mbp_tt_mode) (*num_difference)++;
+	if (process1->mbp_tt_mult != process2->mbp_tt_mult) (*num_difference)++;
+	if (process1->mbp_angle_mode != process2->mbp_angle_mode) (*num_difference)++;
+	if (process1->mbp_static_mode != process2->mbp_static_mode) (*num_difference)++;
+	if (strncmp(process1->mbp_staticfile, process2->mbp_staticfile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_heading_mode != process2->mbp_heading_mode) (*num_difference)++;
+	if (process1->mbp_headingbias != process2->mbp_headingbias) (*num_difference)++;
+	if (process1->mbp_edit_mode != process2->mbp_edit_mode) (*num_difference)++;
+	if (strncmp(process1->mbp_editfile, process2->mbp_editfile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_tide_mode != process2->mbp_tide_mode) (*num_difference)++;
+	if (strncmp(process1->mbp_tidefile, process2->mbp_tidefile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_tide_format != process2->mbp_tide_format) (*num_difference)++;
+	if (process1->mbp_ampcorr_mode != process2->mbp_ampcorr_mode) (*num_difference)++;
+	if (strncmp(process1->mbp_ampcorrfile, process2->mbp_ampcorrfile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_ampcorr_type != process2->mbp_ampcorr_type) (*num_difference)++;
+	if (process1->mbp_ampcorr_symmetry != process2->mbp_ampcorr_symmetry) (*num_difference)++;
+	if (process1->mbp_ampcorr_angle != process2->mbp_ampcorr_angle) (*num_difference)++;
+	if (process1->mbp_ampcorr_slope != process2->mbp_ampcorr_slope) (*num_difference)++;
+	if (process1->mbp_sscorr_mode != process2->mbp_sscorr_mode) (*num_difference)++;
+	if (strncmp(process1->mbp_sscorrfile, process2->mbp_sscorrfile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_sscorr_type != process2->mbp_sscorr_type) (*num_difference)++;
+	if (process1->mbp_sscorr_symmetry != process2->mbp_sscorr_symmetry) (*num_difference)++;
+	if (process1->mbp_sscorr_angle != process2->mbp_sscorr_angle) (*num_difference)++;
+	if (process1->mbp_sscorr_slope != process2->mbp_sscorr_slope) (*num_difference)++;
+	if (strncmp(process1->mbp_ampsscorr_topofile, process2->mbp_ampsscorr_topofile, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_ssrecalc_mode != process2->mbp_ssrecalc_mode) (*num_difference)++;
+	if (process1->mbp_ssrecalc_pixelsize != process2->mbp_ssrecalc_pixelsize) (*num_difference)++;
+	if (process1->mbp_ssrecalc_swathwidth != process2->mbp_ssrecalc_swathwidth) (*num_difference)++;
+	if (process1->mbp_ssrecalc_interpolate != process2->mbp_ssrecalc_interpolate) (*num_difference)++;
+	if (strncmp(process1->mbp_meta_vessel, process2->mbp_meta_vessel, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (strncmp(process1->mbp_meta_institution, process2->mbp_meta_institution, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (strncmp(process1->mbp_meta_platform, process2->mbp_meta_platform, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (strncmp(process1->mbp_meta_sonar, process2->mbp_meta_sonar, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (strncmp(process1->mbp_meta_sonarversion, process2->mbp_meta_sonarversion, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (strncmp(process1->mbp_meta_cruiseid, process2->mbp_meta_cruiseid, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (strncmp(process1->mbp_meta_cruisename, process2->mbp_meta_cruisename, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (strncmp(process1->mbp_meta_pi, process2->mbp_meta_pi, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (strncmp(process1->mbp_meta_piinstitution, process2->mbp_meta_piinstitution, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (strncmp(process1->mbp_meta_client, process2->mbp_meta_client, MBP_FILENAMESIZE) != 0) (*num_difference)++;
+	if (process1->mbp_meta_svcorrected != process2->mbp_meta_svcorrected) (*num_difference)++;
+	if (process1->mbp_meta_tidecorrected != process2->mbp_meta_tidecorrected) (*num_difference)++;
+	if (process1->mbp_meta_batheditmanual != process2->mbp_meta_batheditmanual) (*num_difference)++;
+	if (process1->mbp_meta_batheditauto != process2->mbp_meta_batheditauto) (*num_difference)++;
+	if (process1->mbp_meta_rollbias != process2->mbp_meta_rollbias) (*num_difference)++;
+	if (process1->mbp_meta_pitchbias != process2->mbp_meta_pitchbias) (*num_difference)++;
+	if (process1->mbp_meta_headingbias != process2->mbp_meta_headingbias) (*num_difference)++;
+	if (process1->mbp_meta_draft != process2->mbp_meta_draft) (*num_difference)++;
+	if (process1->mbp_kluge001 != process2->mbp_kluge001) (*num_difference)++;
+	if (process1->mbp_kluge002 != process2->mbp_kluge002) (*num_difference)++;
+	if (process1->mbp_kluge003 != process2->mbp_kluge003) (*num_difference)++;
+	if (process1->mbp_kluge004 != process2->mbp_kluge004) (*num_difference)++;
+	if (process1->mbp_kluge005 != process2->mbp_kluge005) (*num_difference)++;
+	if (process1->mbp_kluge006 != process2->mbp_kluge006) (*num_difference)++;
+	if (process1->mbp_kluge007 != process2->mbp_kluge007) (*num_difference)++;
+	if (process1->mbp_kluge008 != process2->mbp_kluge008) (*num_difference)++;
+	if (process1->mbp_kluge009 != process2->mbp_kluge009) (*num_difference)++;
+	if (process1->mbp_kluge010 != process2->mbp_kluge010) (*num_difference)++;
+
+	if (verbose >= 2) {
+		fprintf(stderr, "\ndbg2  MBIO function <%s> completed\n", __func__);
+		fprintf(stderr, "dbg2  Return value:\n");
+		fprintf(stderr, "dbg2       num_difference: %d\n", *num_difference);
+		fprintf(stderr, "dbg2       error:          %d\n", *error);
+		fprintf(stderr, "dbg2  Return status:\n");
+		fprintf(stderr, "dbg2       status:         %d\n", MB_SUCCESS);
+	}
+
+	return (MB_SUCCESS);
+}
+
 /*--------------------------------------------------------------------*/
 int mb_pr_bathmode(int verbose, struct mb_process_struct *process, int *error) {
 	if (verbose >= 2) {
@@ -1787,13 +1936,13 @@ int mb_pr_default_output(int verbose, struct mb_process_struct *process, int *er
 	/* deal with format */
 	if (status == MB_SUCCESS && format > 0) {
 		/* set format if found */
-		if (process->mbp_format_specified == false) {
+		if (!process->mbp_format_specified) {
 			process->mbp_format = format;
 			process->mbp_format_specified = true;
 		}
 
 		/* set output file if needed */
-		if (process->mbp_ofile_specified == false && process->mbp_format_specified == true) {
+		if (!process->mbp_ofile_specified && process->mbp_format_specified) {
 			/* use .txt suffix if MBARI ROV navigation */
 			if (process->mbp_format == MBF_MBARIROV)
 				sprintf(process->mbp_ofile, "%sedited.txt", fileroot);
@@ -1803,7 +1952,7 @@ int mb_pr_default_output(int verbose, struct mb_process_struct *process, int *er
 			process->mbp_ofile_specified = true;
 		}
 	}
-	else if (process->mbp_ofile_specified == false && process->mbp_format_specified == true) {
+	else if (!process->mbp_ofile_specified && process->mbp_format_specified) {
 		status = MB_SUCCESS;
 		*error = MB_ERROR_NO_ERROR;
 		strcpy(fileroot, process->mbp_ifile);
@@ -1934,7 +2083,7 @@ int mb_pr_check(int verbose, char *ifile, int *nparproblem, int *ndataproblem, i
 		status = mb_pr_get_output(verbose, &format, process.mbp_ifile, ofile, error);
 
 		/* check data format */
-		if (status == MB_SUCCESS && process.mbp_format_specified == true && format != 0 && process.mbp_format != format) {
+		if (status == MB_SUCCESS && process.mbp_format_specified && format != 0 && process.mbp_format != format) {
 			unexpected_format = true;
 			(*nparproblem)++;
 
@@ -1943,7 +2092,7 @@ int mb_pr_check(int verbose, char *ifile, int *nparproblem, int *ndataproblem, i
 		}
 
 		/* check output file */
-		if (status == MB_SUCCESS && process.mbp_ofile_specified == true && format != 0) {
+		if (status == MB_SUCCESS && process.mbp_ofile_specified && format != 0) {
 			if (strcmp(process.mbp_ofile, ofile) != 0) {
 				unexpected_output = true;
 				(*nparproblem)++;
@@ -1951,7 +2100,7 @@ int mb_pr_check(int verbose, char *ifile, int *nparproblem, int *ndataproblem, i
 		}
 
 		/* check if output file specified but does not exist */
-		if (process.mbp_ofile_specified == true && stat(process.mbp_ofile, &statbuf) != 0) {
+		if (process.mbp_ofile_specified && stat(process.mbp_ofile, &statbuf) != 0) {
 			missing_ofile = true;
 			(*nparproblem)++;
 		}
@@ -3135,7 +3284,7 @@ int mb_pr_get_ofile(int verbose, char *file, int *mbp_ofile_specified, char *mbp
 		char buffer[MBP_FILENAMESIZE];
 		char dummy[MBP_FILENAMESIZE];
 		char *result;
-		while ((result = fgets(buffer, MBP_FILENAMESIZE, fp)) == buffer && *mbp_ofile_specified == false) {
+		while ((result = fgets(buffer, MBP_FILENAMESIZE, fp)) == buffer && !*mbp_ofile_specified) {
 			if (strncmp(buffer, "OUTFILE", 7) == 0) {
 				sscanf(buffer, "%s %s", dummy, mbp_ofile);
 				*mbp_ofile_specified = true;
@@ -4038,6 +4187,8 @@ int mb_pr_get_kluges(int verbose, char *file, int *mbp_kluge001, int *mbp_kluge0
 int mb_pr_set_bathyslopenew(int verbose, int nsmooth, int nbath, char *beamflag, double *bath, double *bathacrosstrack,
                             int *ndepths, double *depths, double *depthacrosstrack, int *nslopes, double *slopes,
                             double *slopeacrosstrack, double *depthsmooth, int *error) {
+	(void)depthsmooth;  // unused
+
 	if (verbose >= 2) {
 		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
@@ -4301,7 +4452,7 @@ int mb_pr_get_bathyslope(int verbose, int ndepths, double *depths, double *depth
 
 			/* look for depth */
 			int idepth = -1;
-			while (found_depth == false && idepth < ndepths - 2) {
+			while (!found_depth && idepth < ndepths - 2) {
 				idepth++;
 				if (acrosstrack >= depthacrosstrack[idepth] && acrosstrack <= depthacrosstrack[idepth + 1]) {
 					*depth = depths[idepth] + (acrosstrack - depthacrosstrack[idepth]) /
@@ -4314,7 +4465,7 @@ int mb_pr_get_bathyslope(int verbose, int ndepths, double *depths, double *depth
 
 			/* look for slope */
 			int islope = -1;
-			while (found_slope == false && islope < nslopes - 2) {
+			while (!found_slope && islope < nslopes - 2) {
 				islope++;
 				if (acrosstrack >= slopeacrosstrack[islope] && acrosstrack <= slopeacrosstrack[islope + 1]) {
 					*slope = slopes[islope] + (acrosstrack - slopeacrosstrack[islope]) /
@@ -4414,7 +4565,7 @@ int mb_pr_point_in_quad(int verbose, double px, double py, double *x, double *y,
 }
 /*--------------------------------------------------------------------*/
 
-int mb_pr_lockswathfile(int verbose, char *file, int purpose, const char *program_name, int *error) {
+int mb_pr_lockswathfile(int verbose, const char *file, int purpose, const char *program_name, int *error) {
 	if (verbose >= 2) {
 		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
@@ -4490,7 +4641,8 @@ int mb_pr_lockswathfile(int verbose, char *file, int purpose, const char *progra
 }
 /*--------------------------------------------------------------------*/
 
-int mb_pr_lockinfo(int verbose, char *file, int *locked, int *purpose, char *program, char *user, char *cpu, char *date,
+int mb_pr_lockinfo(int verbose, const char *file, bool *locked, int *purpose,
+                   char *program, char *user, char *cpu, char *date,
                    int *error) {
 	if (verbose >= 2) {
 		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
@@ -4501,7 +4653,7 @@ int mb_pr_lockinfo(int verbose, char *file, int *locked, int *purpose, char *pro
 
 	/* initialize return parameters */
 	*locked = false;
-	*purpose = 0;
+	*purpose = MBP_LOCK_NONE;
 	program[0] = '\0';
 	user[0] = '\0';
 	cpu[0] = '\0';
@@ -4569,7 +4721,7 @@ int mb_pr_lockinfo(int verbose, char *file, int *locked, int *purpose, char *pro
 	return (status);
 }
 /*--------------------------------------------------------------------*/
-int mb_pr_unlockswathfile(int verbose, char *file, int purpose, const char *program_name, int *error) {
+int mb_pr_unlockswathfile(int verbose, const char *file, int purpose, const char *program_name, int *error) {
 	if (verbose >= 2) {
 		fprintf(stderr, "\ndbg2  MBIO function <%s> called\n", __func__);
 		fprintf(stderr, "dbg2  Input arguments:\n");
@@ -4587,7 +4739,7 @@ int mb_pr_unlockswathfile(int verbose, char *file, int purpose, const char *prog
 	struct stat file_status;
 	int fstat = stat(lockfile, &file_status);
 	if (fstat == 0) {
-		int locked;
+		bool locked;
 		int lock_purpose;
 		mb_path lock_program;
 		mb_path lock_user;
@@ -4606,7 +4758,7 @@ int mb_pr_unlockswathfile(int verbose, char *file, int purpose, const char *prog
 			strcpy(user, "unknown");
 
 		/* if locked and everything matches remove lock file */
-		if (locked == true && strncmp(program_name, lock_program, MAX(strlen(program_name), strlen(lock_program))) == 0
+		if (locked && strncmp(program_name, lock_program, MAX(strlen(program_name), strlen(lock_program))) == 0
 		    && strncmp(user, lock_user, MAX(strlen(user), strlen(lock_user))) == 0
 		    && purpose == lock_purpose) {
 			mb_path command;

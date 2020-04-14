@@ -10,11 +10,14 @@
 /* Machine is bigendian, (Byteswapping off) */
 /* #undef ENDIAN_BIG */
 
-/* Turned on OpenGL define in config */
-#define GOT_GL 1
+/* define if the compiler supports basic C++11 syntax */
+#define HAVE_CXX11 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
+
+/* Define to 1 if you have the `gsincos' function. */
+/* #undef HAVE_GSINCOS */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
@@ -33,6 +36,9 @@
 
 /* Define to 1 if you have the <rpc/types.h> header file. */
 #define HAVE_RPC_TYPES_H 1
+
+/* Define to 1 if you have the `sincos' function. */
+/* #undef HAVE_SINCOS */
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
@@ -71,12 +77,12 @@
 #define MBSYSTEM_INSTALL_PREFIX "/usr/local"
 
 /* Set MBSYSTEM_OTPS_LOCATION define in mb_config.h */
-#define MBSYSTEM_OTPS_LOCATION "/usr/local/src/OTPS2"
+#define MBSYSTEM_OTPS_LOCATION "/usr/local/opt/otps"
 
 /* Build libmbtnav */
 #define MBTNAV_ENABLED 1
 
-/* Build libmbtrn and mbtrnpreprocess */
+/* Build libmbtrn and mbtrnpp */
 #define MBTRN_ENABLED 1
 
 /* Build graphical tools */
@@ -92,7 +98,7 @@
 #define PACKAGE_NAME "mbsystem"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "mbsystem 5.7.6beta16"
+#define PACKAGE_STRING "mbsystem 5.7.6beta32"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "mbsystem"
@@ -101,7 +107,7 @@
 #define PACKAGE_URL "http://www.mbari.org/data/mbsystem/"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "5.7.6beta16"
+#define PACKAGE_VERSION "5.7.6beta32"
 
 /* Build tools using PCL */
 /* #undef PCLTOOLS_ENABLED */
@@ -110,13 +116,13 @@
 #define STDC_HEADERS 1
 
 /* Build unit tests */
-/* #undef TEST_ENABLED */
+#define TEST_ENABLED 1
 
 /* Version number of package */
-#define VERSION "5.7.6beta16"
+#define VERSION "5.7.6beta32"
 
 /* Set VERSION_DATE define in mb_config.h */
-#define VERSION_DATE "29 October 2019"
+#define VERSION_DATE "13 April 2020"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
