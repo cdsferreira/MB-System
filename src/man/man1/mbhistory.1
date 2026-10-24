@@ -136,7 +136,8 @@ Allows \fB\-\-prune\fP to remove tagged versions and \fB\-\-tag\fP to
 move an existing tag.
 .TP
 \fB\-\-process\fP
-Runs \fBmbprocess\fP on each restored swath file.
+Runs \fBmbprocess\fP \fB\-\-force\fP on each restored swath file, so that
+the processed file is regenerated even if its time stamp looks up to date.
 .TP
 \fB\-\-verbose\fP \fB\-V\fP
 Increases the amount of output; with \fB\-\-diff\fP and restores, every

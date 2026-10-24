@@ -1011,8 +1011,10 @@ int main(int argc, char **argv) {
 					error = MB_ERROR_NO_ERROR;
 
 					if (status == MB_SUCCESS && process) {
+						/* force processing: mbprocess compares file times in whole
+						   seconds and could otherwise treat the output as up to date */
 						mb_pathplusplus command;
-						snprintf(command, sizeof(command), "mbprocess -I \"%s\"", swathfile);
+						snprintf(command, sizeof(command), "mbprocess -I \"%s\" --force", swathfile);
 						fprintf(stdout, "  running: %s\n", command);
 						if (system(command) != 0) {
 							fprintf(stderr, "  mbprocess failed for %s\n", swathfile);
