@@ -1043,9 +1043,10 @@ struct mb_esf_struct {
 #define MB_HISTORY_DIR "mbhistory"
 #define MB_HISTORY_ENV "MB_HISTORY"
 #define MB_HISTORY_MANIFEST_SUFFIX ".manifest"
-#define MB_HISTORY_MODE_DEFAULT 0      /* skip if identical to newest snapshot */
+#define MB_HISTORY_MODE_DEFAULT 0      /* skip if identical to newest snapshot (esf: same edits) */
 #define MB_HISTORY_MODE_ONCE 1         /* also at most once per file per process */
 #define MB_HISTORY_MODE_FORCE 2        /* always make a new snapshot */
+#define MB_HISTORY_NOTE_CREATED "created" /* note of the snapshot of a new esf file */
 #define MB_HISTORY_NAME_LENGTH 256
 struct mb_history_entry {
   int version;

@@ -39,7 +39,14 @@ edits at the time it was saved, just before the named program changed them.
 The current esf file is always the newest state and is called \fBnow\fP.
 A program run that reopens the same esf file several times saves at most one
 snapshot of it, and no snapshot is saved if the file is unchanged since the
-newest one.
+newest one. Every rewrite of an esf file updates the program, user, cpu and
+date lines of its header, so a rewrite that leaves the edits and the ESF mode
+unchanged also counts as unchanged.
+
+When a program creates a new esf file, the empty file (no edits) is saved as
+the first version with the note "created", so the history also shows when
+editing of the swath file began. Esf files created before this was done have
+no such version; their history starts with the first rewrite.
 
 Restoring never deletes versions. Before a version is restored, the current
 esf file is saved as a new version with the note "restore (vN \-> vM)", where
@@ -106,7 +113,11 @@ Restores the version that carries the tag \fIname\fP.
 Restores the edits as they were at the given UTC date and time, which is the
 first version saved at or after that time; if no version was saved since,
 the current file is already in that state and nothing is changed. A date
-without a time means the end of that day.
+without a time means the end of that day. A date before the "created"
+version restores an esf file with no edits. If the oldest version of a file
+is not a "created" version and the date is before it, the edits made before
+that version were not recorded: the oldest version is restored and a warning
+is printed.
 .TP
 \fB\-\-tag=\fP\fIname\fP
 Labels the current state with the one-word tag \fIname\fP. A snapshot is
