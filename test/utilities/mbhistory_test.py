@@ -221,6 +221,44 @@ class MbhistoryTest(unittest.TestCase):
     code, output = self.run_mbhistory('--restore-date=2999-12-31T23:59')
     self.assertIn('no change since that date', output)
 
+  def testRestoreDateBeforeHistoryWarns(self):
+    # a history without a "created" version does not know the edits made
+    # before its oldest version
+    self.make_versions()
+    code, output = self.run_mbhistory('--restore-date=2000-01-01')
+    self.assertEqual(0, code, output)
+    self.assertIn('would restore version 1', output)
+    self.assertIn('edits made before', output)
+    self.assertIn('version 1 is the oldest known state', output)
+
+  def testCreatedVersionWithMbclean(self):
+    # mbclean creates the esf file: version 1 holds no edits and has the note
+    # "created", so restoring a date before the first edits removes them all.
+    # Snapshots are saved before each run: runs 2 and 3 save versions 2 and 3.
+    # Run 3 adds no edits, so run 4 finds the same edits as version 3 (only
+    # the esf header was rewritten) and saves no new version.
+    mbclean = os.path.abspath('../../src/utilities/mbclean')
+    testdata = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'testdata', 'mb54')
+    swath = os.path.join(self.tmpdir, 'TN136HS.309.snipped.mb54')
+    shutil.copy(os.path.join(testdata, 'TN136HS.309.snipped.mb54'), swath)
+    for depth_range in ('0/460', '0/455', '0/455', '0/455'):
+      subprocess.run([mbclean, '-I' + swath, '-F54', '--depth-range=' + depth_range], stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, cwd=self.tmpdir, check=True)
+    with open(os.path.join(self.history, 'TN136HS.309.snipped.mb54.esf.manifest')) as f:
+      entries = [line.rstrip('\n').split('\t') for line in f if not line.startswith('#')]
+    self.assertEqual(3, len(entries))
+    self.assertEqual('created', entries[0][9])
+    self.assertEqual('mbclean', entries[0][3])
+    self.assertEqual(MB_PATH_MAXLINE, os.path.getsize(os.path.join(self.history, entries[0][8])))
+
+    cmd = [self.cmd, '--input=' + swath, '--restore-date=2000-01-01', '--yes']
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = result.stdout.decode()
+    self.assertEqual(0, result.returncode, output)
+    self.assertIn('restored version 1', output)
+    self.assertNotIn('were not recorded', output)
+    self.assertEqual(MB_PATH_MAXLINE, os.path.getsize(swath + '.esf'))
+
   def testDatalist(self):
     self.make_versions()
     swath2 = os.path.join(self.tmpdir, 'line2.mb88')
