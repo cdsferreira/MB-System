@@ -3,11 +3,6 @@
 //
 // See README file for copying and redistribution conditions.
 
-#include "mbio/mb_define.h"
-#include "mbio/mb_process.h"
-#include "mbio/mb_status.h"
-#include "mbio/mb_swap.h"
-
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -15,6 +10,11 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+
+#include "mbio/mb_define.h"
+#include "mbio/mb_process.h"
+#include "mbio/mb_status.h"
+#include "mbio/mb_swap.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
