@@ -75,6 +75,31 @@ class MblistTest(unittest.TestCase):
         self.assertIn(b'Unable to open data list file:', e.output, arg)
       self.assertTrue(raised, arg)
 
+  def testInvalidPixelRange(self):
+    # Same as testInvalidBeamRange for the sidescan pixel range.
+    for arg in ('-NC', '-N5', '--pixel-range=C'):
+      raised = False
+      try:
+        subprocess.check_output([self.cmd, arg], stderr=subprocess.STDOUT)
+      except subprocess.CalledProcessError as e:
+        raised = True
+        self.assertEqual(9, e.returncode, arg)
+        self.assertIn(b'Invalid pixel range:', e.output, arg)
+        self.assertIn(b'usage:', e.output, arg)
+      self.assertTrue(raised, arg)
+
+  def testValidPixelRange(self):
+    for arg in ('-N10/20', '-NA', '--pixel-range=10/20'):
+      raised = False
+      try:
+        subprocess.check_output([self.cmd, arg], stderr=subprocess.STDOUT)
+      except subprocess.CalledProcessError as e:
+        raised = True
+        self.assertEqual(2, e.returncode, arg)
+        self.assertNotIn(b'Invalid pixel range:', e.output, arg)
+        self.assertIn(b'Unable to open data list file:', e.output, arg)
+      self.assertTrue(raised, arg)
+
   # TODO(schwehr): Add tests of actual usage.
 
 

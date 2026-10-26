@@ -1015,7 +1015,10 @@ int main(int argc, char **argv) {
             pixel_set = MBLIST_SET_ALL;
           }
           else {
-            sscanf(optarg, "%d/%d", &pixel_start, &pixel_end);
+            if (sscanf(optarg, "%d/%d", &pixel_start, &pixel_end) != 2) {
+              fprintf(stderr, "Invalid pixel range: %s\n", optarg);
+              errflg = true;
+            }
             pixel_set = MBLIST_SET_ON;
           }
         }
@@ -1147,7 +1150,10 @@ int main(int argc, char **argv) {
           pixel_set = MBLIST_SET_ALL;
         }
         else {
-          sscanf(optarg, "%d/%d", &pixel_start, &pixel_end);
+          if (sscanf(optarg, "%d/%d", &pixel_start, &pixel_end) != 2) {
+            fprintf(stderr, "Invalid pixel range: %s\n", optarg);
+            errflg = true;
+          }
           pixel_set = MBLIST_SET_ON;
         }
         break;
