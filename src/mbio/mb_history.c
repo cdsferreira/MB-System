@@ -35,7 +35,12 @@
  *
  * The version number is followed by the UTC date and time of the snapshot.
  * A snapshot holds the state of the file at that time, just before the
- * program named in the manifest modified it. The manifest is a tab
+ * program named in the manifest modified it. A new edit save file is also
+ * saved when it is created (no edits, note "created"), so that the history
+ * shows when editing began. No snapshot is made if the file is unchanged
+ * since the newest snapshot; for edit save files, a rewrite that changes
+ * only the program, user, cpu and date lines of the header counts as
+ * unchanged. The manifest is a tab
  * separated text file with one line per snapshot:
  *
  *     version utc time_d program user host size crc32 snapshot note
@@ -246,6 +251,47 @@ static int mb_history_copy_stream(FILE *ifp, FILE *ofp, int *error) {
 		*error = MB_ERROR_EOF;
 	}
 	return (status);
+}
+/*--------------------------------------------------------------------*/
+/* true if two edit save files hold the same edits and differ at most in
+   the program, user, cpu and date lines of their ESFVERSION03 header
+   (MB_PATH_MAXLINE bytes), which every rewrite of an esf file updates */
+static bool mb_history_same_edits(const char *file_a, const char *file_b) {
+	FILE *fpa = fopen(file_a, "rb");
+	FILE *fpb = fopen(file_b, "rb");
+	bool same = (fpa != NULL && fpb != NULL);
+
+	/* the format and mode lines (the first two header lines) must match */
+	char header_a[MB_PATH_MAXLINE];
+	char header_b[MB_PATH_MAXLINE];
+	if (same)
+		same = (fread(header_a, MB_PATH_MAXLINE, 1, fpa) == 1 && fread(header_b, MB_PATH_MAXLINE, 1, fpb) == 1);
+	if (same)
+		same = (strncmp(header_a, "ESFVERSION03", 12) == 0 && strncmp(header_b, "ESFVERSION03", 12) == 0);
+	if (same) {
+		const char *end_a = memchr(header_a, '\n', MB_PATH_MAXLINE);
+		if (end_a != NULL)
+			end_a = memchr(end_a + 1, '\n', MB_PATH_MAXLINE - (size_t)(end_a + 1 - header_a));
+		same = (end_a != NULL && memcmp(header_a, header_b, (size_t)(end_a - header_a)) == 0);
+	}
+
+	/* the edits after the header must be identical */
+	while (same) {
+		unsigned char buffer_a[MB_PATH_MAXLINE];
+		unsigned char buffer_b[MB_PATH_MAXLINE];
+		const size_t nread_a = fread(buffer_a, 1, sizeof(buffer_a), fpa);
+		const size_t nread_b = fread(buffer_b, 1, sizeof(buffer_b), fpb);
+		if (nread_a != nread_b || memcmp(buffer_a, buffer_b, nread_a) != 0 || ferror(fpa) || ferror(fpb))
+			same = false;
+		else if (nread_a == 0)
+			break;
+	}
+
+	if (fpa != NULL)
+		fclose(fpa);
+	if (fpb != NULL)
+		fclose(fpb);
+	return (same);
 }
 /*--------------------------------------------------------------------*/
 /* 	function mb_history_copy copies a file byte for byte. */
@@ -479,7 +525,8 @@ int mb_history_write_manifest(int verbose, const char *file, int nentry, struct 
  * 	directory and appends an entry to its manifest.
  *
  * 	mode:  MB_HISTORY_MODE_DEFAULT - no new snapshot if the file is
- * 	                                 identical to the newest snapshot
+ * 	                                 identical to the newest snapshot (for
+ * 	                                 esf files: holds the same edits)
  * 	       MB_HISTORY_MODE_ONCE    - as default, and at most one snapshot
  * 	                                 per file per process (for programs
  * 	                                 that reopen the same file)
@@ -542,8 +589,18 @@ int mb_history_snapshot(int verbose, const char *file, const char *program_name,
 				newest = i;
 		}
 
-		/* no new snapshot if the file is unchanged since the newest one */
-		if (mode != MB_HISTORY_MODE_FORCE && newest >= 0 && entries[newest].crc32 == crc && entries[newest].size == size) {
+		/* no new snapshot if the file is unchanged since the newest one, or if
+		    only the header of an esf file was rewritten */
+		bool unchanged = false;
+		if (mode != MB_HISTORY_MODE_FORCE && newest >= 0 && entries[newest].size == size) {
+			unchanged = (entries[newest].crc32 == crc);
+			if (!unchanged) {
+				mb_pathplus newest_path = "";
+				const int nchar = snprintf(newest_path, sizeof(newest_path), "%s/%s", dir, entries[newest].snapshot);
+				unchanged = (nchar > 0 && (size_t)nchar < sizeof(newest_path) && mb_history_same_edits(file, newest_path));
+			}
+		}
+		if (unchanged) {
 			*version = entries[newest].version;
 			done = true;
 			if (mode == MB_HISTORY_MODE_ONCE)

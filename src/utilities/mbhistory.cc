@@ -917,6 +917,22 @@ int main(int argc, char **argv) {
 					fprintf(stdout, "  no change since that date: unchanged\n");
 					skip = true;
 				}
+				else {
+					/* the history of an edit save file created before mbhistory
+					   recorded creations starts with its first rewrite, so the
+					   state before the oldest version is not known */
+					bool oldest = true;
+					for (int i = 0; i < nentry && oldest; i++)
+						if (entries[i].version < target->version)
+							oldest = false;
+					if (oldest && strcmp(target->note, MB_HISTORY_NOTE_CREATED) != 0) {
+						char date[32];
+						format_utc(target->time_d, date, sizeof(date));
+						fprintf(stderr,
+						        "  warning: edits made before %s were not recorded; version %d is the oldest known state\n",
+						        date, target->version);
+					}
+				}
 			}
 
 			mb_pathplus target_path = "";
@@ -1016,6 +1032,8 @@ int main(int argc, char **argv) {
 						mb_pathplusplus command;
 						snprintf(command, sizeof(command), "mbprocess -I \"%s\" --force", swathfile);
 						fprintf(stdout, "  running: %s\n", command);
+						fflush(stdout);
+						fflush(stderr);
 						if (system(command) != 0) {
 							fprintf(stderr, "  mbprocess failed for %s\n", swathfile);
 							nfail++;
