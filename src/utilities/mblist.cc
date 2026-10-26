@@ -910,10 +910,16 @@ int main(int argc, char **argv) {
           }
           else if (optarg[0] == 'x' || optarg[0] == 'X') {
             beam_set = MBLIST_SET_EXCLUDE_OUTER;
-            sscanf(optarg, "%*c%d", &beam_exclude_percent);
+            if (sscanf(optarg, "%*c%d", &beam_exclude_percent) != 1) {
+              fprintf(stderr, "Invalid beam range: %s\n", optarg);
+              errflg = true;
+            }
           }
           else {
-            sscanf(optarg, "%d/%d", &beam_start, &beam_end);
+            if (sscanf(optarg, "%d/%d", &beam_start, &beam_end) != 2) {
+              fprintf(stderr, "Invalid beam range: %s\n", optarg);
+              errflg = true;
+            }
             beam_set = MBLIST_SET_ON;
           }
         }
@@ -1122,10 +1128,16 @@ int main(int argc, char **argv) {
         }
         else if (optarg[0] == 'x' || optarg[0] == 'X') {
           beam_set = MBLIST_SET_EXCLUDE_OUTER;
-          sscanf(optarg, "%*c%d", &beam_exclude_percent);
+          if (sscanf(optarg, "%*c%d", &beam_exclude_percent) != 1) {
+            fprintf(stderr, "Invalid beam range: %s\n", optarg);
+            errflg = true;
+          }
         }
         else {
-          sscanf(optarg, "%d/%d", &beam_start, &beam_end);
+          if (sscanf(optarg, "%d/%d", &beam_start, &beam_end) != 2) {
+            fprintf(stderr, "Invalid beam range: %s\n", optarg);
+            errflg = true;
+          }
           beam_set = MBLIST_SET_ON;
         }
         break;

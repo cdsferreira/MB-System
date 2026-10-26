@@ -90,7 +90,7 @@ class MbpreprocessTest(unittest.TestCase):
     env['PATH'] = cmd_dir + os.pathsep + env.get('PATH', '')
 
     def headings(tmpdir, filename, iformat):
-      cmd = [os.path.join(cmd_dir, 'mblist'), '-I' + filename, '-F%d' % iformat, '-MC', '-Q', '-OH']
+      cmd = [os.path.join(cmd_dir, 'mblist'), '-I' + filename, '-F%d' % iformat, '-Q', '-OH']
       output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, cwd=tmpdir, env=env).decode()
       return [float(value) for value in output.split()]
 
