@@ -134,8 +134,12 @@ if(buildWCDView)
     set(wcdview
         mbwcdview.1)
 endif()
+if(buildVelocityToolQt)
+    set(velocitytoolqt
+        mbvelocitytool-qt.1)
+endif()
 
-install(FILES ${manpages} ${deprecated} ${trn} ${photo} ${wcdview} DESTINATION ${CMAKE_INSTALL_MANPAGES}/man1)
+install(FILES ${manpages} ${deprecated} ${trn} ${photo} ${wcdview} ${velocitytoolqt} DESTINATION ${CMAKE_INSTALL_MANPAGES}/man1)
 
 message(STATUS "Installed man pages to ${CMAKE_INSTALL_MANPAGES}/man1")
 

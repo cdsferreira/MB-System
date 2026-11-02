@@ -22,7 +22,7 @@
 #    See README.md file for copying and redistribution conditions.
 #------------------------------------------------------------------------------
 
-# Tests of mbio_py (src/python), the Python water column viewer and mbwcdview,
+# Tests of mbio_py (src/python), the Python water column viewer, mbwcdview and mbvelocitytool-qt,
 # with the libmbio of this build. They need python3 with numpy (the viewer test
 # also uses PySide6 and matplotlib when installed) and a shared libmbio.
 
@@ -63,6 +63,11 @@ if(mbio_py_tests_ok)
     add_test(NAME mbwcdview_test COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/mbwcdview_test.py")
     set_tests_properties(mbwcdview_test PROPERTIES ENVIRONMENT
                          "${test_environment};MBWCDVIEW=$<TARGET_FILE:mbwcdview>")
+  endif()
+  if(buildVelocityToolQt)
+    add_test(NAME mbvelocitytool_qt_test COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/mbvelocitytool_qt_test.py")
+    set_tests_properties(mbvelocitytool_qt_test PROPERTIES ENVIRONMENT
+                         "${test_environment};MBVELOCITYTOOL_QT=$<TARGET_FILE:mbvelocitytool-qt>;MBVELOCITYTOOL_QT_WINDOW_TEST=$<TARGET_FILE:mbvelocitytool_qt_window_test>")
   endif()
 else()
   message("mbio_py tests not added: they need python3 with numpy and BUILD_SHARED_LIBS=ON")

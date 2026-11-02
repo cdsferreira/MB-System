@@ -103,8 +103,7 @@ def _cmn_part(ping, fan):
     return struct.pack("<HHBBBBBBBB", 12, ping % 65536, 2, fan, 2, fan, 0, 0, 1, 0)
 
 
-def svp(t):
-    points = [(0.0, SOUNDSPEED), (5000.0, SOUNDSPEED)]
+def svp(t, points=((0.0, SOUNDSPEED), (5000.0, SOUNDSPEED))):
     lat, lon = position(t)
     body = struct.pack("<HH4sIdd", 28, len(points), b"S00 ", int(t), lat, lon)
     for d, c in points:
