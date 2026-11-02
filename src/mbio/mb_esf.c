@@ -376,8 +376,7 @@ int mb_esf_open(int verbose, const char *program_name, char *esffile, bool load,
 				}
 			}
 
-			/* copy old edit save file to tmp file - if the backup copy
-			    fails do not open (and so truncate) the existing esf file */
+			/* copy old edit save file to tmp file */
 			if (load) {
 				snprintf(backupfile, sizeof(backupfile), "%s.tmp", esffile);
 				if (mb_esf_copyfile(esffile, backupfile) != 0) {
