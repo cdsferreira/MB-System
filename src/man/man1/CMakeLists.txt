@@ -140,7 +140,8 @@ if(buildQt6Tools)
         mbvelocitytool-qt.1
         mbedit-qt.1
         mbgrdviz-qt.1
-        mbeditviz-qt.1)
+        mbeditviz-qt.1
+        mbnavedit-qt.1)
 endif()
 
 install(FILES ${manpages} ${deprecated} ${trn} ${photo} ${qt6tools} DESTINATION ${CMAKE_INSTALL_MANPAGES}/man1)
