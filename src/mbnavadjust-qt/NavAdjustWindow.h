@@ -42,6 +42,10 @@ class QDockWidget;
 class QLabel;
 class QProgressBar;
 
+namespace mbvq {
+class MapWidget;
+}
+
 namespace mbnaq {
 
 class BiasesPanel;
@@ -60,10 +64,13 @@ class NavAdjustWindow : public QMainWindow {
  public:
   /* A dark background chosen on the command line overrides the system setting. */
   explicit NavAdjustWindow(ProjectController &controller, bool forceDark = false, QWidget *parent = nullptr);
+  ~NavAdjustWindow() override;
 
   ProjectBrowser *browser() { return browser_; }
   CrossingEditor *editor() { return editor_; }
   ModelPlot *modelPlot() { return modelPlot_; }
+  /* the dock of the map of View > Visualize Survey, nullptr before the first map */
+  QDockWidget *mapDock() const { return mapDock_; }
   QAction *action(const char *name) const { return actions_.value(name, nullptr); }
 
  signals:
@@ -81,6 +88,7 @@ class NavAdjustWindow : public QMainWindow {
   void showBiases();
   void showControls();
   void showModelPlot();
+  void placeMap(mbvq::MapWidget *map);
   void analyzeCrossings();
   void askImportData(bool singleSurvey);
   void followSystemColors();
@@ -94,6 +102,7 @@ class NavAdjustWindow : public QMainWindow {
   CrossingEditor *editor_;
   ModelPlot *modelPlot_;
   QDockWidget *modelDock_;
+  QDockWidget *mapDock_ = nullptr;
   bool modelPlotShown_ = false;
   QWidget *controlsWindow_ = nullptr;
   ControlsPanel *controls_ = nullptr;

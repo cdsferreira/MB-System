@@ -46,6 +46,8 @@ void install();
 QWidget *create_map_view(size_t instance, QWidget *parent);
 QWidget *create_profile_view(size_t instance, QWidget *parent);
 QWidget *create_soundings_view(QWidget *parent);
+/* draw the lines of a map view this many times as wide */
+void set_line_scale(QWidget *map_view, float scale);
 }  // namespace gl_backend
 
 namespace null_backend {

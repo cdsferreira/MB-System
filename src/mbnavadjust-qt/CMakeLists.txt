@@ -24,15 +24,24 @@
 
 # mbnavadjust-qt: Qt6 port of mbnavadjust (CMake only, built with -DbuildQt6Tools=ON).
 
-# mbnavadjust-qt-core: no Qt and no X11. It compiles the unchanged
+# On macOS Qt uses the system OpenGL framework. build-utils/FindOpenGL.cmake finds
+# the X11 Mesa libGL of the Motif programs, so in this directory let Qt's
+# find_package(OpenGL) use CMake's own module.
+if(APPLE)
+  list(REMOVE_ITEM CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/build-utils")
+endif()
+
+find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets)
+
+# mbnavadjust-qt-core: no Qt code and no X11. It compiles the unchanged
 # src/mbnavadjust/mbnavadjust_prog.c, so the x11 directory, which holds a
 # stand-in for the one X11 header that file needs, is private to this library.
+# Its map is mbview, whose Qt half is the mbview-qt library.
 add_library(
   mbnavadjust-qt-core STATIC
   mbnaq_bridge.cc
   mbnaq_core.cc
   mbnaq_core.h
-  mbnaq_noview.c
   mbnaq_prog.c)
 
 set_target_properties(mbnavadjust-qt-core PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
@@ -43,16 +52,7 @@ target_include_directories(
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_SOURCE_DIR}/src/mbview ${CMAKE_SOURCE_DIR}/src/mbnavadjust)
 
-target_link_libraries(mbnavadjust-qt-core PUBLIC mbnavadjust_core mbaux mbio ${MB_SYSLIBS})
-
-# On macOS Qt uses the system OpenGL framework. build-utils/FindOpenGL.cmake finds
-# the X11 Mesa libGL of the Motif programs, so in this directory let Qt's
-# find_package(OpenGL) use CMake's own module.
-if(APPLE)
-  list(REMOVE_ITEM CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/build-utils")
-endif()
-
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+target_link_libraries(mbnavadjust-qt-core PUBLIC mbview-qt mbnavadjust_core mbaux mbio ${MB_SYSLIBS})
 
 # mbnavadjust-qt-ui: the plots as images and the widgets that show them.
 add_library(

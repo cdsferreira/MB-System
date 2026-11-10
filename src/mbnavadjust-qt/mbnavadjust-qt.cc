@@ -43,6 +43,7 @@
 #include <QString>
 
 #include "NavAdjustWindow.h"
+#include "mbvq.h"
 #include "mbnaq_controller.h"
 #include "mbnaq_core.h"
 #include "mbnaq_plots.h"
@@ -340,6 +341,8 @@ int main(int argc, char **argv) {
   /* the program with its windows */
   if (replay.empty() && !dump && export_prefix.empty()) {
     int qt_argc = 1;
+    /* one renderer for the maps of the process, chosen before the QApplication exists */
+    mbvq::set_backend(mbvq::Backend::LegacyGL);
     QApplication app(qt_argc, argv);
     ProjectController *controller = ProjectController::create();
     controller->session().setVerbose(verbose);

@@ -45,6 +45,8 @@
 #include "mbnaq_plots.h"
 #include "mbnaq_terminal.h"
 #include "mbnaq_widgets.h"
+#include "mbvq.h"
+#include "mbvq_window.h"
 
 namespace mbnaq {
 
@@ -118,6 +120,39 @@ NavAdjustWindow::NavAdjustWindow(ProjectController &controller, bool forceDark, 
   resizeDocks({projectDock}, {560}, Qt::Horizontal);
   resizeDocks({logDock, terminalDock}, {1, 1}, Qt::Horizontal);
   resizeDocks({logDock}, {180}, Qt::Vertical);
+
+  /* the map of View > Visualize Survey comes to this window */
+  mbvq::set_map_placement([this](mbvq::MapWidget *map) { placeMap(map); });
+}
+
+NavAdjustWindow::~NavAdjustWindow() { mbvq::set_map_placement(nullptr); }
+
+/* The map goes beside the crossing view when both keep a useful width, else
+   it floats, like the model plot. Its own menus are in a bar inside it. It
+   closes with its Dismiss menu, which tells the program, so the dock has no
+   close button. */
+void NavAdjustWindow::placeMap(mbvq::MapWidget *map) {
+  map->setMenuBarShown(true);
+  /* the navigation and the ties are what this map is for: draw them wider */
+  map->setLineScale(2.0f);
+  if (mapDock_ == nullptr) {
+    mapDock_ = new QDockWidget("Map");
+    mapDock_->setObjectName("dock_map");
+    mapDock_->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    addDockWidget(Qt::RightDockWidgetArea, mapDock_);
+  }
+  mapDock_->setWindowTitle(map->title().trimmed());
+  mapDock_->setWidget(map);
+  connect(map, &mbvq::MapWidget::closed, mapDock_, [this](size_t) { mapDock_->hide(); });
+  const int editorWidth = editor_->width();
+  const bool room = editorWidth >= 1300;
+  mapDock_->setFloating(!room);
+  mapDock_->show();
+  if (room)
+    resizeDocks({mapDock_}, {editorWidth / 2}, Qt::Horizontal);
+  else
+    mapDock_->resize(900, 750);
+  mapDock_->raise();
 }
 
 QAction *NavAdjustWindow::addMenuAction(QMenu *menu, const char *name, const QString &label, const std::function<void()> &call) {
@@ -218,8 +253,7 @@ void NavAdjustWindow::createMenus() {
     viewGroup_->addAction(action);
   }
   view->addSeparator();
-  QAction *visualize = addMenuAction(view, "pushButton_visualize", "Visualize Survey", [] {});
-  visualize->setToolTip("The map view needs mbview-qt, which is added in a later step");
+  addMenuAction(view, "pushButton_visualize", "Visualize Survey", [&session] { session.visualize(); });
   addMenuAction(view, "pushButton_showmodelplot", "Show Modelplot", [this] { showModelPlot(); });
 
   QMenu *action = menuBar()->addMenu("Action");
@@ -274,7 +308,6 @@ void NavAdjustWindow::refreshActions() {
     }
     it.value()->setEnabled(!busy && session.isEnabled(name.toStdString()));
   }
-  actions_.value("pushButton_visualize")->setEnabled(false);
   undo_->setEnabled(!busy && session.canUndo());
   redo_->setEnabled(!busy && session.canRedo());
 

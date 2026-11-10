@@ -250,6 +250,11 @@ void MapWidget::setMenuBarShown(bool shown) {
 
 void MapWidget::dismiss() { mbvq_c_destroy(instance_); }
 
+void MapWidget::setLineScale(float scale) {
+  if (backend() == Backend::LegacyGL && map_view_ != nullptr)
+    gl_backend::set_line_scale(map_view_, scale);
+}
+
 QLabel *MapWidget::takeStatusLabel() {
   outer_->removeWidget(status_);
   return status_;

@@ -50,6 +50,19 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #endif
+/* mbview-qt can draw the lines of one map thicker than the widths the
+   drawing code asks for (mbvq::MapWidget::setLineScale); the backend, which
+   defines MBV_GL_REAL_LINE_WIDTH, calls the real glLineWidth */
+#ifndef MBV_GL_REAL_LINE_WIDTH
+#ifdef __cplusplus
+extern "C" {
+#endif
+void mbv_line_width(GLfloat width);
+#ifdef __cplusplus
+}
+#endif
+#define glLineWidth(width) mbv_line_width(width)
+#endif
 #endif
 
 #endif /* MBVIEW_MBV_GL_H */

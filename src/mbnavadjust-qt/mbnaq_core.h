@@ -263,6 +263,13 @@ class Session {
   /* one line with the counts of what each plot has drawn */
   std::string drawCounts() const;
 
+  /* the map (mbview-qt): View > Visualize Survey opens it; the rest is called
+     from the program logic through the bridge */
+  void visualize();
+  void updateVisualization();
+  void mapRoutePicked();
+  void mapNavPicked();
+
   /* main window actions */
   void setFileNav(FileNav value);
   void setTieSetting(TieSetting value);
@@ -306,6 +313,7 @@ class Session {
   void loadCrossingRow(int crossing, int tie);
   void loadSectionRow(int file, int section);
   void refreshAfterEdit(bool modelOutOfDate);
+  void afterMapPick();
   void pushUndo();
   void applyStep(struct UndoStep &step);
   void takeStep(struct UndoStep &step) const;

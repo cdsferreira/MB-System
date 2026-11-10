@@ -51,6 +51,8 @@
 #include <deque>
 #include <memory>
 
+/* this file calls the real glLineWidth (mbv_gl.h) */
+#define MBV_GL_REAL_LINE_WIDTH
 #include "mbv_gl.h"
 #include "mbv_input.h"
 #include "mbv_render.h"
@@ -63,12 +65,19 @@ namespace gl_backend {
 
 namespace {
 
+/* the line width factor of the map being drawn (mbv_line_width) */
+float current_line_scale = 1.0f;
+
 class GlMapView final : public QOpenGLWidget {
  public:
   GlMapView(size_t instance, QWidget *parent);
   ~GlMapView() override;
   /* queue a drawing at resolution rez; false if it must be drawn now */
   bool defer(int rez);
+  void set_line_scale(float scale) {
+    line_scale_ = scale;
+    update();
+  }
 
  protected:
   void initializeGL() override;
@@ -84,6 +93,7 @@ class GlMapView final : public QOpenGLWidget {
   void release_gl();
 
   size_t instance_;
+  float line_scale_ = 1.0f;
   std::deque<int> queue_;
   bool painting_ = false;
   std::unique_ptr<QOpenGLFramebufferObject> pick_fbo_;
@@ -253,7 +263,9 @@ void GlMapView::paintGL() {
     rez = MBVQ_REZ_LOW;
   glViewport(0, 0, pixel_width(), pixel_height());
   painting_ = true;
+  current_line_scale = line_scale_;
   mbvq_c_plot(instance_, rez);
+  current_line_scale = 1.0f;
   painting_ = false;
   if (!queue_.empty())
     update();
@@ -332,9 +344,16 @@ void install() {
 
 QWidget *create_map_view(size_t instance, QWidget *parent) { return new GlMapView(instance, parent); }
 
+void set_line_scale(QWidget *map_view, float scale) {
+  if (auto *view = dynamic_cast<GlMapView *>(map_view))
+    view->set_line_scale(scale);
+}
+
 QWidget *create_profile_view(size_t instance, QWidget *parent) { return new GlProfileView(instance, parent); }
 
 QWidget *create_soundings_view(QWidget *parent) { return new GlSoundingsView(parent); }
 
 }  // namespace gl_backend
 }  // namespace mbvq
+
+extern "C" void mbv_line_width(GLfloat width) { glLineWidth(width * mbvq::gl_backend::current_line_scale); }

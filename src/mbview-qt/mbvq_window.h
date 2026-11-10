@@ -75,6 +75,8 @@ class MapWidget final : public QWidget {
   QWidget *controlPanel() const { return control_panel_; }
   /* as the Dismiss menu; the library removes this widget afterwards */
   void dismiss();
+  /* draw the lines of this map (navigation, routes, contours) this many times as wide */
+  void setLineScale(float scale);
 
   /* for the library */
   QLabel *takeStatusLabel();

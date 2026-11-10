@@ -38,6 +38,7 @@ extern "C" {
 #include "mbnavadjust_io.h"
 #include "mbnavadjust.h"
 #include "mbview.h"
+#include "mbvq_bridge.h"
 }
 
 #define MBNA_LIST_KINDS 16
@@ -1237,9 +1238,232 @@ void Session::closeProject(bool writeOutstanding) {
     mbnavadjust_write_project(mbna_verbose, &project, __FILE__, __LINE__, __FUNCTION__, &error);
     project.save_count = 0;
   }
+  /* the map shows the project, so it goes with it */
+  if (project.visualization_status)
+    mbnavadjust_dismiss_visualization();
   mbnavadjust_close_project(mbna_verbose, &project, &error);
   resetSelections();
   refreshAfterEdit(false);
+}
+
+/*--------------------------------------------------------------------*/
+/* the map: what the Motif callbacks do_visualize, do_update_visualization_status,
+   do_pickroute_notify and do_picknav_notify do */
+
+void Session::visualize() {
+  if (!project.open || project.grid_status == MBNA_GRID_NONE || project.visualization_status)
+    return;
+  /* mbview and its shared data are started once in the program */
+  mbvq_c_start(mbna_verbose);
+  int grid_id = MBNA_GRID_PROJECT;
+  if (mbna_view_mode == MBNA_VIEW_MODE_SURVEY)
+    grid_id = mbna_survey_select;
+  mbnavadjust_open_visualization(grid_id);
+  updateStatus();
+}
+
+void Session::updateVisualization() {
+  if (!project.visualization_status)
+    return;
+  int error = MB_ERROR_NO_ERROR;
+
+  /* clear any navadjust related interactive nav picks */
+  struct mbview_shareddata_struct *shareddata = nullptr;
+  mbview_getsharedptr(mbna_verbose, &shareddata, &error);
+
+  if (mbna_naverr_mode == MBNA_NAVERR_MODE_CROSSING && mbna_crossing_select >= 0 &&
+      mbna_crossing_select < project.num_crossings) {
+    /* select the data sections associated with the loaded crossing */
+    struct mbna_crossing *crossing = &(project.crossings[mbna_crossing_select]);
+    mbview_clearnavpicks(0);
+    shareddata->nav_selected_mbnavadjust[0] = MBV_SELECT_NONE;
+    shareddata->nav_selected_mbnavadjust[1] = MBV_SELECT_NONE;
+    mb_path name;
+    snprintf(name, sizeof(name), "%4.4d:%4.4d", crossing->file_id_1, crossing->section_1);
+    mbview_picknavbyname(mbna_verbose, 0, name, &error);
+    snprintf(name, sizeof(name), "%4.4d:%4.4d", crossing->file_id_2, crossing->section_2);
+    mbview_picknavbyname(mbna_verbose, 0, name, &error);
+
+    /* select the route associated with the selected tie */
+    if (mbna_tie_select != MBNA_SELECT_NONE) {
+      struct mbna_file *file_1 = &project.files[crossing->file_id_1];
+      struct mbna_file *file_2 = &project.files[crossing->file_id_2];
+      snprintf(name, sizeof(name), "%4.4d:%1d %2.2d:%4.4d:%2.2d %2.2d:%4.4d:%2.2d", mbna_crossing_select, mbna_tie_select,
+               file_1->block, crossing->file_id_1, crossing->section_1, file_2->block, crossing->file_id_2,
+               crossing->section_2);
+    }
+    else {
+      snprintf(name, sizeof(name), "MBNA_SELECT_NONE");
+    }
+    mbview_pick_routebyname(mbna_verbose, 0, name, &error);
+  }
+
+  else if (mbna_naverr_mode == MBNA_NAVERR_MODE_SECTION && mbna_file_select != MBNA_SELECT_NONE &&
+           mbna_section_select != MBNA_SELECT_NONE) {
+    /* select the data section associated with the loaded section */
+    shareddata->nav_selected_mbnavadjust[0] = MBV_SELECT_NONE;
+    shareddata->nav_selected_mbnavadjust[1] = MBV_SELECT_NONE;
+    mbview_clearnavpicks(0);
+    mb_path name;
+    snprintf(name, sizeof(name), "%4.4d:%4.4d", mbna_file_select, mbna_section_select);
+    mbview_picknavbyname(mbna_verbose, 0, name, &error);
+  }
+
+  mbview_update(mbna_verbose, 0, &error);
+}
+
+/* a route, that is a tie, picked on the map */
+void Session::mapRoutePicked() {
+  int error = MB_ERROR_NO_ERROR;
+  struct mbview_shareddata_struct *shareddata = nullptr;
+  mbview_getsharedptr(mbna_verbose, &shareddata, &error);
+  if (shareddata == nullptr || shareddata->route_selected == MBV_SELECT_NONE)
+    return;
+
+  struct mbview_route_struct *route = &shareddata->routes[shareddata->route_selected];
+  if (mbna_modelplot_mode == MBNA_MODELPLOT_MODE_SECTIONS) {
+    int isurvey;
+    int ifile;
+    int isection;
+    const int nscan = sscanf(route->name, "%d:%d:%d", &isurvey, &ifile, &isection);
+    if (nscan != 3 || ifile < 0 || ifile >= project.num_files || isection < 0 || isection >= project.files[ifile].num_sections) {
+      ifile = MBNA_SELECT_NONE;
+      isection = MBNA_SELECT_NONE;
+    }
+    if (ifile != MBNA_SELECT_NONE) {
+      mbna_current_file = ifile;
+      mbna_current_section = isection;
+      mbna_file_select = ifile;
+      mbna_section_select = isection;
+      mbna_survey_select = project.files[mbna_file_select].survey;
+      mbna_file_id_2 = ifile;
+      mbna_section_2 = isection;
+
+      /* bring up the crossing view if required, or replot it */
+      if (mbna_current_section != MBV_SELECT_NONE && mbna_naverr_mode == MBNA_NAVERR_MODE_UNLOADED) {
+        initCrossingWindow(MBNA_NAVERR_MODE_SECTION);
+      }
+      else if (mbna_current_section != MBV_SELECT_NONE) {
+        mbnavadjust_naverr_specific_section(mbna_file_select, mbna_section_select);
+        plotCrossing(MBNA_PLOT_MODE_FIRST);
+        updateCrossing();
+        updateStatus();
+      }
+    }
+  }
+  else {
+    int icrossing;
+    int itie;
+    int ifile1;
+    int isection1;
+    int isnav1;
+    int ifile2;
+    int isection2;
+    int isnav2;
+    const int nscan = sscanf(route->name, "%d:%d %d:%d:%d %d:%d:%d", &icrossing, &itie, &ifile1, &isection1, &isnav1, &ifile2,
+                             &isection2, &isnav2);
+    if (nscan < 2) {
+      icrossing = MBNA_SELECT_NONE;
+      itie = MBNA_SELECT_NONE;
+    }
+
+    mbnavadjust_visualization_selectcrossingfromroute(icrossing, itie);
+
+    /* bring up the crossing view if required, or replot it */
+    if (mbna_naverr_mode == MBNA_NAVERR_MODE_UNLOADED) {
+      initCrossingWindow(MBNA_NAVERR_MODE_CROSSING);
+    }
+    else {
+      plotCrossing(MBNA_PLOT_MODE_FIRST);
+      updateCrossing();
+      updateStatus();
+    }
+  }
+  afterMapPick();
+}
+
+/* one or two navigation sections picked on the map */
+void Session::mapNavPicked() {
+  int error = MB_ERROR_NO_ERROR;
+  struct mbview_shareddata_struct *shareddata = nullptr;
+  mbview_getsharedptr(mbna_verbose, &shareddata, &error);
+  if (shareddata == nullptr)
+    return;
+
+  /* if set to look at global ties then translate selected navigation to
+     single section and open that in the crossing view with reference grid */
+  if (mbna_view_list == MBNA_VIEW_LIST_FILESECTIONS || mbna_view_list == MBNA_VIEW_LIST_GLOBALTIES ||
+      mbna_view_list == MBNA_VIEW_LIST_GLOBALTIESSORTED) {
+    shareddata->nav_selected_mbnavadjust[0] = shareddata->nav_selected[0];
+    shareddata->nav_selected_mbnavadjust[1] = shareddata->nav_selected[1];
+    if (shareddata->nav_selected_mbnavadjust[0] != MBV_SELECT_NONE) {
+      struct mbview_nav_struct *nav1 = &shareddata->navs[shareddata->nav_selected_mbnavadjust[0]];
+      int ifile1;
+      int isection1;
+      const int nscan = sscanf(nav1->name, "%d:%d", &ifile1, &isection1);
+      if (nscan != 2 || ifile1 < 0 || ifile1 >= project.num_files || isection1 < 0 ||
+          isection1 >= project.files[ifile1].num_sections) {
+        ifile1 = MBNA_SELECT_NONE;
+        isection1 = MBNA_SELECT_NONE;
+      }
+      mbna_current_file = ifile1;
+      mbna_current_section = isection1;
+      mbna_file_select = ifile1;
+      mbna_section_select = isection1;
+      mbna_survey_select = ifile1 != MBNA_SELECT_NONE ? project.files[mbna_file_select].survey : MBNA_SELECT_NONE;
+      mbna_file_id_2 = ifile1;
+      mbna_section_2 = isection1;
+
+      if (mbna_current_section != MBV_SELECT_NONE && mbna_naverr_mode == MBNA_NAVERR_MODE_UNLOADED) {
+        initCrossingWindow(MBNA_NAVERR_MODE_SECTION);
+      }
+      else if (mbna_current_section != MBV_SELECT_NONE) {
+        mbnavadjust_naverr_specific_section(mbna_file_select, mbna_section_select);
+        plotCrossing(MBNA_PLOT_MODE_FIRST);
+        updateCrossing();
+        updateStatus();
+      }
+      afterMapPick();
+    }
+  }
+
+  /* else if set to look at crossings get selected navigation and translate to selected crossing */
+  else {
+    shareddata->nav_selected_mbnavadjust[0] = shareddata->nav_selected[0];
+    shareddata->nav_selected_mbnavadjust[1] = shareddata->nav_selected[1];
+    if (shareddata->nav_selected_mbnavadjust[0] != MBV_SELECT_NONE && shareddata->nav_selected_mbnavadjust[1] != MBV_SELECT_NONE) {
+      struct mbview_nav_struct *nav1 = &shareddata->navs[shareddata->nav_selected_mbnavadjust[0]];
+      struct mbview_nav_struct *nav2 = &shareddata->navs[shareddata->nav_selected_mbnavadjust[1]];
+      int ifile1 = MBNA_SELECT_NONE;
+      int isection1 = MBNA_SELECT_NONE;
+      int ifile2 = MBNA_SELECT_NONE;
+      int isection2 = MBNA_SELECT_NONE;
+      sscanf(nav1->name, "%d:%d", &ifile1, &isection1);
+      sscanf(nav2->name, "%d:%d", &ifile2, &isection2);
+      mbnavadjust_visualization_selectcrossingfromnav(ifile1, isection1, ifile2, isection2);
+
+      if (mbna_current_crossing != MBV_SELECT_NONE && mbna_naverr_mode == MBNA_NAVERR_MODE_UNLOADED) {
+        initCrossingWindow(MBNA_NAVERR_MODE_CROSSING);
+      }
+      else if (mbna_current_crossing != MBV_SELECT_NONE) {
+        plotCrossing(MBNA_PLOT_MODE_FIRST);
+        updateCrossing();
+        updateStatus();
+      }
+      afterMapPick();
+    }
+  }
+}
+
+/* after a pick on the map: the model plot and the map follow the selection */
+void Session::afterMapPick() {
+  if (project.modelplot) {
+    do_update_modelplot_status();
+    mbnavadjust_modelplot_plot(__FILE__, __LINE__);
+    notifyPlots();
+  }
+  if (project.visualization_status)
+    updateVisualization();
 }
 
 std::string Session::versionText() const { return fmt("%s %s", MB_VERSION, MB_VERSION_DATE); }

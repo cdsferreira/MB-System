@@ -67,12 +67,32 @@ void do_update_modelplot_status(void) {
     Session::current()->updateModelPlotStatus();
 }
 
-/* The map view arrives with mbview-qt. */
-void do_update_visualization_status(void) {}
-int do_visualize_dismiss_notify(size_t) { return MB_SUCCESS; }
-void do_visualize_sensitivity(void) {}
-void do_pickroute_notify(size_t) {}
-void do_picknav_notify(size_t) {}
+/* the map (mbview-qt), as the Motif callbacks */
+void do_update_visualization_status(void) {
+  if (Session::current() != nullptr)
+    Session::current()->updateVisualization();
+}
+
+int do_visualize_dismiss_notify(size_t) {
+  const int status = mbnavadjust_dismiss_visualization();
+  do_visualize_sensitivity();
+  return status;
+}
+
+void do_visualize_sensitivity(void) {
+  if (Session::current() != nullptr)
+    Session::current()->updateStatus();
+}
+
+void do_pickroute_notify(size_t) {
+  if (Session::current() != nullptr)
+    Session::current()->mapRoutePicked();
+}
+
+void do_picknav_notify(size_t) {
+  if (Session::current() != nullptr)
+    Session::current()->mapNavPicked();
+}
 void do_mbnavadjust_addcrossing(Widget, XtPointer, XtPointer) {}
 
 void do_naverr_init(int mode) {
