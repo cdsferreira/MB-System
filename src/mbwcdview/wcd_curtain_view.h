@@ -54,6 +54,7 @@ class CurtainPlot {
  public:
   void setCurtain(std::shared_ptr<const Curtain> curtain);
   const Curtain *curtain() const { return curtain_.get(); }
+  std::shared_ptr<const Curtain> sharedCurtain() const { return curtain_; }
   void setMaxMode(bool max);         // the strongest value instead of the mean
   void setPalette(Palette palette);
   void setColorRange(double vmin, double vmax);

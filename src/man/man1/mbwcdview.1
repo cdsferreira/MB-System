@@ -190,6 +190,15 @@ clears, saves and loads them (the lasso file of \fB\-\-lasso\fP). Opening anothe
 keeps the polygons of the swath view and clears those of the curtain, whose along-track
 distances belong to a line.
 
+\fBExport 3D...\fP opens a dialog that writes the same files as \fB\-\-export-3d\fP
+from the window: the fans, the curtain or both; the current ping or a range of pings,
+every \fIn\fP\-th; the amplitude range (by default the window's \fBAmp Min\fP and
+\fBAmp Max\fP, also the ends of the colours); only the samples in the lasso; at most a
+number of points; the formats; and the start of the file names (by default the file's
+own, in its directory). The beam range, the curtain's combination, the ray tracing and
+the palette are the window's. \fBCount\fP shows how many points the settings select
+without writing; both run in the background and can be cancelled.
+
 \fB\-\-export-3d\fP writes the water column as 3D points: the samples of the fans of
 the pings of \fB\-\-pings\fP, the cells of the curtain, or both, those with an
 amplitude in \fB\-\-range\fP and, with \fB\-\-lasso\fP, in the lasso's polygons. A fan

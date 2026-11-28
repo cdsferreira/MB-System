@@ -31,6 +31,9 @@
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
+#include <QLineEdit>
+#include <QRadioButton>
 #include <QDockWidget>
 #include <QDoubleSpinBox>
 #include <QElapsedTimer>
@@ -54,6 +57,7 @@
 
 #include "WcdView.h"
 #include "wcd_curtain_view.h"
+#include "wcd_export3d_dialog.h"
 #include "wcd_window.h"
 
 namespace {
@@ -467,6 +471,84 @@ int main(int argc, char **argv) {
     CHECK(w.openFile(kmall));
     w.waitUntilIdle();
     CHECK(view->lasso().polygons().size() == 1 && curtain_view->lasso().empty());
+    w.clearLasso();
+  }
+
+  /* the Export 3D dialog: counts and writes in the background with the window's settings */
+  {
+    QWidget *drawing = view->drawingWidget();
+    const QRectF r = view->plot().plotRect(drawing->size());
+    w.setLassoMode(true);
+    drag(drawing, box_corners(r, 0.0, 0.5, 0.0, 1.0));  // the port half of the fans
+    w.setLassoMode(false);
+    CHECK(w.lasso().polygons.size() == 1);
+    wcd::Export3dDialog *d = w.showExport3dDialog();
+    CHECK(d != nullptr);
+    if (d != nullptr) {
+      d->setConfirmReplace(false);
+      CHECK(d->lassoOnly()->isEnabled() && d->lassoOnly()->isChecked());
+      CHECK(d->name()->text().endsWith("/0001_20250101_120000"));
+      CHECK(d->valueMin()->value() == spins[2]->value() && d->valueMax()->value() == spins[3]->value());
+      CHECK(d->currentPing()->isChecked() && d->lastPing()->maximum() == 3);
+      d->name()->setText(dir + "/dialog");
+      d->what()->setCurrentIndex(2);
+      d->pingRange()->setChecked(true);
+      d->firstPing()->setValue(0);
+      d->lastPing()->setValue(3);
+      d->lassoOnly()->setChecked(false);
+      d->count();
+      d->waitUntilIdle();
+      CHECK(d->lastOk());
+      const size_t all_fan = d->lastResult().fan.points, all_curtain = d->lastResult().curtain.points;
+      CHECK(all_fan > 100 && all_curtain > 10 && d->lastResult().fan.pings == 4);
+      CHECK(!QFile::exists(dir + "/dialog_fan.vec"));
+      CHECK(d->resultLabel()->text().startsWith("Fans: "));
+      /* the lasso: about half of the fans, no curtain cells (no polygon there) */
+      d->lassoOnly()->setChecked(true);
+      d->count();
+      d->waitUntilIdle();
+      CHECK(d->lastOk() && d->lastResult().fan.points > all_fan / 4 && d->lastResult().fan.points < all_fan * 3 / 4);
+      CHECK(d->lastResult().curtain.points == 0);
+      /* written in the three formats; the window refuses another file meanwhile */
+      d->formatPly()->setChecked(true);
+      CHECK(d->formatVec()->isChecked() && d->formatLas()->isChecked());
+      d->exportFiles();
+      if (d->running())
+        CHECK(!w.openFile(kmall));
+      d->waitUntilIdle();
+      CHECK(d->lastOk() && !w.exporting());
+      for (const char *ext : {"vec", "ply", "las"})
+        CHECK(QFile::exists(dir + "/dialog_fan." + ext) && !QFile::exists(dir + "/dialog_curtain." + ext));
+      CHECK(d->lastResult().files.size() == 3 && d->resultLabel()->text().contains("Written: dialog_fan.vec"));
+      /* the budget thins evenly */
+      d->lassoOnly()->setChecked(false);
+      d->budgetOn()->setChecked(true);
+      d->budget()->setValue(10);
+      d->count();
+      d->waitUntilIdle();
+      CHECK(d->lastOk() && d->lastResult().fan.written <= 10 && d->lastResult().fan.stride > 1);
+      d->budgetOn()->setChecked(false);
+      /* the current ping only */
+      d->currentPing()->setChecked(true);
+      d->count();
+      d->waitUntilIdle();
+      CHECK(d->lastOk() && d->lastResult().fan.pings == 1);
+      /* settings that make no export */
+      d->pingRange()->setChecked(true);
+      d->firstPing()->setValue(3);
+      d->lastPing()->setValue(1);
+      d->count();
+      d->waitUntilIdle();
+      CHECK(d->resultLabel()->text() == "The first ping is after the last");
+      d->firstPing()->setValue(0);
+      d->formatVec()->setChecked(false);
+      d->formatPly()->setChecked(false);
+      d->formatLas()->setChecked(false);
+      d->exportFiles();
+      d->waitUntilIdle();
+      CHECK(d->resultLabel()->text() == "No format chosen");
+      d->close();
+    }
     w.clearLasso();
   }
 

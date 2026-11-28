@@ -57,6 +57,10 @@ class QTimer;
 class QToolButton;
 
 namespace wcd {
+class Export3dDialog;
+}
+
+namespace wcd {
 
 class CurtainView;
 class WcdView;
@@ -177,6 +181,10 @@ class WaterColumnWidget : public QWidget {
   void clearLasso();
   bool saveLasso(const QString &path, QString *message = nullptr) const;
   bool loadLasso(const QString &path, QString *message = nullptr);
+
+  /* the Export 3D dialog (made on first use), with the window's state; nullptr without a file */
+  Export3dDialog *showExport3dDialog();
+  bool exporting() const;  // the dialog counts or writes in the background
   QString title() const;
 
   /* For a window that shows the table of picks itself, for example in a dock. It then gets
@@ -267,6 +275,7 @@ class WaterColumnWidget : public QWidget {
   PickTable *pick_table_ = nullptr;
   bool pick_table_taken_ = false;
   PickDialog *pick_dialog_ = nullptr;
+  Export3dDialog *export3d_dialog_ = nullptr;
   bool pick_shown_once_ = false;
 };
 

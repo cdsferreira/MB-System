@@ -35,6 +35,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDateTime>
+#include <QDir>
 #include <QDoubleSpinBox>
 #include <QEventLoop>
 #include <QFile>
@@ -66,6 +67,7 @@
 #include "mb_define.h"
 #include "WcdView.h"
 #include "wcd_curtain_view.h"
+#include "wcd_export3d_dialog.h"
 
 namespace wcd {
 
@@ -422,6 +424,9 @@ WaterColumnWidget::WaterColumnWidget(Presentation presentation, QWidget *parent)
   auto *one_to_one = new QPushButton("1:1");
   one_to_one->setToolTip("As many metres per pixel along track as in depth");
   auto *save_curtain = new QPushButton("Save Curtain");
+  auto *export3d = new QPushButton("Export 3D...");
+  export3d->setToolTip("Write the fans and the curtain as 3D points for mbgrdviz, QGIS and other programs");
+  connect(export3d, &QPushButton::clicked, this, &WaterColumnWidget::showExport3dDialog);
   if (panel) {
     auto *curtain = new QWidget;
     curtain->setObjectName("panel_curtain_controls");
@@ -441,7 +446,10 @@ WaterColumnWidget::WaterColumnWidget(Presentation presentation, QWidget *parent)
     scale->addWidget(fit);
     scale->addWidget(one_to_one);
     form->addRow("Exaggeration:", scale);
-    form->addRow("", save_curtain);
+    auto *saves = new QHBoxLayout;
+    saves->addWidget(save_curtain);
+    saves->addWidget(export3d);
+    form->addRow("", saves);
     auto *curtain_menu = new QMenu(this);
     auto *curtain_action = new QWidgetAction(curtain_menu);
     curtain_action->setDefaultWidget(curtain);
@@ -473,6 +481,7 @@ WaterColumnWidget::WaterColumnWidget(Presentation presentation, QWidget *parent)
     curtain_row->addWidget(fit);
     curtain_row->addWidget(one_to_one);
     curtain_row->addWidget(save_curtain);
+    curtain_row->addWidget(export3d);
     layout->addLayout(curtain_row);
   }
   connect(first_beam_, &QSpinBox::valueChanged, this, &WaterColumnWidget::beamsFromSpinBoxes);
@@ -597,6 +606,10 @@ void WaterColumnWidget::openDialog() {
 bool WaterColumnWidget::openFile(const QString &path) {
   if (worker_ != nullptr)
     return false;
+  if (exporting()) {
+    showStatus("A 3D export is running", 3000);
+    return false;
+  }
   const std::string file = path.toStdString();
   if (is_datalist(file)) {
     std::vector<std::pair<std::string, int>> files;
@@ -1039,6 +1052,62 @@ void WaterColumnWidget::loadLassoDialog() {
   QString message;
   if (!path.isEmpty() && !loadLasso(path, &message))
     showStatus(message, 5000);
+}
+
+bool WaterColumnWidget::exporting() const { return export3d_dialog_ != nullptr && export3d_dialog_->running(); }
+
+Export3dDialog *WaterColumnWidget::showExport3dDialog() {
+  if (!loaded() || current_ < 0 || current_ >= (int)steps_.size()) {
+    showStatus("No file to export", 3000);
+    return nullptr;
+  }
+  if (export3d_dialog_ == nullptr) {
+    export3d_dialog_ = new Export3dDialog(this);
+    connect(export3d_dialog_, &Export3dDialog::exported, this, [this](const QStringList &files) {
+      QStringList names;
+      for (const QString &f : files)
+        names << QFileInfo(f).fileName();
+      showStatus("Exported " + names.join(", "), 8000);
+    });
+  }
+  if (!export3d_dialog_->running()) {
+    Export3dContext c;
+    c.line = &line_;
+    c.current_ping = steps_[(size_t)current_].first;
+    Export3dOptions &o = c.base;
+    o.beams.first_beam = first_beam_->value();
+    o.beams.last_beam = last_beam_->value();
+    o.beams.raytrace = raytrace_->isChecked();
+    o.combine_max = combine_->currentIndex() == 1;
+    o.color_min = amin_->value();
+    o.color_max = amax_->value();
+    const Palette palette = view_->plot().palette();
+    for (int i = 0; i < 256; i++) {
+      const QRgb rgb = palette_color(palette, i);
+      o.colors[(size_t)i * 3] = (uint8_t)qRed(rgb);
+      o.colors[(size_t)i * 3 + 1] = (uint8_t)qGreen(rgb);
+      o.colors[(size_t)i * 3 + 2] = (uint8_t)qBlue(rgb);
+    }
+    o.lasso = lasso();
+    /* the window's curtain when it is made with these beams and is not about to be made again */
+    const std::shared_ptr<const Curtain> curtain = curtain_view_->plot().sharedCurtain();
+    if (curtain != nullptr && curtain_worker_ == nullptr && !curtain_timer_->isActive() && !curtain_stale_ &&
+        curtain->first_beam == o.beams.first_beam && curtain->last_beam == o.beams.last_beam)
+      c.curtain = curtain;
+    const QString path = QString::fromStdString(line_.kmall.empty() ? line_.kmwcd : line_.kmall);
+    const QFileInfo info(path);
+    c.default_name = info.dir().filePath(info.completeBaseName());
+    c.settings = QString("Beams %1 to %2 of each swath, %3 rays, curtain %4, %5 palette")
+                     .arg(o.beams.first_beam)
+                     .arg(o.beams.last_beam)
+                     .arg(o.beams.raytrace ? "ray traced" : "straight")
+                     .arg(o.combine_max ? "max" : "mean")
+                     .arg(palette_name(palette));
+    export3d_dialog_->setContext(c);
+  }
+  export3d_dialog_->show();
+  export3d_dialog_->raise();
+  return export3d_dialog_;
 }
 
 void WaterColumnWidget::togglePick(bool on) { view_->setCursor(on ? Qt::CrossCursor : Qt::ArrowCursor); }
