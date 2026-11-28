@@ -25,6 +25,9 @@
 #ifndef MBWCDVIEW_WCD_WIDGET_H
 #define MBWCDVIEW_WCD_WIDGET_H
 
+#include <atomic>
+#include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -35,20 +38,54 @@
 #include <QStringList>
 #include <QWidget>
 
+#include "wcd_curtain.h"
 #include "wcd_data.h"
+#include "wcd_palette.h"
 #include "wcd_scene.h"
 
 class QCheckBox;
+class QComboBox;
 class QDoubleSpinBox;
 class QLabel;
 class QPushButton;
+class QSpinBox;
+class QSplitter;
 class QTableWidget;
 class QThread;
 class QTimer;
 
 namespace wcd {
 
+class CurtainView;
 class WcdView;
+
+/* a slider with two handles, for a range of values */
+class RangeSlider : public QWidget {
+  Q_OBJECT
+ public:
+  explicit RangeSlider(QWidget *parent = nullptr);
+  void setRange(int minimum, int maximum);
+  void setValues(int lower, int upper);  // no signal
+  int lower() const { return lower_; }
+  int upper() const { return upper_; }
+  QSize sizeHint() const override { return QSize(200, 22); }
+  QSize minimumSizeHint() const override { return QSize(60, 22); }
+
+ signals:
+  void valuesChanged(int lower, int upper);
+
+ protected:
+  void paintEvent(QPaintEvent *event) override;
+  void mousePressEvent(QMouseEvent *event) override;
+  void mouseMoveEvent(QMouseEvent *event) override;
+  void mouseReleaseEvent(QMouseEvent *event) override;
+
+ private:
+  double toX(int value) const;
+  int toValue(double x) const;
+  int minimum_ = 0, maximum_ = 1, lower_ = 0, upper_ = 1;
+  int handle_ = -1;  // 0 lower, 1 upper, -1 none
+};
 
 /* slider that moves exactly one step per mouse wheel notch */
 class OneStepWheelSlider : public QSlider {
@@ -93,6 +130,9 @@ class PickDialog : public QDialog {
 /* Window: the full tool, for the window of the program. Panel: compact, for a part of another program's window. */
 enum class Presentation { Window, Panel };
 
+/* where the curtain is: below the swath view, beside it, or not shown */
+enum class CurtainLayout { Below, Beside, Off };
+
 /* The tool: the plot, its controls and the data. WaterColumnWindow puts it in the window of the program. */
 class WaterColumnWidget : public QWidget {
   Q_OBJECT
@@ -101,14 +141,28 @@ class WaterColumnWidget : public QWidget {
   explicit WaterColumnWidget(Presentation presentation = Presentation::Window, QWidget *parent = nullptr);
   ~WaterColumnWidget() override;
 
-  bool openFile(const QString &path);  // runs in the background; false when another file is still loading
+  /* runs in the background; false when another file is still loading. A datalist opens its
+     first file, and Previous/Next file go through the others */
+  bool openFile(const QString &path);
+  bool openListedFile(int index);  // file index of the datalist
+  int fileIndex() const { return file_index_; }
+  int fileCount() const { return (int)files_.size(); }  // 0 without a datalist
   bool busy() const { return worker_ != nullptr; }
   bool loaded() const { return !steps_.empty(); }
-  void waitUntilIdle();
+  void waitUntilIdle();  // also until the curtain is made
   bool showTime(double time_d);  // the ping nearest to this time; false when no file is in or the time is outside of it
   void setStep(int step);
   void showPing(int ping);  // first slider step of water column ping index ping; waits for a file that is loading
   bool saveImage(const QString &path);
+  bool saveCurtainImage(const QString &path);
+  /* beams first .. last of each swath (last -1: to the last) in the curtain, the others dimmed in the swath view */
+  void setBeamRange(int first, int last);
+  void setPalette(Palette palette);
+  void setCombineMax(bool max);  // the strongest value instead of the mean in the curtain
+  void setCurtainLayout(CurtainLayout layout);
+  void setCurtainExaggeration(double exaggeration);  // 1: 1:1
+  const Curtain *curtain() const;  // nullptr until it is made
+  CurtainView *curtainView() const { return curtain_view_; }
   QStringList pick(double across, double depth);  // for tests: pick the cell nearest to a point
   QString title() const;
 
@@ -135,7 +189,17 @@ class WaterColumnWidget : public QWidget {
  private:
   void showStatus(const QString &message, int timeout_ms = 0);
   void openDialog();
+  bool loadFile(const QString &path, int format);
   void finishOpen(const QString &path, Line line, bool ok, const std::string &message);
+  void showFiles();
+  void beamsFromSpinBoxes();
+  void beamsFromSlider(int lower, int upper);
+  void applyBeamRange();
+  void updateBeamAngles();
+  void requestCurtain();
+  void startCurtain();
+  void stopCurtain();
+  void onCurtainPing(int ping);
   void saveImageDialog();
   void redraw();
   void updatePlotSettings();
@@ -148,6 +212,9 @@ class WaterColumnWidget : public QWidget {
   void replayTick();
 
   wcd::Line line_;
+  std::vector<std::pair<std::string, int>> files_;  // the files of a datalist with their formats
+  int file_index_ = -1;
+  QString list_label_;
   std::vector<std::pair<int, int>> steps_;  // (water column ping, swath) per slider step
   int current_ = 0;
   QString file_label_;
@@ -165,6 +232,19 @@ class WaterColumnWidget : public QWidget {
   QDoubleSpinBox *dmin_, *dmax_, *amin_, *amax_, *xmax_, *replay_rate_;
   QPushButton *replay_;
   OneStepWheelSlider *slider_;
+  QPushButton *previous_file_, *next_file_;
+  QLabel *file_count_;
+  QSplitter *splitter_;
+  CurtainView *curtain_view_;
+  QSpinBox *first_beam_, *last_beam_;
+  RangeSlider *beam_slider_;
+  QLabel *beam_count_, *beam_angles_;
+  QComboBox *combine_, *palette_, *curtain_layout_;
+  QDoubleSpinBox *exaggeration_;
+  QTimer *curtain_timer_;
+  QThread *curtain_worker_ = nullptr;
+  std::shared_ptr<std::atomic<bool>> curtain_cancel_;
+  bool curtain_again_ = false, curtain_stale_ = false, curtain_first_ = true;
   QTimer *replay_timer_;
   PickTable *pick_table_ = nullptr;
   bool pick_table_taken_ = false;

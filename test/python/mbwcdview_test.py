@@ -132,6 +132,59 @@ class MbwcdviewTest(unittest.TestCase):
           colours.add((r, g, b))
     self.assertGreater(len(colours), 20)
 
+  def test_dump_curtain(self):
+    """The curtain of the line: one column per water column ping at its along-track distance
+    (the synthetic line moves 1e-5 deg in latitude and longitude per second)."""
+    out = subprocess.run([self.program, "--dump", "-I", self.kmwcd, "--beams=4/11"], capture_output=True, text=True,
+                         check=True).stdout
+    found = re.search(r"curtain: beams (\d+) \.\. (\d+) of (\d+) per swath, (ray traced|straight rays), (\d+) columns x "
+                      r"(\d+) cells of ([0-9.e-]+) m, filled (\d+), along track ([0-9.]+) m", out)
+    self.assertIsNotNone(found, out)
+    self.assertEqual(found.group(1, 2, 3), ("4", "11", str(S.NBEAMS)))
+    self.assertEqual(int(found.group(5)), S.NPINGS - 1)
+    self.assertGreater(int(found.group(8)), 0)
+    # first to last water column ping (fan 0 times), flat earth as the curtain computes it
+    t0, t1 = S.ping_time(S.PING0 + 1), S.ping_time(S.PING0 + S.NPINGS - 1)
+    (lat0, lon0), (lat1, lon1) = S.position(t0), S.position(t1)
+    dn = (lat1 - lat0) * 111320.0
+    de = (lon1 - lon0) * 111320.0 * math.cos(math.radians(0.5 * (lat0 + lat1)))
+    self.assertAlmostEqual(float(found.group(9)), math.hypot(dn, de), delta=0.05)
+    # the deepest sample is within the cells
+    self.assertGreater(int(found.group(6)) * float(found.group(7)), S.DRAFT + S.BOTTOM_BELOW_TX)
+    all_beams = subprocess.run([self.program, "--dump", "-I", self.kmwcd], capture_output=True, text=True,
+                               check=True).stdout
+    self.assertIn("curtain: beams 0 .. %d of %d per swath" % (S.NBEAMS - 1, S.NBEAMS), all_beams)
+
+  def test_curtain_options(self):
+    image = os.path.join(self.tmp.name, "curtain.png")
+    subprocess.run([self.program, "-I", self.kmall, "--beams=2/13", "--combine=max", "--palette=haxby",
+                    "--exaggeration=2", "--export-curtain=" + image, "--size=800x400"], check=True)
+    width, height, bpp, rows = read_png(image)
+    self.assertEqual((width, height), (800, 400))
+    for bad in ("--beams=5", "--beams=9/3", "--combine=sum", "--palette=jet", "--curtain=above",
+                "--exaggeration=0"):
+      result = subprocess.run([self.program, "-I", self.kmall, bad, "--export-curtain=" + image], capture_output=True,
+                              text=True)
+      self.assertNotEqual(result.returncode, 0, bad)
+      self.assertIn("usage: mbwcdview", result.stderr, bad)
+
+  def test_export_palette(self):
+    # the swath in another palette: Grayscale has no colours, only greys
+    image = os.path.join(self.tmp.name, "gray.png")
+    subprocess.run([self.program, "-I", self.kmall, "--ping=1", "--palette=grayscale", "--export=" + image,
+                    "--size=400x300"], check=True)
+    self.assertEqual(len(self.plot_colours(image)), 0)
+
+  def test_dump_datalist(self):
+    """A datalist stands for its first file without a window; the two files of the line count once."""
+    datalist = os.path.join(self.tmp.name, "lines.mb-1")
+    with open(datalist, "w") as f:
+      f.write("%s 261\n%s 261\n" % (self.kmall, self.kmwcd))
+    out = subprocess.run([self.program, "--dump", "-I", datalist], capture_output=True, text=True,
+                         check=True).stdout
+    self.assertIn("datalist %s: 1 files, the first shown" % datalist, out)
+    self.assertIn("water column pings %d, matched %d" % (S.NPINGS - 1, S.NPINGS - 1), out)
+
   def test_dump_wcd(self):
     wcd = A.write(os.path.join(self.tmp.name, A.WCD_NAME))
     out = subprocess.run([self.program, "--dump", "-I", wcd, "--ping=2"], capture_output=True, text=True,

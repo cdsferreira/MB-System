@@ -33,6 +33,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -57,7 +58,7 @@ double median(std::vector<double> v) {
 
 }  // namespace
 
-int dump(const std::string &path, int format, int ping_index) {
+int dump(const std::string &path, int format, int ping_index, const CurtainOptions &curtain_options) {
   Line line;
   std::string message;
   if (!line.load(path, Progress(), &message, format, true)) {
@@ -89,6 +90,28 @@ int dump(const std::string &path, int format, int ping_index) {
   bool interpolated0 = false;
   if (line.draft(i0, draft0, &interpolated0))
     printf("transducer depth %.3f m%s\n", draft0, interpolated0 ? " (interpolated)" : "");
+
+  /* the curtain of the file */
+  {
+    Curtain curtain;
+    std::string curtain_message;
+    const auto start = std::chrono::steady_clock::now();
+    if (build_curtain(line, curtain_options, curtain, nullptr, &curtain_message)) {
+      const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+      size_t filled = 0;
+      for (const float v : curtain.mean)
+        filled += std::isfinite(v) ? 1 : 0;
+      printf("curtain: beams %d .. %d of %d per swath, %s, %d columns x %d cells of %g m, filled %zu, "
+             "along track %.1f %s\n", curtain.first_beam, curtain.last_beam, curtain.beams_max,
+             curtain.traced ? "ray traced" : "straight rays", curtain.ncols, curtain.nz, curtain.dz, filled,
+             curtain.along.empty() ? 0.0 : curtain.along.back(), curtain.along_is_distance ? "m" : "pings");
+      if (getenv("MBWCDVIEW_TIMING") != nullptr)
+        printf("curtain time %.3f s\n", seconds);
+    }
+    else {
+      printf("curtain: %s\n", curtain_message.c_str());
+    }
+  }
 
   if (!line.has_survey)
     return 0;

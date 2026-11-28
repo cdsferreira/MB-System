@@ -39,6 +39,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -48,8 +49,11 @@
 
 #include "mb_define.h"
 #include "mb_status.h"
+#include "wcd_curtain.h"
+#include "wcd_curtain_view.h"
 #include "wcd_data.h"
 #include "wcd_dump.h"
+#include "wcd_palette.h"
 #include "wcd_plot.h"
 #include "wcd_scene.h"
 #include "wcd_window.h"
@@ -59,13 +63,19 @@ constexpr char help_message[] =
     "MBWCDVIEW displays water column data, one swath at a time, read through MBIO.\n"
     "Opening a Kongsberg *.kmwcd, *.kmall, *.wcd or *.all finds the other file of the survey\n"
     "line, so that its soundings and navigation are shown with the water column; Reson 7k\n"
-    "*.s7k files hold both.\n"
-    "--dump prints a summary of the line and --export writes an image of one swath,\n"
-    "both without opening a window.";
+    "*.s7k files hold both. A datalist opens its first file, and Previous/Next file go\n"
+    "through the others.\n"
+    "The curtain shows the water column from the side: each ping is a column at its\n"
+    "along-track position, combining by depth the samples of the beams in the range of\n"
+    "--beams (counted within each swath), which the swath view dims outside of.\n"
+    "--dump prints a summary of the line, --export writes an image of one swath and\n"
+    "--export-curtain one of the curtain, all without opening a window.";
 constexpr char usage_message[] =
     "mbwcdview [--input=file -Ifile --format=format -Fformat --ping=index --swath=index\n"
-    "           --bottom --wc-bottom --straight --export=image.png --size=widthxheight\n"
-    "           --dump --verbose -V --help -H]";
+    "           --bottom --wc-bottom --straight --beams=first/last --combine=mean|max\n"
+    "           --palette=viridis|haxby|grayscale|rainbow --curtain=below|beside|off\n"
+    "           --exaggeration=value --export=image.png --export-curtain=image.png\n"
+    "           --size=widthxheight --dump --verbose -V --help -H]";
 
 int main(int argc, char **argv) {
   static struct option options[] = {{"input", required_argument, nullptr, 'I'},
@@ -76,16 +86,26 @@ int main(int argc, char **argv) {
                                     {"wc-bottom", no_argument, nullptr, 'w'},
                                     {"straight", no_argument, nullptr, 's'},
                                     {"export", required_argument, nullptr, 'E'},
+                                    {"export-curtain", required_argument, nullptr, 'C'},
+                                    {"beams", required_argument, nullptr, 'B'},
+                                    {"combine", required_argument, nullptr, 'M'},
+                                    {"palette", required_argument, nullptr, 'L'},
+                                    {"curtain", required_argument, nullptr, 'U'},
+                                    {"exaggeration", required_argument, nullptr, 'X'},
                                     {"size", required_argument, nullptr, 'Z'},
                                     {"dump", no_argument, nullptr, 'D'},
                                     {"verbose", no_argument, nullptr, 'V'},
                                     {"help", no_argument, nullptr, 'H'},
                                     {nullptr, 0, nullptr, 0}};
 
-  std::string input, export_file;
+  std::string input, export_file, export_curtain;
   int format = 0, ping = 0, swath = -1, verbose = 0, width = 1400, height = 900;
-  bool help = false, dump = false, errflg = false;
+  bool help = false, dump = false, errflg = false, combine_max = false;
   wcd::SceneOptions scene;
+  wcd::CurtainOptions curtain;
+  wcd::Palette palette = wcd::Palette::Viridis;
+  wcd::CurtainLayout layout = wcd::CurtainLayout::Below;
+  double exaggeration = 1.0;
   int c, option_index;
   while ((c = getopt_long(argc, argv, "VvHhI:i:F:f:P:p:S:", options, &option_index)) != -1) {
     switch (c) {
@@ -115,6 +135,38 @@ int main(int argc, char **argv) {
       break;
     case 'E':
       export_file = optarg;
+      break;
+    case 'C':
+      export_curtain = optarg;
+      break;
+    case 'B':
+      if (sscanf(optarg, "%d/%d", &curtain.first_beam, &curtain.last_beam) != 2 || curtain.first_beam < 0 ||
+          curtain.last_beam < curtain.first_beam)
+        errflg = true;
+      break;
+    case 'M':
+      if (strcmp(optarg, "max") == 0)
+        combine_max = true;
+      else if (strcmp(optarg, "mean") != 0)
+        errflg = true;
+      break;
+    case 'L':
+      if (!wcd::palette_from_name(QString::fromLocal8Bit(optarg), palette))
+        errflg = true;
+      break;
+    case 'U':
+      if (strcmp(optarg, "below") == 0)
+        layout = wcd::CurtainLayout::Below;
+      else if (strcmp(optarg, "beside") == 0)
+        layout = wcd::CurtainLayout::Beside;
+      else if (strcmp(optarg, "off") == 0)
+        layout = wcd::CurtainLayout::Off;
+      else
+        errflg = true;
+      break;
+    case 'X':
+      if (sscanf(optarg, "%lf", &exaggeration) != 1 || !(exaggeration > 0.0))
+        errflg = true;
       break;
     case 'Z':
       if (sscanf(optarg, "%dx%d", &width, &height) != 2 || width < 200 || height < 150)
@@ -153,15 +205,70 @@ int main(int argc, char **argv) {
     return MB_ERROR_NO_ERROR;
   }
 
+  /* without a window, a datalist stands for its first file */
+  if ((dump || !export_file.empty() || !export_curtain.empty()) && !input.empty() && wcd::is_datalist(input, format)) {
+    std::vector<std::pair<std::string, int>> files;
+    std::string message;
+    if (!wcd::read_datalist(input, files, &message) || files.empty()) {
+      fprintf(stderr, "%s: cannot read datalist %s: %s\n", program_name, input.c_str(), message.c_str());
+      return MB_ERROR_OPEN_FAIL;
+    }
+    if (dump)
+      printf("datalist %s: %zu files, the first shown\n", input.c_str(), files.size());
+    input = files.front().first;
+    format = files.front().second;
+  }
+
   if (dump) {
     if (input.empty()) {
       fprintf(stderr, "usage: %s\n", usage_message);
       return MB_ERROR_BAD_USAGE;
     }
-    return wcd::dump(input, format, ping);
+    return wcd::dump(input, format, ping, curtain);
   }
 
   QApplication app(argc, argv);
+
+  /* write the curtain to an image without a window */
+  if (!export_curtain.empty()) {
+    wcd::Line line;
+    std::string message;
+    if (input.empty() || !line.load(input, wcd::Progress(), &message, format) || !line.has_wc) {
+      fprintf(stderr, "%s: no water column data in %s %s\n", program_name, input.c_str(), message.c_str());
+      return MB_ERROR_OPEN_FAIL;
+    }
+    curtain.raytrace = scene.raytrace;
+    auto made = std::make_shared<wcd::Curtain>();
+    if (!wcd::build_curtain(line, curtain, *made, nullptr, &message)) {
+      fprintf(stderr, "%s: no curtain: %s\n", program_name, message.c_str());
+      return MB_ERROR_OPEN_FAIL;
+    }
+    wcd::CurtainPlot plot;
+    plot.setCurtain(made);
+    plot.setMaxMode(combine_max);
+    plot.setPalette(palette);
+    plot.setColorRange(line.wc.amp_min, line.wc.amp_max);
+    plot.setDepthWindow(line.default_depth_min(), 1.0e5);
+    const QSize size(width, height);
+    plot.setExaggeration(exaggeration, size);
+    plot.showStart();
+    if (ping >= 0 && ping < made->ncols) {
+      plot.setCurrent(ping);
+      plot.setLabel(QString("ping %1").arg(line.wc.pings[ping].ping_number));
+      plot.followCurrent(size);
+    }
+    const QString caption = QString::fromStdString(input.substr(input.find_last_of("/\\") + 1));
+    if (!plot.render(size, 1.0, caption).save(QString::fromStdString(export_curtain))) {
+      fprintf(stderr, "%s: cannot write %s\n", program_name, export_curtain.c_str());
+      return MB_ERROR_WRITE_FAIL;
+    }
+    if (verbose > 0)
+      fprintf(stderr, "%s: curtain of beams %d .. %d, %d pings x %d cells of %g m, %s, written to %s\n", program_name,
+              made->first_beam, made->last_beam, made->ncols, made->nz, made->dz,
+              made->traced ? "ray traced" : "straight rays", export_curtain.c_str());
+    if (export_file.empty())
+      return MB_ERROR_NO_ERROR;
+  }
 
   /* write one swath to an image without a window */
   if (!export_file.empty()) {
@@ -180,6 +287,8 @@ int main(int argc, char **argv) {
     wcd::SceneInfo info;
     wcd::build_scene(line, i, s, scene, data, info);
     wcd::WcdPlot plot;
+    plot.setPalette(palette);
+    plot.setBeamRange(curtain.first_beam, curtain.last_beam);
     plot.setColorRange(line.wc.amp_min, line.wc.amp_max);
     plot.setDepthWindow(line.default_depth_min(), 1.0e5);
     plot.setData(std::move(data));
@@ -197,10 +306,21 @@ int main(int argc, char **argv) {
   }
 
   wcd::WaterColumnWindow window;
+  wcd::WaterColumnWidget *editor = window.editor();
+  editor->setPalette(palette);
+  editor->setCombineMax(combine_max);
+  editor->setCurtainLayout(layout);
   window.show();
   if (!input.empty()) {
-    window.editor()->openFile(QString::fromStdString(input));
-    window.editor()->showPing(ping);
+    editor->openFile(QString::fromStdString(input));
+    editor->showPing(ping);
+    if (curtain.first_beam != 0 || curtain.last_beam >= 0 || exaggeration != 1.0) {
+      /* the beam range and scale once the file is in */
+      QObject::connect(editor, &wcd::WaterColumnWidget::fileOpened, editor, [editor, curtain, exaggeration]() {
+        editor->setBeamRange(curtain.first_beam, curtain.last_beam);
+        editor->setCurtainExaggeration(exaggeration);
+      }, Qt::SingleShotConnection);
+    }
   }
   return app.exec();
 }

@@ -27,10 +27,13 @@
 
 #include <string>
 
+#include "wcd_curtain.h"
+
 namespace wcd {
 
-/* print a summary of the line of path (mbwcdview --dump); returns the exit code */
-int dump(const std::string &path, int format, int ping_index);
+/* print a summary of the line of path (mbwcdview --dump), with its curtain of the beams of
+   curtain_options; returns the exit code */
+int dump(const std::string &path, int format, int ping_index, const CurtainOptions &curtain_options = CurtainOptions());
 
 }  // namespace wcd
 

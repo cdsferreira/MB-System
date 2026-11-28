@@ -138,9 +138,9 @@ void SwathRhi::upload(QRhiResourceUpdateBatch *updates, const std::vector<float>
 }
 
 void SwathRhi::update(QRhiResourceUpdateBatch *updates, const WcdPlot &plot) {
-  if (!lut_uploaded_) {
-    updates->uploadTexture(lut_.get(), colormap_image());
-    lut_uploaded_ = true;
+  if (lut_palette_ != (int)plot.palette()) {
+    updates->uploadTexture(lut_.get(), colormap_image(plot.palette()));
+    lut_palette_ = (int)plot.palette();
   }
   float sx, ox, sz, oz;
   plot.deviceTransform(sx, ox, sz, oz);

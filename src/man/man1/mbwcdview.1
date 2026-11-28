@@ -1,6 +1,6 @@
-.TH mbwcdview 1 "1 November 2026" "MB-System 5.0" "MB-System 5.0"
+.TH mbwcdview 1 "28 November 2026" "MB-System 5.0" "MB-System 5.0"
 .SH NAME
-\fBmbwcdview\fP \- Display water column data, one swath at a time.
+\fBmbwcdview\fP \- Display water column data, one swath at a time and as a curtain.
 
 .SH VERSION
 Version 5.0
@@ -24,7 +24,19 @@ Version 5.0
 .br
 \fB\-\-straight\fP
 .br
+\fB\-\-beams\fP=\fIfirst\fP/\fIlast\fP
+.br
+\fB\-\-combine\fP=\fBmean\fP|\fBmax\fP
+.br
+\fB\-\-palette\fP=\fBviridis\fP|\fBhaxby\fP|\fBgrayscale\fP|\fBrainbow\fP
+.br
+\fB\-\-curtain\fP=\fBbelow\fP|\fBbeside\fP|\fBoff\fP
+.br
+\fB\-\-exaggeration\fP=\fIvalue\fP
+.br
 \fB\-\-export\fP=\fIimage.png\fP
+.br
+\fB\-\-export-curtain\fP=\fIimage.png\fP
 .br
 \fB\-\-size\fP=\fIwidth\fPx\fIheight\fP
 .br
@@ -105,12 +117,54 @@ The image is drawn on the graphics card through Qt's QRhi (Metal on macOS,
 Direct3D 11 on Windows, OpenGL on Linux), or with OpenGL where \fBmbwcdview\fP
 was built with Qt older than 6.8, so stepping through the pings is fast.
 
+Below the swath (or beside it) the window shows the curtain: the water column of the
+whole file seen from the side, as an echogram of a single beam echosounder shows it.
+Each water column ping is a column at its along-track distance (summed between the
+positions of successive pings) reaching half way to the pings before and after it;
+all swaths of a ping go into its column. A column combines by depth the samples of
+the beams in the range of the \fBBeams\fP controls (beam numbers counted from 0 within
+each swath, the same range in every swath), at the depths the swath view gives them
+(ray traced or straight), in cells of a few metres (about a thousandth of the deepest
+sample, a step of 1, 2 or 5 times a power of ten): with \fBCombine\fP \fBMean
+(linear)\fP the mean of their linear power (10^(dB/10)), shown in dB, with \fBMax\fP the
+strongest. Each sample covers the depths from half way to the sample before it to half
+way to the next, so that cells finer than the samples have no gaps. Fewer beams take
+less of the seafloor and side lobe echo of the outer beams into the curtain, so that
+targets and layers in the water stand out. The swath view draws the beams outside of
+the range under a light veil, and the first and last beam of the range as orange lines;
+next to the controls are the pointing angles of these beams in the swath shown, and
+picking takes only cells of the beams in the range.
+
+The curtain starts at a scale of 1:1, as many metres per pixel along track as in depth,
+over the depth range of the swath view. The \fBVertical exaggeration\fP is the metres
+per pixel along track over the metres per pixel in depth; \fBFit\fP shows the whole
+file and \fB1:1\fP goes back. In the curtain, the mouse wheel zooms along track about
+the pointer, dragging moves along track, and a click shows that ping in the swath view.
+A red line marks the ping of the swath view; it follows the slider, the arrow keys and
+replay, and the curtain moves to keep it in view. The curtain is made in the background
+again a moment after the range or the ray tracing changes (a fraction of a second for a
+line of 400 deep water pings of 1024 beams). \fBSave Curtain\fP writes it as an image.
+\fBCurtain\fP places it \fBBelow\fP or \fBBeside\fP the swath, or hides it (\fBOff\fP).
+Without positions the columns follow each other by ping number.
+
+\fBPalette\fP colours the amplitudes of both views: \fBViridis\fP (the default),
+\fBHaxby\fP and \fBRainbow\fP (the Haxby and Bright colour tables of \fBmbgrdviz\fP,
+low values blue and magenta), or \fBGrayscale\fP (black to white).
+
+A datalist (a file named *.mb-1 or given with format \-1, see \fBmbdatalist\fP(1))
+opens its first file; \fBPrevious file\fP and \fBNext file\fP (also Page Up and Page
+Down) open the others, and \fBFile\fP \fIi\fP / \fIn\fP tells which is shown. The
+*.kmwcd of a *.kmall listed before it (or the *.wcd of a *.all, or the reverse) is the
+same line and is left out. Without a window, \fB\-\-dump\fP, \fB\-\-export\fP and
+\fB\-\-export-curtain\fP use the first file of a datalist.
+
 The depth range starts at the surface, or, for a sonar deeper than its longest
 slant range (on a vehicle), a tenth of that range above the shallowest transducer
 depth; so does the image written with \fB\-\-export\fP.
 
-Without a window, \fB\-\-dump\fP prints a summary of a survey line and
-\fB\-\-export\fP writes an image of one swath.
+Without a window, \fB\-\-dump\fP prints a summary of a survey line,
+\fB\-\-export\fP writes an image of one swath and \fB\-\-export-curtain\fP an image
+of the curtain.
 
 .SH MB-SYSTEM AUTHORSHIP
 David W. Caress
@@ -135,7 +189,8 @@ Christian dos Santos Ferreira
 .br
 The swath file to open. For Kongsberg data either the *.kmwcd or the *.kmall,
 or the *.wcd or the *.all, of a survey line; the other file is found as described above.
-For Reson 7k data the *.s7k file. The file name may also be given as the last argument.
+For Reson 7k data the *.s7k file. A datalist opens its first file. The file name may
+also be given as the last argument.
 .TP
 .B \-\-format\fP=\fIformat_id\fP {\fB\-F\fP\fIformat_id\fP}
 .br
@@ -162,21 +217,52 @@ With \fB\-\-export\fP, draw the bottom detections recorded in the water column.
 .B \-\-straight
 With \fB\-\-export\fP, use straight rays instead of ray tracing.
 .TP
+.B \-\-beams\fP=\fIfirst\fP/\fIlast\fP
+.br
+The range of beams (numbers counted from 0 within each swath) in the curtain; the
+swath view dims the others. Default: all beams.
+.TP
+.B \-\-combine\fP=\fBmean\fP|\fBmax\fP
+.br
+How the curtain combines the samples of a depth cell: the mean of their linear power
+or the strongest. Default: \fBmean\fP.
+.TP
+.B \-\-palette\fP=\fBviridis\fP|\fBhaxby\fP|\fBgrayscale\fP|\fBrainbow\fP
+.br
+The colour palette of the amplitudes. Default: \fBviridis\fP.
+.TP
+.B \-\-curtain\fP=\fBbelow\fP|\fBbeside\fP|\fBoff\fP
+.br
+Where the window shows the curtain. Default: \fBbelow\fP.
+.TP
+.B \-\-exaggeration\fP=\fIvalue\fP
+.br
+The vertical exaggeration of the curtain, metres per pixel along track over metres per
+pixel in depth. Default: 1 (1:1).
+.TP
 .B \-\-export\fP=\fIimage.png\fP
 .br
 Write an image of one swath (PNG or JPEG by the file name) and exit without
 opening a window.
 .TP
+.B \-\-export-curtain\fP=\fIimage.png\fP
+.br
+Write an image of the curtain (PNG or JPEG by the file name), with a line at the ping
+given by \fB\-\-ping\fP, and exit without opening a window. With \fB\-\-export\fP
+both images are written.
+.TP
 .B \-\-size\fP=\fIwidth\fPx\fIheight\fP
 .br
-The size in pixels of the exported image. Default: 1400x900.
+The size in pixels of the exported images. Default: 1400x900.
 .TP
 .B \-\-dump
 Print a summary of the survey line and exit: the files found, the numbers of
 pings, matched pings and position records, the amplitude range and fill value,
 the longest slant range and the top of the default depth window,
 the position, speed, course, heading and transducer depth (interpolated for a water
-column ping without a survey ping) at the ping given by \fB\-\-ping\fP, and the
+column ping without a survey ping) at the ping given by \fB\-\-ping\fP, the curtain
+of the beams of \fB\-\-beams\fP (columns, depth cells and their height, the cells
+with a value and the along-track length), and the
 depth ratio and across track difference between the bottom detections of the
 water column and the soundings, for straight and for ray traced geometry, over every
 tenth water column ping. Each beam's detection is compared with the sounding (not
@@ -220,13 +306,24 @@ detections:
 	mbwcdview \-I 0030_20250208_100905.kmall \-\-ping=100 \-\-bottom \-\-wc-bottom \-\-export=ping100.png
 .br
 
+To write the curtain of the central beams 192 to 319 of a 512 beam swath, with the
+strongest value of each cell:
+.br
+	mbwcdview \-I 0030_20250208_100905.kmall \-\-beams=192/319 \-\-combine=max \-\-export-curtain=curtain.png
+.br
+
+To go through the lines of a datalist:
+.br
+	mbwcdview \-I datalist.mb-1
+.br
+
 To check the pairing of the files and the ray tracing of a line:
 .br
 	mbwcdview \-\-dump \-I 0030_20250208_100905.kmall
 .br
 
 .SH SEE ALSO
-\fBmbsystem\fP(1), \fBmbinfo\fP(1), \fBmbprocess\fP(1), \fBmbio\fP(3)
+\fBmbsystem\fP(1), \fBmbdatalist\fP(1), \fBmbinfo\fP(1), \fBmbprocess\fP(1), \fBmbio\fP(3)
 
 .SH BUGS
 The soundings of a ping are assigned to the swaths by splitting them into equal
@@ -234,4 +331,6 @@ blocks, which is right for dual swath data with one receiver; when the receive
 fans have different numbers of soundings all soundings of the ping are drawn on
 each swath. Water column data stored inside *.kmall files are not read. Dual head
 and dual receiver systems, and water column data of EM 2040 scanning mode, have not
-been tested.
+been tested. The curtain places every ping at its position and does not move samples
+by their along-track offset, so in tilted (dual swath) sectors a target appears at the
+ping that sounded it, not where it lies.

@@ -64,7 +64,7 @@ class SwathRhi {
   std::unique_ptr<QRhiShaderResourceBindings> bindings_;
   std::unique_ptr<QRhiGraphicsPipeline> pipeline_;
   quint32 nindices_ = 0;
-  bool lut_uploaded_ = false;
+  int lut_palette_ = -1;  // palette in the colour map texture
 };
 
 /* draw the swath of the plot into image (size x scale pixels) with a QRhi of its own */

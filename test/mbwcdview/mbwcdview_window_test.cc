@@ -39,6 +39,8 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QSlider>
+#include <QSpinBox>
+#include <QSplitter>
 #include <QStatusBar>
 #include <QTableWidget>
 #include <QTextStream>
@@ -48,6 +50,7 @@
 #include <cstdio>
 
 #include "WcdView.h"
+#include "wcd_curtain_view.h"
 #include "wcd_window.h"
 
 namespace {
@@ -120,8 +123,9 @@ int main(int argc, char **argv) {
   QStatusBar *status = window.statusBar();
   auto *view = window.findChild<wcd::WcdView *>();
   auto *slider = window.findChild<QSlider *>();
-  const auto spins = window.findChildren<QDoubleSpinBox *>();  // depth, amplitude, across-track, replay rate
-  CHECK(view != nullptr && slider != nullptr && spins.size() == 6);
+  /* depth, amplitude, across-track, replay rate, then the curtain's vertical exaggeration */
+  const auto spins = window.findChildren<QDoubleSpinBox *>();
+  CHECK(view != nullptr && slider != nullptr && spins.size() == 7);
 
   /* the swath is drawn with QRhi where it is built, unless MB_RENDERER=legacy-gl asks for OpenGL */
 #if defined(MBWCD_HAVE_RHI) && defined(MBWCD_HAVE_GL)
@@ -286,6 +290,59 @@ int main(int argc, char **argv) {
   button(*dialog, "Close")->click();
   CHECK(table->rowCount() == 0);
 
+  /* the curtain: one column per water column ping, all beams, at 1:1 */
+  {
+    const wcd::Curtain *c = w.curtain();
+    CHECK(c != nullptr);
+    CHECK(c != nullptr && c->ncols > 2 && c->first_beam == 0 && c->last_beam == c->beams_max - 1);
+    CHECK(c != nullptr && c->along_is_distance && c->along.back() > c->along.front());
+    auto *curtain_view = w.curtainView();
+    CHECK(curtain_view->plot().exaggeration() == 1.0 && spins[6]->value() == 1.0);
+    const auto beam_boxes = window.findChildren<QSpinBox *>();
+    CHECK(beam_boxes.size() == 2 && c != nullptr && beam_boxes[1]->maximum() == c->beams_max - 1);
+
+    /* a range of beams: the curtain is made again, the swath view dims the others */
+    w.setBeamRange(4, 11);
+    w.waitUntilIdle();
+    c = w.curtain();
+    CHECK(c != nullptr && c->first_beam == 4 && c->last_beam == 11);
+    CHECK(beam_boxes[0]->value() == 4 && beam_boxes[1]->value() == 11);
+    CHECK(!view->plot().inBeamRange(3) && view->plot().inBeamRange(4) && view->plot().inBeamRange(11) &&
+          !view->plot().inBeamRange(12));
+    /* the first beam never after the last */
+    beam_boxes[0]->setValue(13);
+    w.waitUntilIdle();
+    CHECK(beam_boxes[1]->value() == 13 && w.curtain()->first_beam == 13 && w.curtain()->last_beam == 13);
+    w.setBeamRange(0, -1);
+    w.waitUntilIdle();
+    CHECK(w.curtain()->first_beam == 0 && w.curtain()->last_beam == w.curtain()->beams_max - 1);
+
+    /* a click in the curtain shows that ping, the line follows the ping */
+    emit curtain_view->pingClicked(2);
+    CHECK(slider->value() > 0 && curtain_view->plot().current() == 2);
+    w.setStep(0);
+    CHECK(curtain_view->plot().current() == 0);
+
+    /* exaggeration, layout, palette and the strongest value */
+    spins[6]->setValue(2.5);
+    CHECK(curtain_view->plot().exaggeration() == 2.5);
+    button(window, "1:1")->click();
+    CHECK(curtain_view->plot().exaggeration() == 1.0);
+    auto *splitter = window.findChild<QSplitter *>();
+    w.setCurtainLayout(wcd::CurtainLayout::Beside);
+    CHECK(splitter->orientation() == Qt::Horizontal && !curtain_view->isHidden());
+    w.setCurtainLayout(wcd::CurtainLayout::Off);
+    CHECK(curtain_view->isHidden());
+    w.setCurtainLayout(wcd::CurtainLayout::Below);
+    CHECK(splitter->orientation() == Qt::Vertical && !curtain_view->isHidden());
+    w.setPalette(wcd::Palette::Haxby);
+    CHECK(view->plot().palette() == wcd::Palette::Haxby);
+    w.setPalette(wcd::Palette::Viridis);
+    w.setCombineMax(true);
+    w.setCombineMax(false);
+    CHECK(w.saveCurtainImage(dir + "/curtain.png") && QFile::exists(dir + "/curtain.png"));
+  }
+
   /* replay goes round the steps */
   spins[5]->setValue(10.0);
   w.setStep(last);
@@ -320,6 +377,25 @@ int main(int argc, char **argv) {
   w.showPing(2);
   w.waitUntilIdle();
   CHECK(slider->value() > 1);
+
+  /* a datalist: the line listed twice counts once */
+  {
+    const QString list = dir + "/lines.mb-1";
+    QFile file(list);
+    CHECK(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    QTextStream(&file) << kmall << " 261\n" << kmall << " 261\n";
+    file.close();
+    CHECK(button(window, "Next file")->isHidden());
+    CHECK(w.openFile(list));
+    w.waitUntilIdle();
+    CHECK(w.fileCount() == 1 && w.fileIndex() == 0 && w.loaded());
+    CHECK(!button(window, "Next file")->isHidden() && !button(window, "Next file")->isEnabled());
+    CHECK(has_label(window, "File 1 / 1"));
+    CHECK(!w.openListedFile(1));
+    CHECK(w.openFile(kmall));
+    w.waitUntilIdle();
+    CHECK(w.fileCount() == 0 && button(window, "Next file")->isHidden());
+  }
 
   printf("%d checks, %d failed\n", checks, failures);
   return failures != 0;

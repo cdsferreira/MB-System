@@ -40,7 +40,6 @@
 #include <QOpenGLTexture>
 #endif
 
-#include "viridis.h"
 #ifdef MBWCD_HAVE_RHI
 #include "wcd_swath_rhi.h"
 #endif
@@ -75,6 +74,8 @@ const char *fragment_shader =
     "}\n";
 #endif
 
+}  // namespace
+
 /* tick spacing 1, 2 or 5 x 10^n giving about n ticks over span */
 double tick_step(double span, int n) {
   if (!(span > 0.0))
@@ -88,15 +89,6 @@ double tick_step(double span, int n) {
 QString tick_label(double v, double step) {
   const int decimals = step >= 1.0 ? 0 : std::min(3, (int)std::ceil(-std::log10(step)));
   return QString::number(std::fabs(v) < 0.5 * step * 1.0e-6 ? 0.0 : v, 'f', decimals);
-}
-
-}  // namespace
-
-QImage colormap_image() {
-  QImage lut(256, 1, QImage::Format_RGBA8888);
-  for (int i = 0; i < 256; i++)
-    lut.setPixelColor(i, 0, QColor(viridis_rgb[i][0], viridis_rgb[i][1], viridis_rgb[i][2]));
-  return lut;
 }
 
 bool use_rhi() {
@@ -141,6 +133,15 @@ void SwathGL::upload(const std::vector<float> &vertices, const std::vector<unsig
   nindices_ = (int)indices.size();
 }
 
+void SwathGL::setPalette(Palette palette) {
+  if (palette == palette_ || lut_ == nullptr)
+    return;
+  palette_ = palette;
+  lut_ = std::make_unique<QOpenGLTexture>(colormap_image(palette));
+  lut_->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
+  lut_->setWrapMode(QOpenGLTexture::ClampToEdge);
+}
+
 void SwathGL::draw(float sx, float ox, float sz, float oz, float vmin, float vmax) {
   if (nindices_ == 0 || !program_->isLinked())
     return;
@@ -183,6 +184,11 @@ void WcdPlot::setDepthWindow(double dmin, double dmax) {
   dmin_ = dmin;
   dmax_ = dmax;
   updateView();
+}
+
+void WcdPlot::setBeamRange(int first, int last) {
+  first_beam_ = std::max(0, first);
+  last_beam_ = last;
 }
 
 void WcdPlot::setAcrossMax(double xmax) {
@@ -286,6 +292,7 @@ void WcdPlot::drawGL(SwathGL &gl, const QSize &size, double dpr) {
   f->glViewport(v.x(), v.y(), v.width(), v.height());
   float sx, ox, sz, oz;
   deviceTransform(sx, ox, sz, oz);
+  gl.setPalette(palette_);
   gl.draw(sx, ox, sz, oz, (float)vmin_, (float)vmax_);
 }
 #endif
@@ -323,6 +330,63 @@ void WcdPlot::drawOverlay(QPainter &p, const QSize &size, const QString &caption
     p.setPen(QPen(s.color, 1.0));
     p.setBrush(s.filled ? QBrush(s.color) : Qt::NoBrush);
     p.drawEllipse(QPointF(px(s.across), pz(s.depth)), 2.5, 2.5);
+  }
+
+  /* beams outside of the curtain's range under a light veil, the two boundary beams as lines */
+  const int nb = data_.nbeams, ns = data_.nsamples;
+  const int first = std::min(first_beam_, nb), last = last_beam_ < 0 ? nb - 1 : std::min(last_beam_, nb - 1);
+  if (nb > 0 && (first > 0 || last < nb - 1)) {
+    auto valid = [&](int b, int k) {
+      const size_t i = (size_t)b * ns + k;
+      return std::isfinite(data_.across[i]) && std::isfinite(data_.depth[i]) && std::isfinite(data_.amplitude[i]);
+    };
+    auto point = [&](int b, int k) {
+      const size_t i = (size_t)b * ns + k;
+      return QPointF(px(data_.across[i]), pz(data_.depth[i]));
+    };
+    auto ends = [&](int b, int &k0, int &k1) {
+      k0 = 0;
+      while (k0 < ns && !valid(b, k0))
+        k0++;
+      k1 = ns - 1;
+      while (k1 >= k0 && !valid(b, k1))
+        k1--;
+      return k0 <= k1;
+    };
+    /* the outline of beams b0 .. b1: their first samples, along beam b1, their last samples back */
+    auto veil = [&](int b0, int b1) {
+      QPolygonF starts, ends_out;
+      for (int b = b0; b <= b1; b++) {
+        int k0, k1;
+        if (ends(b, k0, k1)) {
+          starts << point(b, k0);
+          ends_out << point(b, k1);
+        }
+      }
+      if (starts.size() < 2)
+        return;
+      QPolygonF outline = starts;
+      for (int k = (int)ends_out.size() - 1; k >= 0; k--)
+        outline << ends_out[k];
+      p.setPen(Qt::NoPen);
+      p.setBrush(QColor(255, 255, 255, 170));
+      p.drawPolygon(outline);
+    };
+    if (first > 0)
+      veil(0, std::min(first, nb - 1));
+    if (last < nb - 1)
+      veil(std::max(last, 0), nb - 1);
+    p.setBrush(Qt::NoBrush);
+    p.setPen(QPen(QColor(255, 140, 0), 1.5));
+    for (const int b : {first, last}) {
+      if (b < 0 || b >= nb)
+        continue;
+      QPolygonF ray;
+      for (int k = 0; k < ns; k++)
+        if (valid(b, k))
+          ray << point(b, k);
+      p.drawPolyline(ray);
+    }
   }
   p.restore();
 
@@ -383,7 +447,7 @@ void WcdPlot::drawOverlay(QPainter &p, const QSize &size, const QString &caption
   const QRectF cb(r.right() + 16, r.top() + 0.1 * r.height(), 16, 0.8 * r.height());
   QImage bar(1, 256, QImage::Format_RGB32);
   for (int i = 0; i < 256; i++)
-    bar.setPixelColor(0, 255 - i, QColor(viridis_rgb[i][0], viridis_rgb[i][1], viridis_rgb[i][2]));
+    bar.setPixel(0, 255 - i, palette_color(palette_, i));
   p.drawImage(cb, bar);
   p.drawRect(cb);
   const double vs = tick_step(vmax_ - vmin_, 6);

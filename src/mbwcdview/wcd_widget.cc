@@ -33,6 +33,7 @@
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDateTime>
 #include <QDoubleSpinBox>
 #include <QEventLoop>
@@ -46,8 +47,11 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMenu>
+#include <QPainter>
 #include <QPushButton>
 #include <QShowEvent>
+#include <QSpinBox>
+#include <QSplitter>
 #include <QTableWidget>
 #include <QTextStream>
 #include <QThread>
@@ -61,6 +65,7 @@
 
 #include "mb_define.h"
 #include "WcdView.h"
+#include "wcd_curtain_view.h"
 
 namespace wcd {
 
@@ -92,6 +97,74 @@ void OneStepWheelSlider::wheelEvent(QWheelEvent *event) {
     setValue(value() - 1);
   event->accept();
 }
+
+/*--------------------------------------------------------------------*/
+RangeSlider::RangeSlider(QWidget *parent) : QWidget(parent) {
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  setToolTip("Range of beams: drag either handle");
+}
+
+void RangeSlider::setRange(int minimum, int maximum) {
+  minimum_ = minimum;
+  maximum_ = std::max(minimum, maximum);
+  setValues(lower_, upper_);
+}
+
+void RangeSlider::setValues(int lower, int upper) {
+  lower_ = std::min(std::max(lower, minimum_), maximum_);
+  upper_ = std::min(std::max(upper, lower_), maximum_);
+  update();
+}
+
+double RangeSlider::toX(int value) const {
+  const double margin = 7.0, w = std::max(1.0, width() - 2.0 * margin);
+  return margin + (maximum_ > minimum_ ? (double)(value - minimum_) / (maximum_ - minimum_) : 0.0) * w;
+}
+
+int RangeSlider::toValue(double x) const {
+  const double margin = 7.0, w = std::max(1.0, width() - 2.0 * margin);
+  return minimum_ + (int)std::lround(std::min(std::max((x - margin) / w, 0.0), 1.0) * (maximum_ - minimum_));
+}
+
+void RangeSlider::paintEvent(QPaintEvent *) {
+  QPainter p(this);
+  p.setRenderHint(QPainter::Antialiasing, true);
+  const double y = height() / 2.0;
+  const QPalette &pal = palette();
+  p.setPen(Qt::NoPen);
+  p.setBrush(pal.color(QPalette::Mid));
+  p.drawRoundedRect(QRectF(toX(minimum_), y - 2, toX(maximum_) - toX(minimum_), 4), 2, 2);
+  p.setBrush(isEnabled() ? pal.color(QPalette::Highlight) : pal.color(QPalette::Mid));
+  p.drawRect(QRectF(toX(lower_), y - 2, toX(upper_) - toX(lower_), 4));
+  p.setPen(QPen(pal.color(QPalette::Dark), 1.0));
+  p.setBrush(pal.color(QPalette::Button));
+  for (const int v : {lower_, upper_})
+    p.drawEllipse(QPointF(toX(v), y), 6.0, 6.0);
+}
+
+void RangeSlider::mousePressEvent(QMouseEvent *event) {
+  const double x = event->position().x();
+  /* the nearer handle; of two on one place, the one the pointer moves away to */
+  const double dl = std::fabs(x - toX(lower_)), du = std::fabs(x - toX(upper_));
+  handle_ = dl < du ? 0 : (du < dl ? 1 : (x < toX(lower_) ? 0 : 1));
+  mouseMoveEvent(event);
+}
+
+void RangeSlider::mouseMoveEvent(QMouseEvent *event) {
+  if (handle_ < 0)
+    return;
+  const int v = toValue(event->position().x());
+  const int lower = handle_ == 0 ? std::min(v, upper_) : lower_;
+  const int upper = handle_ == 1 ? std::max(v, lower_) : upper_;
+  if (lower != lower_ || upper != upper_) {
+    lower_ = lower;
+    upper_ = upper;
+    update();
+    emit valuesChanged(lower_, upper_);
+  }
+}
+
+void RangeSlider::mouseReleaseEvent(QMouseEvent *) { handle_ = -1; }
 
 /*--------------------------------------------------------------------*/
 const QStringList PickTable::columns = {"Ping", "UTC", "AcrossTrack_m", "Depth_m", "ShipLat",
@@ -200,13 +273,23 @@ WaterColumnWidget::WaterColumnWidget(Presentation presentation, QWidget *parent)
     bar->setObjectName("panel_bar");
     bar->setToolButtonStyle(Qt::ToolButtonTextOnly);
   }
-  auto *open = new QPushButton(panel ? "Open" : "Open .kmwcd/.kmall/.wcd/.all/.s7k");
+  auto *open = new QPushButton(panel ? "Open" : "Open .kmwcd/.kmall/.wcd/.all/.s7k/datalist");
   connect(open, &QPushButton::clicked, this, &WaterColumnWidget::openDialog);
   to_header(open);
   file_name_ = new QLabel("No file loaded");
   file_name_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
   if (!panel)
     header->addWidget(file_name_);
+  previous_file_ = new QPushButton("Previous file");
+  next_file_ = new QPushButton("Next file");
+  file_count_ = new QLabel;
+  previous_file_->setToolTip("The file before in the datalist (Page Up)");
+  next_file_->setToolTip("The file after in the datalist (Page Down)");
+  connect(previous_file_, &QPushButton::clicked, this, [this]() { openListedFile(file_index_ - 1); });
+  connect(next_file_, &QPushButton::clicked, this, [this]() { openListedFile(file_index_ + 1); });
+  to_header(previous_file_);
+  to_header(file_count_);
+  to_header(next_file_);
   auto *save = new QPushButton("Save Image");
   connect(save, &QPushButton::clicked, this, &WaterColumnWidget::saveImageDialog);
   to_header(save);
@@ -220,6 +303,7 @@ WaterColumnWidget::WaterColumnWidget(Presentation presentation, QWidget *parent)
     connect(box, &QCheckBox::toggled, this, &WaterColumnWidget::redraw);
     to_header(box);
   }
+  connect(raytrace_, &QCheckBox::toggled, this, &WaterColumnWidget::requestCurtain);
   pick_ = new QCheckBox("Pick");
   connect(pick_, &QCheckBox::clicked, this, &WaterColumnWidget::showPickDialog);
   connect(pick_, &QCheckBox::toggled, this, &WaterColumnWidget::togglePick);
@@ -291,6 +375,115 @@ WaterColumnWidget::WaterColumnWidget(Presentation presentation, QWidget *parent)
     x_row->addWidget(replay_);
     layout->addLayout(x_row);
   }
+  /* curtain: beam range, combination, palette, layout and scale */
+  first_beam_ = new QSpinBox;
+  last_beam_ = new QSpinBox;
+  for (QSpinBox *box : {first_beam_, last_beam_}) {
+    box->setRange(0, 0);
+    box->setKeyboardTracking(false);
+    box->setMinimumWidth(box->fontMetrics().horizontalAdvance("00000") + 28);
+  }
+  first_beam_->setToolTip("First beam of each swath in the curtain");
+  last_beam_->setToolTip("Last beam of each swath in the curtain");
+  beam_slider_ = new RangeSlider;
+  beam_count_ = new QLabel("of 0-0");
+  beam_angles_ = new QLabel;
+  combine_ = new QComboBox;
+  combine_->addItems({"Mean (linear)", "Max"});
+  combine_->setToolTip("Samples of one depth cell: the mean of their linear power, or the strongest");
+  palette_ = new QComboBox;
+  palette_->addItems(palette_names());
+  palette_->setToolTip("Colour palette of the amplitudes");
+  curtain_layout_ = new QComboBox;
+  curtain_layout_->addItems({"Below", "Beside", "Off"});
+  curtain_layout_->setToolTip("Where the curtain (side view) is shown");
+  exaggeration_ = spin_box(1.0e-3, 1.0e4, 0.1, 3);
+  exaggeration_->setValue(1.0);
+  exaggeration_->setKeyboardTracking(false);
+  exaggeration_->setToolTip("Vertical exaggeration of the curtain: metres along track per pixel over metres in "
+                            "depth per pixel (1 = 1:1)");
+  auto *fit = new QPushButton("Fit");
+  fit->setToolTip("The whole file in the curtain");
+  auto *one_to_one = new QPushButton("1:1");
+  one_to_one->setToolTip("As many metres per pixel along track as in depth");
+  auto *save_curtain = new QPushButton("Save Curtain");
+  if (panel) {
+    auto *curtain = new QWidget;
+    curtain->setObjectName("panel_curtain_controls");
+    auto *form = new QFormLayout(curtain);
+    auto *beams = new QHBoxLayout;
+    beams->addWidget(first_beam_);
+    beams->addWidget(beam_slider_, 1);
+    beams->addWidget(last_beam_);
+    beams->addWidget(beam_count_);
+    form->addRow("Beams:", beams);
+    form->addRow("", beam_angles_);
+    form->addRow("Combine:", combine_);
+    form->addRow("Palette:", palette_);
+    form->addRow("Curtain:", curtain_layout_);
+    auto *scale = new QHBoxLayout;
+    scale->addWidget(exaggeration_);
+    scale->addWidget(fit);
+    scale->addWidget(one_to_one);
+    form->addRow("Exaggeration:", scale);
+    form->addRow("", save_curtain);
+    auto *curtain_menu = new QMenu(this);
+    auto *curtain_action = new QWidgetAction(curtain_menu);
+    curtain_action->setDefaultWidget(curtain);
+    curtain_menu->addAction(curtain_action);
+    auto *curtain_button = new QToolButton;
+    curtain_button->setText("Curtain");
+    curtain_button->setObjectName("panel_curtain");
+    curtain_button->setMenu(curtain_menu);
+    curtain_button->setPopupMode(QToolButton::InstantPopup);
+    curtain_button->setFocusPolicy(Qt::NoFocus);
+    bar->insertWidget(scales_place, curtain_button);
+  }
+  else {
+    auto *curtain_row = new QHBoxLayout;
+    curtain_row->addWidget(new QLabel("Beams:"));
+    curtain_row->addWidget(first_beam_);
+    curtain_row->addWidget(beam_slider_, 1);
+    curtain_row->addWidget(last_beam_);
+    curtain_row->addWidget(beam_count_);
+    curtain_row->addWidget(beam_angles_);
+    curtain_row->addWidget(new QLabel("Combine:"));
+    curtain_row->addWidget(combine_);
+    curtain_row->addWidget(new QLabel("Palette:"));
+    curtain_row->addWidget(palette_);
+    curtain_row->addWidget(new QLabel("Curtain:"));
+    curtain_row->addWidget(curtain_layout_);
+    curtain_row->addWidget(new QLabel("Vertical exaggeration:"));
+    curtain_row->addWidget(exaggeration_);
+    curtain_row->addWidget(fit);
+    curtain_row->addWidget(one_to_one);
+    curtain_row->addWidget(save_curtain);
+    layout->addLayout(curtain_row);
+  }
+  connect(first_beam_, &QSpinBox::valueChanged, this, &WaterColumnWidget::beamsFromSpinBoxes);
+  connect(last_beam_, &QSpinBox::valueChanged, this, &WaterColumnWidget::beamsFromSpinBoxes);
+  connect(beam_slider_, &RangeSlider::valuesChanged, this, &WaterColumnWidget::beamsFromSlider);
+  connect(combine_, &QComboBox::currentIndexChanged, this, [this](int index) { setCombineMax(index == 1); });
+  connect(palette_, &QComboBox::currentIndexChanged, this, [this](int index) { setPalette((Palette)index); });
+  connect(curtain_layout_, &QComboBox::currentIndexChanged, this,
+          [this](int index) { setCurtainLayout((CurtainLayout)index); });
+  connect(exaggeration_, &QDoubleSpinBox::valueChanged, this, [this](double value) {
+    if (std::fabs(value - curtain_view_->plot().exaggeration()) > 1.0e-9)
+      curtain_view_->setExaggeration(value);
+  });
+  connect(fit, &QPushButton::clicked, this, [this]() { curtain_view_->fit(); });
+  connect(one_to_one, &QPushButton::clicked, this, [this]() { exaggeration_->setValue(1.0); });
+  connect(save_curtain, &QPushButton::clicked, this, [this]() {
+    const QString path = QFileDialog::getSaveFileName(this, "Save Curtain", QFileInfo(file_label_).completeBaseName() +
+                                                      "_curtain.png", "PNG (*.png);;JPEG (*.jpg)");
+    if (!path.isEmpty() && !saveCurtainImage(path))
+      showStatus("Cannot write " + path, 5000);
+  });
+  curtain_timer_ = new QTimer(this);
+  curtain_timer_->setSingleShot(true);
+  curtain_timer_->setInterval(150);
+  connect(curtain_timer_, &QTimer::timeout, this, &WaterColumnWidget::startCurtain);
+
   for (QDoubleSpinBox *box : {dmin_, dmax_, amin_, amax_, xmax_})
     connect(box, &QDoubleSpinBox::valueChanged, this, &WaterColumnWidget::updatePlotSettings);
   connect(replay_, &QPushButton::toggled, this, &WaterColumnWidget::toggleReplay);
@@ -301,7 +494,20 @@ WaterColumnWidget::WaterColumnWidget(Presentation presentation, QWidget *parent)
   /* plot */
   view_ = new WcdView;
   connect(view_, &WcdView::clicked, this, &WaterColumnWidget::onClicked);
-  layout->addWidget(view_, 1);
+  curtain_view_ = new CurtainView;
+  connect(curtain_view_, &CurtainView::pingClicked, this, &WaterColumnWidget::onCurtainPing);
+  connect(curtain_view_, &CurtainView::exaggerationChanged, this, [this](double value) {
+    exaggeration_->blockSignals(true);
+    exaggeration_->setValue(value);
+    exaggeration_->blockSignals(false);
+  });
+  splitter_ = new QSplitter(Qt::Vertical);
+  splitter_->setChildrenCollapsible(false);
+  splitter_->addWidget(view_);
+  splitter_->addWidget(curtain_view_);
+  splitter_->setStretchFactor(0, 3);
+  splitter_->setStretchFactor(1, 2);
+  layout->addWidget(splitter_, 1);
 
   /* ping slider */
   auto *slider_row = new QHBoxLayout;
@@ -339,16 +545,22 @@ WaterColumnWidget::WaterColumnWidget(Presentation presentation, QWidget *parent)
     view_->setFocusPolicy(Qt::ClickFocus);
     setFocusProxy(view_);
   }
+  showFiles();
+
+  /* the panel is a part of another program's window: no curtain until asked for */
+  if (panel)
+    curtain_layout_->setCurrentIndex((int)CurtainLayout::Off);
 }
 
 WaterColumnWidget::~WaterColumnWidget() {
-  /* the thread writes to data held by its lambda and posts to this object */
+  /* the threads write to data held by their lambdas and post to this object */
   if (worker_ != nullptr)
     worker_->wait();
+  stopCurtain();
 }
 
 void WaterColumnWidget::waitUntilIdle() {
-  while (worker_ != nullptr)
+  while (worker_ != nullptr || curtain_worker_ != nullptr || curtain_timer_->isActive())
     QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
 }
 
@@ -358,8 +570,9 @@ void WaterColumnWidget::showStatus(const QString &message, int timeout_ms) { emi
 
 /*--------------------------------------------------------------------*/
 void WaterColumnWidget::openDialog() {
-  const QString path = QFileDialog::getOpenFileName(this, "Open .kmwcd/.kmall/.wcd/.all/.s7k", "",
-                                                    "Swath files (*.kmwcd *.kmall *.wcd *.all *.s7k);;All files (*)");
+  const QString path = QFileDialog::getOpenFileName(this, "Open .kmwcd/.kmall/.wcd/.all/.s7k or datalist", "",
+                                                    "Swath files and datalists (*.kmwcd *.kmall *.wcd *.all *.s7k *.mb-1);;"
+                                                    "Datalists (*.mb-1);;All files (*)");
   if (!path.isEmpty())
     openFile(path);
 }
@@ -367,7 +580,52 @@ void WaterColumnWidget::openDialog() {
 bool WaterColumnWidget::openFile(const QString &path) {
   if (worker_ != nullptr)
     return false;
+  const std::string file = path.toStdString();
+  if (is_datalist(file)) {
+    std::vector<std::pair<std::string, int>> files;
+    std::string message;
+    if (!read_datalist(file, files, &message) || files.empty()) {
+      showStatus(QString("Cannot read datalist %1: %2").arg(QFileInfo(path).fileName(), QString::fromStdString(message)));
+      emit fileOpenFailed(path);
+      return true;
+    }
+    files_ = std::move(files);
+    list_label_ = QFileInfo(path).fileName();
+    return openListedFile(0);
+  }
+  files_.clear();
+  file_index_ = -1;
+  list_label_.clear();
+  return loadFile(path, 0);
+}
+
+bool WaterColumnWidget::openListedFile(int index) {
+  if (worker_ != nullptr || index < 0 || index >= (int)files_.size())
+    return false;
+  file_index_ = index;
+  return loadFile(QString::fromStdString(files_[index].first), files_[index].second);
+}
+
+void WaterColumnWidget::showFiles() {
+  const bool list = !files_.empty();
+  previous_file_->setVisible(list);
+  next_file_->setVisible(list);
+  file_count_->setVisible(list);
+  previous_file_->setEnabled(list && file_index_ > 0);
+  next_file_->setEnabled(list && file_index_ + 1 < (int)files_.size());
+  file_count_->setText(list ? QString("File %1 / %2").arg(file_index_ + 1).arg(files_.size()) : QString());
+  file_count_->setToolTip(list_label_);
+}
+
+bool WaterColumnWidget::loadFile(const QString &path, int format) {
+  if (worker_ != nullptr)
+    return false;
   replay_->setChecked(false);
+  stopCurtain();
+  curtain_view_->plot().setCurtain(nullptr);
+  curtain_view_->plot().setMessage("Loading...");
+  curtain_view_->update();
+  showFiles();
   file_label_ = QFileInfo(path).fileName();
   file_name_->setText(file_label_);
   showStatus("Reading survey file (navigation, bathymetry)...");
@@ -382,7 +640,7 @@ bool WaterColumnWidget::openFile(const QString &path) {
   };
   auto load = std::make_shared<Load>();
   const std::string file = path.toStdString();
-  worker_ = QThread::create([this, load, file] {
+  worker_ = QThread::create([this, load, file, format] {
     int last = -1;
     const wcd::Progress progress = [this, &last](int npings, double fraction) {
       const int pct = (int)(100.0 * fraction);
@@ -392,7 +650,7 @@ bool WaterColumnWidget::openFile(const QString &path) {
             this, [this, pct, npings] { showStatus(QString("Loading pings... %1% (%2 pings)").arg(pct).arg(npings)); }, Qt::QueuedConnection);
       }
     };
-    load->ok = load->line.load(file, progress, &load->message);
+    load->ok = load->line.load(file, progress, &load->message, format);
   });
   worker_->setParent(this);
   connect(worker_, &QThread::finished, this, [this, load, path] {
@@ -422,6 +680,9 @@ void WaterColumnWidget::finishOpen(const QString &path, Line line, bool ok, cons
                                 : QString("Cannot read %1: %2").arg(file_label_, QString::fromStdString(message)));
     view_->plot().setData(wcd::PlotData());
     view_->redraw();
+    curtain_view_->plot().setMessage("No water column data");
+    curtain_view_->update();
+    showFiles();
     emit fileOpenFailed(path);
     return;
   }
@@ -461,9 +722,33 @@ void WaterColumnWidget::finishOpen(const QString &path, Line line, bool ok, cons
   slider_->setValue(0);
   slider_->blockSignals(false);
   current_ = 0;
+
+  /* the beam range: kept from the file before where this file has as many beams, else all */
+  const int beams = std::max(1, beams_per_swath_max(wc));
+  const bool keep = first_beam_->maximum() == beams - 1 && first_beam_->maximum() > 0;
+  for (QSpinBox *box : {first_beam_, last_beam_}) {
+    box->blockSignals(true);
+    box->setRange(0, beams - 1);
+  }
+  if (!keep) {
+    first_beam_->setValue(0);
+    last_beam_->setValue(beams - 1);
+  }
+  for (QSpinBox *box : {first_beam_, last_beam_})
+    box->blockSignals(false);
+  beam_slider_->setRange(0, beams - 1);
+  beam_slider_->setValues(first_beam_->value(), last_beam_->value());
+  beam_count_->setText(QString("of 0-%1").arg(beams - 1));
+  view_->plot().setBeamRange(first_beam_->value(), last_beam_->value());
+  showFiles();
+
   updatePlotSettings();
   emit fileOpened(path);
   redraw();
+  curtain_view_->plot().setMessage("Making the curtain...");
+  curtain_first_ = true;
+  curtain_stale_ = true;
+  startCurtain();
 
   const QString summary =
       QString("Nav summary: survey pings=%1, position records=%2%3, WC pings=%4, matched=%5, fill value=%6")
@@ -486,6 +771,10 @@ void WaterColumnWidget::updatePlotSettings() {
   plot.setDepthWindow(dmin_->value(), dmax_->value());
   plot.setAcrossMax(xmax_->value());
   view_->redraw();
+  CurtainPlot &curtain = curtain_view_->plot();
+  curtain.setColorRange(amin_->value(), amax_->value());
+  curtain.setDepthWindow(dmin_->value(), dmax_->value());
+  curtain_view_->followCurrent();
 }
 
 void WaterColumnWidget::redraw() {
@@ -502,6 +791,10 @@ void WaterColumnWidget::redraw() {
   wcd::build_scene(line_, ping, swath, options, data, info);
   view_->plot().setData(std::move(data));
   view_->redraw();
+  curtain_view_->plot().setCurrent(ping);
+  curtain_view_->plot().setLabel(QString("ping %1").arg(line_.wc.pings[ping].ping_number));
+  curtain_view_->followCurrent();
+  updateBeamAngles();
   meta_->setText(wcd::metadata_text(line_, ping, swath));
   if (presentation_ == Presentation::Panel)
     meta_->setToolTip(file_label_ + "\n" + meta_->text());
@@ -553,6 +846,10 @@ void WaterColumnWidget::keyPressEvent(QKeyEvent *event) {
     slider_->setValue(current_ - 1);
   else if (event->key() == Qt::Key_Right && current_ < slider_->maximum())
     slider_->setValue(current_ + 1);
+  else if (event->key() == Qt::Key_PageUp && !files_.empty())
+    openListedFile(file_index_ - 1);
+  else if (event->key() == Qt::Key_PageDown && !files_.empty())
+    openListedFile(file_index_ + 1);
   else
     QWidget::keyPressEvent(event);
 }
@@ -616,6 +913,14 @@ bool WaterColumnWidget::saveImage(const QString &path) {
   return image.save(path);
 }
 
+bool WaterColumnWidget::saveCurtainImage(const QString &path) {
+  if (curtain() == nullptr)
+    return false;
+  const QSize size = curtain_view_->isVisible() ? curtain_view_->size() : QSize(1400, 500);
+  const QImage image = curtain_view_->plot().render(size, 2.0, file_label_);
+  return image.save(path);
+}
+
 void WaterColumnWidget::saveImageDialog() {
   const QString path = QFileDialog::getSaveFileName(this, "Save Image", file_label_, "PNG (*.png);;JPEG (*.jpg)");
   if (!path.isEmpty() && !saveImage(path))
@@ -667,7 +972,8 @@ QStringList WaterColumnWidget::pick(double across, double depth) {
   double best_d2 = std::numeric_limits<double>::max();
   for (size_t i = 0; i < d.across.size(); i++) {
     if (!std::isfinite(d.amplitude[i]) || !std::isfinite(d.across[i]) || !std::isfinite(d.depth[i]) ||
-        d.depth[i] < dmin_->value() || d.depth[i] > dmax_->value())
+        d.depth[i] < dmin_->value() || d.depth[i] > dmax_->value() ||
+        !view_->plot().inBeamRange((int)(i / (size_t)std::max(1, d.nsamples))))
       continue;
     const double d2 = (d.across[i] - across) * (d.across[i] - across) + (d.depth[i] - depth) * (d.depth[i] - depth);
     if (d2 < best_d2) {
@@ -716,6 +1022,190 @@ QStringList WaterColumnWidget::pick(double across, double depth) {
   pick_table_->addRow(row);
   emit pickAdded(row);
   return row;
+}
+
+/*--------------------------------------------------------------------*/
+const Curtain *WaterColumnWidget::curtain() const { return curtain_view_->plot().curtain(); }
+
+void WaterColumnWidget::setBeamRange(int first, int last) {
+  const int beams = first_beam_->maximum() + 1;
+  if (last < 0 || last >= beams)
+    last = beams - 1;
+  first = std::min(std::max(first, 0), last);
+  for (QSpinBox *box : {first_beam_, last_beam_})
+    box->blockSignals(true);
+  first_beam_->setValue(first);
+  last_beam_->setValue(last);
+  for (QSpinBox *box : {first_beam_, last_beam_})
+    box->blockSignals(false);
+  beam_slider_->setValues(first, last);
+  applyBeamRange();
+}
+
+void WaterColumnWidget::beamsFromSpinBoxes() {
+  /* the first beam never after the last: the other box follows */
+  QSpinBox *changed = qobject_cast<QSpinBox *>(sender());
+  if (first_beam_->value() > last_beam_->value()) {
+    QSpinBox *other = changed == last_beam_ ? first_beam_ : last_beam_;
+    other->blockSignals(true);
+    other->setValue(changed == last_beam_ ? last_beam_->value() : first_beam_->value());
+    other->blockSignals(false);
+  }
+  beam_slider_->setValues(first_beam_->value(), last_beam_->value());
+  applyBeamRange();
+}
+
+void WaterColumnWidget::beamsFromSlider(int lower, int upper) {
+  for (QSpinBox *box : {first_beam_, last_beam_})
+    box->blockSignals(true);
+  first_beam_->setValue(lower);
+  last_beam_->setValue(upper);
+  for (QSpinBox *box : {first_beam_, last_beam_})
+    box->blockSignals(false);
+  applyBeamRange();
+}
+
+void WaterColumnWidget::applyBeamRange() {
+  view_->plot().setBeamRange(first_beam_->value(), last_beam_->value());
+  view_->redraw();
+  updateBeamAngles();
+  requestCurtain();
+}
+
+/* the pointing angles of the first and last beam of the range in the ping and swath shown */
+void WaterColumnWidget::updateBeamAngles() {
+  QString text;
+  if (!steps_.empty()) {
+    const auto [ping, swath] = steps_[current_];
+    const WcPing &p = line_.wc.pings[ping];
+    std::vector<int> beams;
+    for (int b = 0; b < p.nbeams(); b++)
+      if (p.swath[b] == swath)
+        beams.push_back(b);
+    if (!beams.empty()) {
+      const int first = std::min(first_beam_->value(), (int)beams.size() - 1);
+      const int last = std::min(last_beam_->value(), (int)beams.size() - 1);
+      text = QString("(%1%2 ... %3%4)")
+                 .arg(p.angle_across[beams[first]], 0, 'f', 1)
+                 .arg(QChar(0x00B0))
+                 .arg(p.angle_across[beams[last]], 0, 'f', 1)
+                 .arg(QChar(0x00B0));
+    }
+  }
+  beam_angles_->setText(text);
+  beam_angles_->setToolTip("Pointing angles across track of the first and last beam of the range in the swath shown "
+                           "(degrees from vertical, starboard positive)");
+}
+
+void WaterColumnWidget::setPalette(Palette palette) {
+  if (palette_->currentIndex() != (int)palette) {
+    palette_->setCurrentIndex((int)palette);  // comes back here
+    return;
+  }
+  view_->plot().setPalette(palette);
+  view_->redraw();
+  curtain_view_->plot().setPalette(palette);
+  curtain_view_->update();
+}
+
+void WaterColumnWidget::setCombineMax(bool max) {
+  if (combine_->currentIndex() != (max ? 1 : 0)) {
+    combine_->setCurrentIndex(max ? 1 : 0);
+    return;
+  }
+  curtain_view_->plot().setMaxMode(max);
+  curtain_view_->update();
+}
+
+void WaterColumnWidget::setCurtainExaggeration(double exaggeration) { exaggeration_->setValue(exaggeration); }
+
+void WaterColumnWidget::setCurtainLayout(CurtainLayout layout) {
+  if (curtain_layout_->currentIndex() != (int)layout) {
+    curtain_layout_->setCurrentIndex((int)layout);
+    return;
+  }
+  curtain_view_->setVisible(layout != CurtainLayout::Off);
+  splitter_->setOrientation(layout == CurtainLayout::Beside ? Qt::Horizontal : Qt::Vertical);
+  if (layout != CurtainLayout::Off && curtain_stale_)
+    startCurtain();
+}
+
+/*--------------------------------------------------------------------*/
+/* the curtain is made again a moment after the last change, so that dragging the range does not queue work */
+void WaterColumnWidget::requestCurtain() {
+  curtain_stale_ = true;
+  if (loaded() && curtain_view_->isVisibleTo(this))
+    curtain_timer_->start();
+}
+
+void WaterColumnWidget::startCurtain() {
+  if (!loaded() || !curtain_view_->isVisibleTo(this))
+    return;
+  if (curtain_worker_ != nullptr) {
+    curtain_cancel_->store(true);
+    curtain_again_ = true;
+    return;
+  }
+  curtain_stale_ = false;
+  CurtainOptions options;
+  options.first_beam = first_beam_->value();
+  options.last_beam = last_beam_->value();
+  options.raytrace = raytrace_->isChecked();
+  auto cancel = std::make_shared<std::atomic<bool>>(false);
+  auto result = std::make_shared<Curtain>();
+  auto ok = std::make_shared<bool>(false);
+  curtain_cancel_ = cancel;
+  const Line *line = &line_;
+  curtain_worker_ = QThread::create([line, options, cancel, result, ok] {
+    *ok = build_curtain(*line, options, *result, cancel.get());
+  });
+  curtain_worker_->setParent(this);
+  QThread *thread = curtain_worker_;
+  connect(thread, &QThread::finished, this, [this, thread, result, ok] {
+    thread->deleteLater();
+    if (thread != curtain_worker_)
+      return;  // stopped
+    curtain_worker_ = nullptr;
+    if (curtain_again_) {
+      curtain_again_ = false;
+      startCurtain();
+      return;
+    }
+    if (!*ok)
+      return;
+    CurtainPlot &plot = curtain_view_->plot();
+    plot.setCurtain(result);
+    if (curtain_first_) {
+      curtain_first_ = false;
+      curtain_view_->setExaggeration(exaggeration_->value());
+      plot.showStart();
+    }
+    curtain_view_->followCurrent();
+  });
+  curtain_worker_->start();
+}
+
+/* stops a curtain being made and waits for its thread: before the line it reads changes */
+void WaterColumnWidget::stopCurtain() {
+  curtain_timer_->stop();
+  curtain_again_ = false;
+  if (curtain_worker_ != nullptr) {
+    curtain_cancel_->store(true);
+    curtain_worker_->wait();
+    curtain_worker_ = nullptr;  // its finished handler deletes it
+    curtain_stale_ = true;
+  }
+}
+
+void WaterColumnWidget::onCurtainPing(int ping) {
+  if (steps_.empty() || steps_[current_].first == ping)
+    return;
+  for (size_t k = 0; k < steps_.size(); k++) {
+    if (steps_[k].first == ping) {
+      slider_->setValue((int)k);
+      return;
+    }
+  }
 }
 
 }  // namespace wcd

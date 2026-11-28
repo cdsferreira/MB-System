@@ -32,6 +32,7 @@
 #include <limits>
 #include <map>
 #include <regex>
+#include <set>
 
 #include "mb_define.h"
 #include "mb_format.h"
@@ -271,6 +272,50 @@ int get_format(const std::string &path) {
   int format = 0, error = MB_ERROR_NO_ERROR;
   mb_get_format(0, file.data(), root.data(), &format, &error);
   return format;
+}
+
+/*--------------------------------------------------------------------*/
+bool is_datalist(const std::string &path, int format) {
+  if (format == MBF_DATALIST)
+    return true;
+  return format == 0 && get_format(path) == MBF_DATALIST;
+}
+
+/*--------------------------------------------------------------------*/
+bool read_datalist(const std::string &path, std::vector<std::pair<std::string, int>> &files, std::string *message) {
+  files.clear();
+  std::vector<char> name(path.begin(), path.end());
+  name.resize(std::max(name.size() + 1, (size_t)MB_PATH_MAXLINE), '\0');
+  void *datalist = nullptr;
+  int error = MB_ERROR_NO_ERROR;
+  if (mb_datalist_open(0, &datalist, name.data(), MB_DATALIST_LOOK_NO, &error) != MB_SUCCESS) {
+    if (message != nullptr)
+      *message = "cannot open the datalist";
+    return false;
+  }
+  std::set<std::string> seen;
+  auto key = [](const std::string &file) {
+    std::error_code ec;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(file, ec);
+    return ec ? file : canonical.string();
+  };
+  std::vector<char> file(MB_PATH_MAXLINE, '\0'), dpath(MB_PATH_MAXLINE, '\0');
+  int format = 0;
+  double weight = 0.0;
+  while (mb_datalist_read(0, datalist, file.data(), dpath.data(), &format, &weight, &error) == MB_SUCCESS) {
+    const std::string entry(file.data());
+    if (entry.empty() || seen.count(key(entry)) != 0)
+      continue;
+    seen.insert(key(entry));
+    const std::string other = find_companion(entry);
+    if (!other.empty())
+      seen.insert(key(other));
+    files.emplace_back(entry, format);
+  }
+  mb_datalist_close(0, &datalist, &error);
+  if (files.empty() && message != nullptr)
+    *message = "no files in the datalist";
+  return true;
 }
 
 /*--------------------------------------------------------------------*/

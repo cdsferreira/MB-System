@@ -70,6 +70,8 @@ endif()
 
 add_library(
   mbwcdview-core STATIC
+  wcd_curtain.cc
+  wcd_curtain.h
   wcd_data.cc
   wcd_data.h
   wcd_dump.cc
@@ -79,7 +81,9 @@ add_library(
 
 target_include_directories(mbwcdview-core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(mbwcdview-core PUBLIC mbio ${MB_SYSLIBS})
+find_package(Threads REQUIRED)
+
+target_link_libraries(mbwcdview-core PUBLIC mbio ${MB_SYSLIBS} Threads::Threads)
 
 # mb_define.h includes the header of this library on Windows, and mbio links it privately
 if(WIN32)
@@ -92,6 +96,10 @@ add_library(
   mbwcdview-ui STATIC
   WcdView.cc
   WcdView.h
+  wcd_curtain_view.cc
+  wcd_curtain_view.h
+  wcd_palette.cc
+  wcd_palette.h
   wcd_plot.cc
   wcd_plot.h
   wcd_scene.cc

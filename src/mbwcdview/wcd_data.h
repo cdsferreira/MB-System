@@ -125,6 +125,14 @@ int get_format(const std::string &path);
    nearest file name time */
 std::string find_companion(const std::string &path, double max_offset_s = 600.0);
 
+/* a datalist: format MBF_DATALIST (-1) given, or a name MBIO takes for one (*.mb-1) */
+bool is_datalist(const std::string &path, int format = 0);
+
+/* the files of a datalist with their formats (mb_datalist_read(), datalists it names
+   included); the other file of a line (find_companion()) listed later counts as the same
+   line and is left out; false if the datalist cannot be opened */
+bool read_datalist(const std::string &path, std::vector<std::pair<std::string, int>> &files, std::string *message);
+
 /* A *.kmall and its *.kmwcd or a *.all and its *.wcd, either may be missing; kmall and
    kmwcd name the survey and water column files of either kind. Any other file, such as
    a Reson 7k *.s7k, is both */

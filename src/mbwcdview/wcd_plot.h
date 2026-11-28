@@ -42,6 +42,8 @@
 #include <QRectF>
 #include <QString>
 
+#include "wcd_palette.h"
+
 #ifdef MBWCD_HAVE_GL
 #include <QOpenGLFunctions>
 
@@ -56,8 +58,9 @@ namespace wcd {
    asks for OpenGL where that is built too */
 bool use_rhi();
 
-/* the colour map as a 256 x 1 RGBA image */
-QImage colormap_image();
+/* axis ticks: spacing 1, 2 or 5 x 10^n giving about n ticks over span, and their labels */
+double tick_step(double span, int n);
+QString tick_label(double v, double step);
 
 struct Sounding {
   double across, depth;
@@ -83,6 +86,7 @@ class SwathGL : protected QOpenGLFunctions {
   ~SwathGL();
   void init();
   void upload(const std::vector<float> &vertices, const std::vector<unsigned int> &indices);
+  void setPalette(Palette palette);  // with the context current
   /* draw into the current viewport; transform maps data (across, depth) to normalized coordinates */
   void draw(float sx, float ox, float sz, float oz, float vmin, float vmax);
 
@@ -90,6 +94,7 @@ class SwathGL : protected QOpenGLFunctions {
   std::unique_ptr<QOpenGLShaderProgram> program_;
   std::unique_ptr<QOpenGLBuffer> vbo_, ibo_;
   std::unique_ptr<QOpenGLTexture> lut_;
+  Palette palette_ = Palette::Viridis;
   int nindices_ = 0;
 };
 #endif
@@ -100,6 +105,12 @@ class WcdPlot {
   void setColorRange(double vmin, double vmax);
   void setDepthWindow(double dmin, double dmax);
   void setAcrossMax(double xmax);  // 0: from the data
+  void setPalette(Palette palette) { palette_ = palette; }
+  Palette palette() const { return palette_; }
+  /* beams (rows of the swath) first .. last are in the curtain's range; the others are dimmed and
+     the two boundary beams drawn. last -1: to the last beam */
+  void setBeamRange(int first, int last);
+  bool inBeamRange(int row) const { return row >= first_beam_ && (last_beam_ < 0 || row <= last_beam_); }
   const PlotData &data() const { return data_; }
 
   /* image area inside a widget/image of the given size (logical pixels) */
@@ -132,6 +143,8 @@ class WcdPlot {
   double vmin_ = -60.0, vmax_ = 0.0;
   double dmin_ = 0.0, dmax_ = 1.0e5;
   double xmax_ = 0.0;
+  Palette palette_ = Palette::Viridis;
+  int first_beam_ = 0, last_beam_ = -1;
   double view_x0_ = -1.0, view_x1_ = 1.0, view_z0_ = 0.0, view_z1_ = 1.0;
   bool mesh_dirty_ = true;
 };
