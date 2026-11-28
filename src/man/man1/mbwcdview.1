@@ -103,7 +103,10 @@ twice the screen resolution with the file name and ping information, and
 picking positions in the image (\fBPick\fP) into a table that can be saved as text.
 The image is drawn on the graphics card through Qt's QRhi (Metal on macOS,
 Direct3D 11 on Windows, OpenGL on Linux), or with OpenGL where \fBmbwcdview\fP
-was built with Qt older than 6.8, so stepping through the pings is fast.
+was built without QRhi, so stepping through the pings is fast.
+QRhi needs \fB\-DbuildQt6Rhi=ON\fP (the default), Qt 6.8 or later,
+Qt Shader Tools and Qt's private Gui headers (on Debian and Ubuntu the package
+qt6-base-private-dev).
 
 The depth range starts at the surface, or, for a sonar deeper than its longest
 slant range (on a vehicle), a tenth of that range above the shallowest transducer

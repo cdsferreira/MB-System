@@ -41,15 +41,16 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
-# QRhi needs Qt 6.8 or later, the private Gui module (rhi/qrhi.h) and Qt Shader
-# Tools (qt6_add_shaders); without them the swath is drawn with OpenGL
-set(mbwcdview_rhi OFF)
+# QRhi needs Qt 6.8 or later, the private Gui module (rhi/qrhi.h) with its
+# headers and Qt Shader Tools (qt6_add_shaders); without them the swath is drawn
+# with OpenGL. The check is the function mb_qt6_rhi_check() in
+# build-utils/MbQt6Rhi.cmake, for the Qt6 tools that draw with QRhi; it is
+# included by its full path: build-utils is off CMAKE_MODULE_PATH on macOS
+include("${CMAKE_SOURCE_DIR}/build-utils/MbQt6Rhi.cmake")
 if(buildQt6Rhi)
   find_package(Qt6 QUIET COMPONENTS GuiPrivate ShaderTools)
-  if(Qt6_VERSION VERSION_GREATER_EQUAL 6.8 AND TARGET Qt6::GuiPrivate AND COMMAND qt6_add_shaders)
-    set(mbwcdview_rhi ON)
-  endif()
 endif()
+mb_qt6_rhi_check(mbwcdview_rhi mbwcdview_rhi_needs)
 set(mbwcdview_gl ${buildQt6LegacyGL})
 if(NOT mbwcdview_rhi)
   set(mbwcdview_gl ON)
@@ -63,9 +64,9 @@ if(mbwcdview_rhi AND mbwcdview_gl)
 elseif(mbwcdview_rhi)
   message(STATUS "mbwcdview: the swath is drawn with QRhi")
 elseif(APPLE)
-  message(WARNING "mbwcdview: the swath is drawn with OpenGL. QRhi needs -DbuildQt6Rhi=ON and Qt 6.8 or later with Qt Shader Tools")
+  message(WARNING "mbwcdview: the swath is drawn with OpenGL. ${mbwcdview_rhi_needs}")
 else()
-  message(STATUS "mbwcdview: the swath is drawn with OpenGL (QRhi needs Qt 6.8 or later with Qt Shader Tools)")
+  message(STATUS "mbwcdview: the swath is drawn with OpenGL (${mbwcdview_rhi_needs})")
 endif()
 
 add_library(
