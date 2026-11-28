@@ -180,6 +180,16 @@ Without a window, \fB\-\-dump\fP prints a summary of a survey line,
 \fB\-\-export\fP writes an image of one swath and \fB\-\-export-curtain\fP an image
 of the curtain.
 
+With \fBLasso\fP on, the left mouse button draws polygons in the swath view (across
+track and depth) and in the curtain (along track and depth) instead of picking or
+moving the curtain: a drag draws a polygon that replaces those of the view, a drag with
+Shift adds one, and a click with Alt (Option on macOS) removes the polygon under the
+pointer. The polygons choose the samples of a 3D export: those of the swath view apply
+to every ping, those of the curtain choose pings and depths. The menu of the button
+clears, saves and loads them (the lasso file of \fB\-\-lasso\fP). Opening another file
+keeps the polygons of the swath view and clears those of the curtain, whose along-track
+distances belong to a line.
+
 \fB\-\-export-3d\fP writes the water column as 3D points: the samples of the fans of
 the pings of \fB\-\-pings\fP, the cells of the curtain, or both, those with an
 amplitude in \fB\-\-range\fP and, with \fB\-\-lasso\fP, in the lasso's polygons. A fan

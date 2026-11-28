@@ -37,6 +37,7 @@
 #include <QFile>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QMouseEvent>
 #include <QPushButton>
 #include <QSlider>
 #include <QSpinBox>
@@ -44,10 +45,12 @@
 #include <QStatusBar>
 #include <QTableWidget>
 #include <QTextStream>
+#include <QToolButton>
 #include <QWheelEvent>
 
 #include <cmath>
 #include <cstdio>
+#include <vector>
 
 #include "WcdView.h"
 #include "wcd_curtain_view.h"
@@ -104,6 +107,28 @@ QString meta_text(QWidget &w) {
 void key(QWidget &w, int code) {
   QKeyEvent event(QEvent::KeyPress, code, Qt::NoModifier);
   QApplication::sendEvent(&w, &event);
+}
+
+void mouse(QWidget *target, QEvent::Type type, const QPointF &pos, Qt::KeyboardModifiers modifiers = Qt::NoModifier) {
+  const Qt::MouseButton button = type == QEvent::MouseMove ? Qt::NoButton : Qt::LeftButton;
+  const Qt::MouseButtons buttons = type == QEvent::MouseButtonRelease ? Qt::NoButton : Qt::LeftButton;
+  QMouseEvent event(type, pos, target->mapToGlobal(pos), button, buttons, modifiers);
+  QApplication::sendEvent(target, &event);
+}
+
+/* a left-button drag through the corners, in steps of a few pixels */
+void drag(QWidget *target, const std::vector<QPointF> &corners, Qt::KeyboardModifiers modifiers = Qt::NoModifier) {
+  mouse(target, QEvent::MouseButtonPress, corners.front(), modifiers);
+  for (size_t i = 1; i < corners.size(); i++)
+    for (int k = 1; k <= 10; k++)
+      mouse(target, QEvent::MouseMove, corners[i - 1] + (corners[i] - corners[i - 1]) * (k / 10.0), modifiers);
+  mouse(target, QEvent::MouseButtonRelease, corners.back(), modifiers);
+}
+
+/* corners of a rectangle at fractions fx0 .. fx1, fz0 .. fz1 of a plot area */
+std::vector<QPointF> box_corners(const QRectF &r, double fx0, double fx1, double fz0, double fz1) {
+  auto at = [&](double fx, double fz) { return QPointF(r.left() + fx * r.width(), r.top() + fz * r.height()); };
+  return {at(fx0, fz0), at(fx1, fz0), at(fx1, fz1), at(fx0, fz1)};
 }
 
 }  // namespace
@@ -341,6 +366,108 @@ int main(int argc, char **argv) {
     w.setCombineMax(true);
     w.setCombineMax(false);
     CHECK(w.saveCurtainImage(dir + "/curtain.png") && QFile::exists(dir + "/curtain.png"));
+  }
+
+  /* the lasso: drawn with the left button in both views while the Lasso button is on */
+  {
+    auto *lasso_button = window.findChild<QToolButton *>("lasso");
+    CHECK(lasso_button != nullptr && lasso_button->isCheckable() && !lasso_button->isChecked());
+    CHECK(w.lasso().empty());
+    QWidget *drawing = view->drawingWidget();
+    auto *curtain_view = w.curtainView();
+    /* the window is never shown: give the views the sizes a layout would */
+    drawing->resize(800, 600);
+    curtain_view->resize(800, 400);
+    int clicks = 0;
+    QObject::connect(view, &wcd::WcdView::clicked, [&clicks](double, double) { clicks++; });
+    int changes = 0;
+    QObject::connect(&w, &wcd::WaterColumnWidget::lassoChanged, [&changes]() { changes++; });
+    const QRectF r = view->plot().plotRect(drawing->size());
+    const std::vector<QPointF> square = box_corners(r, 0.3, 0.7, 0.2, 0.6);
+
+    /* without lasso mode a press is a click, and draws nothing */
+    drag(drawing, square);
+    CHECK(clicks == 1 && w.lasso().empty());
+
+    lasso_button->click();
+    CHECK(w.lassoMode() && view->lassoMode() && curtain_view->lassoMode());
+    drag(drawing, square);
+    CHECK(clicks == 1);
+    CHECK(changes == 1);
+    wcd::Lasso lasso = w.lasso();
+    CHECK(lasso.polygons.size() == 1 && !lasso.polygons[0].curtain && lasso.polygons[0].x.size() >= 25);
+    if (lasso.polygons.size() == 1 && !lasso.polygons[0].x.empty()) {
+      double across, depth;
+      CHECK(view->plot().toData(square[0], drawing->size(), across, depth));
+      CHECK(std::fabs(lasso.polygons[0].x[0] - across) < 1.0e-6 && std::fabs(lasso.polygons[0].z[0] - depth) < 1.0e-6);
+      /* the centre of the square is in, a point outside it is out */
+      double cx, cz, ox, oz;
+      view->plot().toData(QPointF(r.left() + 0.5 * r.width(), r.top() + 0.4 * r.height()), drawing->size(), cx, cz);
+      view->plot().toData(QPointF(r.left() + 0.9 * r.width(), r.top() + 0.4 * r.height()), drawing->size(), ox, oz);
+      CHECK(lasso.contains(false, cx, cz) && !lasso.contains(false, ox, oz) && !lasso.contains(true, cx, cz));
+    }
+    /* Shift adds a polygon, a plain drag replaces them, a click draws none */
+    drag(drawing, box_corners(r, 0.05, 0.2, 0.7, 0.9), Qt::ShiftModifier);
+    CHECK(view->lasso().polygons().size() == 2);
+    drag(drawing, box_corners(r, 0.05, 0.2, 0.7, 0.9));
+    CHECK(view->lasso().polygons().size() == 1);
+    drag(drawing, square, Qt::ShiftModifier);
+    CHECK(view->lasso().polygons().size() == 2);
+    mouse(drawing, QEvent::MouseButtonPress, square[0]);
+    mouse(drawing, QEvent::MouseButtonRelease, square[0]);
+    CHECK(view->lasso().polygons().size() == 2 && !view->lasso().drawing());
+    /* Alt removes the polygon under the pointer, and nothing elsewhere */
+    const QPointF centre(r.left() + 0.5 * r.width(), r.top() + 0.4 * r.height());
+    mouse(drawing, QEvent::MouseButtonPress, QPointF(r.left() + 0.95 * r.width(), r.top() + 0.05 * r.height()),
+          Qt::AltModifier);
+    CHECK(view->lasso().polygons().size() == 2);
+    mouse(drawing, QEvent::MouseButtonPress, centre, Qt::AltModifier);
+    mouse(drawing, QEvent::MouseButtonRelease, centre, Qt::AltModifier);
+    CHECK(view->lasso().polygons().size() == 1);
+    /* a press outside of the plot area starts nothing */
+    drag(drawing, {QPointF(2, 2), QPointF(r.center()), QPointF(r.right(), r.bottom())});
+    CHECK(view->lasso().polygons().size() == 1);
+
+    /* the curtain draws instead of moving */
+    const double start = curtain_view->plot().start();
+    const QRectF cr = curtain_view->plot().plotRect(curtain_view->size());
+    drag(curtain_view, box_corners(cr, 0.1, 0.6, 0.1, 0.5));
+    CHECK(curtain_view->plot().start() == start);
+    lasso = w.lasso();
+    CHECK(lasso.polygons.size() == 2 && lasso.has(false) && lasso.has(true));
+
+    /* saved and loaded */
+    const QString path = dir + "/window.lasso";
+    CHECK(w.saveLasso(path) && QFile::exists(path));
+    w.clearLasso();
+    CHECK(w.lasso().empty() && view->lasso().empty() && curtain_view->lasso().empty());
+    CHECK(w.loadLasso(path));
+    const wcd::Lasso loaded = w.lasso();
+    CHECK(loaded.polygons.size() == 2);
+    for (size_t i = 0; i < loaded.polygons.size() && i < lasso.polygons.size(); i++) {
+      CHECK(loaded.polygons[i].curtain == lasso.polygons[i].curtain &&
+            loaded.polygons[i].x.size() == lasso.polygons[i].x.size());
+      for (size_t j = 0; j < loaded.polygons[i].x.size() && j < lasso.polygons[i].x.size(); j++)
+        CHECK(std::fabs(loaded.polygons[i].x[j] - lasso.polygons[i].x[j]) < 6.0e-4 &&
+              std::fabs(loaded.polygons[i].z[j] - lasso.polygons[i].z[j]) < 6.0e-4);
+    }
+    QString message;
+    CHECK(!w.loadLasso(dir + "/missing.lasso", &message) && !message.isEmpty());
+    CHECK(w.lasso().polygons.size() == 2);
+
+    /* off: presses click again, and the curtain moves */
+    lasso_button->click();
+    CHECK(!w.lassoMode() && !view->lassoMode() && !curtain_view->lassoMode());
+    mouse(drawing, QEvent::MouseButtonPress, centre);
+    mouse(drawing, QEvent::MouseButtonRelease, centre);
+    CHECK(clicks == 2);
+    CHECK(w.lasso().polygons.size() == 2);
+
+    /* another file keeps the swath view's polygons and clears the curtain's, which belong to a track */
+    CHECK(w.openFile(kmall));
+    w.waitUntilIdle();
+    CHECK(view->lasso().polygons().size() == 1 && curtain_view->lasso().empty());
+    w.clearLasso();
   }
 
   /* replay goes round the steps */

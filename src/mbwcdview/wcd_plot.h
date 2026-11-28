@@ -54,6 +54,8 @@ class QOpenGLTexture;
 
 namespace wcd {
 
+class LassoEditor;
+
 /* the swath is drawn with QRhi where it is built, unless MB_RENDERER=legacy-gl
    asks for OpenGL where that is built too */
 bool use_rhi();
@@ -116,6 +118,11 @@ class WcdPlot {
   /* image area inside a widget/image of the given size (logical pixels) */
   QRectF plotRect(const QSize &size) const;
   bool toData(const QPointF &pixel, const QSize &size, double &across, double &depth) const;
+  /* as toData, for a pixel outside of the image area that of the nearest edge */
+  void toDataClamped(const QPointF &pixel, const QSize &size, double &across, double &depth) const;
+  QPointF toPixel(double across, double depth, const QSize &size) const;
+  /* the lasso drawn over the plot, nullptr none */
+  void setLasso(const LassoEditor *lasso) { lasso_ = lasso; }
 
   /* mesh for SwathGL::upload() and SwathRhi::upload(); changes with the data and the depth window */
   bool meshChanged() const { return mesh_dirty_; }
@@ -147,6 +154,7 @@ class WcdPlot {
   int first_beam_ = 0, last_beam_ = -1;
   double view_x0_ = -1.0, view_x1_ = 1.0, view_z0_ = 0.0, view_z1_ = 1.0;
   bool mesh_dirty_ = true;
+  const LassoEditor *lasso_ = nullptr;
 };
 
 }  // namespace wcd

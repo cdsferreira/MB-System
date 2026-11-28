@@ -45,6 +45,7 @@
 #include <QWidget>
 
 #include "wcd_curtain.h"
+#include "wcd_lasso.h"
 #include "wcd_palette.h"
 
 namespace wcd {
@@ -79,6 +80,10 @@ class CurtainPlot {
   double metresPerPixelAlong(const QSize &size) const { return metresPerPixelDepth(size) * exaggeration_; }
   /* the ping at this pixel, -1 if none */
   int pingAt(const QPointF &pixel, const QSize &size) const;
+  /* along-track position and depth at a pixel, for one outside of the plot area at the nearest edge */
+  void toDataClamped(const QPointF &pixel, const QSize &size, double &along, double &depth) const;
+  /* the lasso drawn over the curtain, nullptr none */
+  void setLasso(const LassoEditor *lasso) { lasso_ = lasso; }
 
   void draw(QPainter &painter, const QSize &size, double dpr, const QString &caption = QString());
   QImage render(const QSize &size, double scale, const QString &caption);
@@ -96,6 +101,7 @@ class CurtainPlot {
   int current_ = -1;
   double depth_bottom_ = 0.0;  // bottom of the deepest cell with a value
   QString message_, label_;
+  const LassoEditor *lasso_ = nullptr;
   QImage cache_;
   QString cache_key_;
 };
@@ -109,10 +115,16 @@ class CurtainView : public QWidget {
   void setExaggeration(double exaggeration);  // keeps the current ping in view
   void fit();
   void followCurrent();  // after setCurrent()
+  /* in lasso mode the left button draws the lasso (see LassoEditor) instead of moving the curtain */
+  void setLassoMode(bool on);
+  bool lassoMode() const { return lasso_mode_; }
+  LassoEditor &lasso() { return lasso_; }
+  const LassoEditor &lasso() const { return lasso_; }
 
  signals:
   void pingClicked(int ping);
   void exaggerationChanged(double exaggeration);
+  void lassoChanged();
 
  protected:
   void paintEvent(QPaintEvent *event) override;
@@ -126,6 +138,8 @@ class CurtainView : public QWidget {
   QPointF press_;
   double press_start_ = 0.0;
   bool dragging_ = false, pressed_ = false;
+  LassoEditor lasso_;
+  bool lasso_mode_ = false;
 };
 
 }  // namespace wcd

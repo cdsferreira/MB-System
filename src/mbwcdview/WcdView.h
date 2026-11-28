@@ -27,6 +27,7 @@
 
 #include <QWidget>
 
+#include "wcd_lasso.h"
 #include "wcd_plot.h"
 
 namespace wcd {
@@ -50,15 +51,27 @@ class WcdView : public QWidget {
   /* draw again after the plot changed */
   void redraw();
   bool usesRhi() const { return rhi_; }
+  /* in lasso mode the left button draws the lasso (see LassoEditor) instead of clicking */
+  void setLassoMode(bool on);
+  bool lassoMode() const { return lasso_mode_; }
+  LassoEditor &lasso() { return lasso_; }
+  const LassoEditor &lasso() const { return lasso_; }
+  QWidget *drawingWidget() const { return drawing_widget_; }
 
  signals:
   void clicked(double across, double depth);
+  void lassoChanged();
+
+ protected:
+  bool eventFilter(QObject *watched, QEvent *event) override;
 
  private:
   wcd::WcdPlot plot_;
   QWidget *drawing_widget_ = nullptr;
   SwathDrawing *drawing_ = nullptr;
   bool rhi_ = false;
+  LassoEditor lasso_;
+  bool lasso_mode_ = false;
 };
 
 }  // namespace wcd

@@ -40,6 +40,7 @@
 
 #include "wcd_curtain.h"
 #include "wcd_data.h"
+#include "wcd_export3d.h"
 #include "wcd_palette.h"
 #include "wcd_scene.h"
 
@@ -53,6 +54,7 @@ class QSplitter;
 class QTableWidget;
 class QThread;
 class QTimer;
+class QToolButton;
 
 namespace wcd {
 
@@ -164,6 +166,17 @@ class WaterColumnWidget : public QWidget {
   const Curtain *curtain() const;  // nullptr until it is made
   CurtainView *curtainView() const { return curtain_view_; }
   QStringList pick(double across, double depth);  // for tests: pick the cell nearest to a point
+
+  /* the lasso: polygons drawn in the swath view (across track, depth) and in the curtain (along
+     track, depth) that choose the samples of a 3D export. In lasso mode the left button draws
+     them in both views. Opening a file clears the curtain's polygons, which belong to its track */
+  void setLassoMode(bool on);
+  bool lassoMode() const;
+  Lasso lasso() const;
+  void setLasso(const Lasso &lasso);
+  void clearLasso();
+  bool saveLasso(const QString &path, QString *message = nullptr) const;
+  bool loadLasso(const QString &path, QString *message = nullptr);
   QString title() const;
 
   /* For a window that shows the table of picks itself, for example in a dock. It then gets
@@ -180,6 +193,7 @@ class WaterColumnWidget : public QWidget {
   void pingChanged(int step, int ping, int ping_number, int swath, double time_d);  // ping is the index in the file
   void pickAdded(const QStringList &row);  // the columns of PickTable
   void pickTableWanted();
+  void lassoChanged();
 
  protected:
   void keyPressEvent(QKeyEvent *event) override;
@@ -207,6 +221,9 @@ class WaterColumnWidget : public QWidget {
   void onClicked(double across, double depth);
   void togglePick(bool on);
   void showPickDialog();
+  void onLassoChanged();
+  void saveLassoDialog();
+  void loadLassoDialog();
   void toggleReplay(bool on);
   void updateReplayInterval();
   void replayTick();
@@ -229,6 +246,7 @@ class WaterColumnWidget : public QWidget {
   WcdView *view_;
   QLabel *file_name_, *meta_, *step_label_;
   QCheckBox *bottom_, *wc_bottom_, *raytrace_, *pick_;
+  QToolButton *lasso_button_;
   QDoubleSpinBox *dmin_, *dmax_, *amin_, *amax_, *xmax_, *replay_rate_;
   QPushButton *replay_;
   OneStepWheelSlider *slider_;

@@ -308,6 +308,21 @@ WaterColumnWidget::WaterColumnWidget(Presentation presentation, QWidget *parent)
   connect(pick_, &QCheckBox::clicked, this, &WaterColumnWidget::showPickDialog);
   connect(pick_, &QCheckBox::toggled, this, &WaterColumnWidget::togglePick);
   to_header(pick_);
+  lasso_button_ = new QToolButton;
+  lasso_button_->setText("Lasso");
+  lasso_button_->setCheckable(true);
+  lasso_button_->setObjectName("lasso");
+  lasso_button_->setToolTip("Draw polygons in the swath view or the curtain that choose the samples of a 3D "
+                            "export: drag to draw one, Shift-drag to add one, Alt-click (Option-click on macOS) "
+                            "to remove the one under the pointer");
+  auto *lasso_menu = new QMenu(this);
+  lasso_menu->addAction("Clear Lasso", this, &WaterColumnWidget::clearLasso);
+  lasso_menu->addAction("Save Lasso...", this, &WaterColumnWidget::saveLassoDialog);
+  lasso_menu->addAction("Load Lasso...", this, &WaterColumnWidget::loadLassoDialog);
+  lasso_button_->setMenu(lasso_menu);
+  lasso_button_->setPopupMode(QToolButton::MenuButtonPopup);
+  connect(lasso_button_, &QToolButton::toggled, this, &WaterColumnWidget::setLassoMode);
+  to_header(lasso_button_);
   meta_ = new QLabel;
   if (panel) {
     layout->setContentsMargins(2, 2, 2, 2);
@@ -494,8 +509,10 @@ WaterColumnWidget::WaterColumnWidget(Presentation presentation, QWidget *parent)
   /* plot */
   view_ = new WcdView;
   connect(view_, &WcdView::clicked, this, &WaterColumnWidget::onClicked);
+  connect(view_, &WcdView::lassoChanged, this, &WaterColumnWidget::onLassoChanged);
   curtain_view_ = new CurtainView;
   connect(curtain_view_, &CurtainView::pingClicked, this, &WaterColumnWidget::onCurtainPing);
+  connect(curtain_view_, &CurtainView::lassoChanged, this, &WaterColumnWidget::onLassoChanged);
   connect(curtain_view_, &CurtainView::exaggerationChanged, this, [this](double value) {
     exaggeration_->blockSignals(true);
     exaggeration_->setValue(value);
@@ -743,6 +760,11 @@ void WaterColumnWidget::finishOpen(const QString &path, Line line, bool ok, cons
   showFiles();
 
   updatePlotSettings();
+  if (!curtain_view_->lasso().empty()) {
+    /* along-track distances of another line */
+    curtain_view_->lasso().clear();
+    onLassoChanged();
+  }
   emit fileOpened(path);
   redraw();
   curtain_view_->plot().setMessage("Making the curtain...");
@@ -928,6 +950,97 @@ void WaterColumnWidget::saveImageDialog() {
 }
 
 /*--------------------------------------------------------------------*/
+void WaterColumnWidget::setLassoMode(bool on) {
+  if (lasso_button_->isChecked() != on) {
+    lasso_button_->blockSignals(true);
+    lasso_button_->setChecked(on);
+    lasso_button_->blockSignals(false);
+  }
+  view_->setLassoMode(on);
+  curtain_view_->setLassoMode(on);
+}
+
+bool WaterColumnWidget::lassoMode() const { return lasso_button_->isChecked(); }
+
+Lasso WaterColumnWidget::lasso() const {
+  Lasso lasso;
+  for (const bool curtain : {false, true}) {
+    const LassoEditor &editor = curtain ? curtain_view_->lasso() : view_->lasso();
+    for (const QPolygonF &polygon : editor.polygons()) {
+      LassoPolygon p;
+      p.curtain = curtain;
+      for (const QPointF &v : polygon) {
+        p.x.push_back(v.x());
+        p.z.push_back(v.y());
+      }
+      lasso.polygons.push_back(std::move(p));
+    }
+  }
+  return lasso;
+}
+
+void WaterColumnWidget::setLasso(const Lasso &lasso) {
+  std::vector<QPolygonF> fan, curtain;
+  for (const LassoPolygon &p : lasso.polygons) {
+    QPolygonF polygon;
+    for (size_t i = 0; i < p.x.size() && i < p.z.size(); i++)
+      polygon << QPointF(p.x[i], p.z[i]);
+    (p.curtain ? curtain : fan).push_back(polygon);
+  }
+  view_->lasso().setPolygons(std::move(fan));
+  curtain_view_->lasso().setPolygons(std::move(curtain));
+  onLassoChanged();
+}
+
+void WaterColumnWidget::clearLasso() { setLasso(Lasso()); }
+
+void WaterColumnWidget::onLassoChanged() {
+  view_->redraw();
+  curtain_view_->update();
+  const size_t nfan = view_->lasso().polygons().size(), ncurtain = curtain_view_->lasso().polygons().size();
+  showStatus(nfan + ncurtain == 0 ? QString("No lasso")
+                                  : QString("Lasso: %1 polygon(s) in the swath view, %2 in the curtain")
+                                        .arg(nfan)
+                                        .arg(ncurtain),
+             4000);
+  emit lassoChanged();
+}
+
+bool WaterColumnWidget::saveLasso(const QString &path, QString *message) const {
+  std::string why;
+  const bool ok = write_lasso(path.toStdString(), lasso(), &why);
+  if (!ok && message != nullptr)
+    *message = QString::fromStdString(why);
+  return ok;
+}
+
+bool WaterColumnWidget::loadLasso(const QString &path, QString *message) {
+  Lasso read;
+  std::string why;
+  if (!read_lasso(path.toStdString(), read, &why)) {
+    if (message != nullptr)
+      *message = QString::fromStdString(why);
+    return false;
+  }
+  setLasso(read);
+  return true;
+}
+
+void WaterColumnWidget::saveLassoDialog() {
+  const QString path = QFileDialog::getSaveFileName(this, "Save Lasso", QFileInfo(file_label_).completeBaseName() +
+                                                    ".lasso", "Lasso (*.lasso);;All files (*)");
+  QString message;
+  if (!path.isEmpty() && !saveLasso(path, &message))
+    showStatus(message, 5000);
+}
+
+void WaterColumnWidget::loadLassoDialog() {
+  const QString path = QFileDialog::getOpenFileName(this, "Load Lasso", QString(), "Lasso (*.lasso);;All files (*)");
+  QString message;
+  if (!path.isEmpty() && !loadLasso(path, &message))
+    showStatus(message, 5000);
+}
+
 void WaterColumnWidget::togglePick(bool on) { view_->setCursor(on ? Qt::CrossCursor : Qt::ArrowCursor); }
 
 PickTable *WaterColumnWidget::takePickTable() {

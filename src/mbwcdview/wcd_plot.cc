@@ -31,6 +31,8 @@
 #include <QPainterPath>
 #include <QStringList>
 
+#include "wcd_lasso.h"
+
 #ifdef MBWCD_HAVE_GL
 #include <QOffscreenSurface>
 #include <QOpenGLBuffer>
@@ -239,6 +241,19 @@ bool WcdPlot::toData(const QPointF &pixel, const QSize &size, double &across, do
   return true;
 }
 
+void WcdPlot::toDataClamped(const QPointF &pixel, const QSize &size, double &across, double &depth) const {
+  const QRectF r = plotRect(size);
+  const QPointF q(std::min(std::max(pixel.x(), r.left()), r.right()), std::min(std::max(pixel.y(), r.top()), r.bottom()));
+  across = view_x0_ + (q.x() - r.left()) / r.width() * (view_x1_ - view_x0_);
+  depth = view_z0_ + (q.y() - r.top()) / r.height() * (view_z1_ - view_z0_);
+}
+
+QPointF WcdPlot::toPixel(double across, double depth, const QSize &size) const {
+  const QRectF r = plotRect(size);
+  return QPointF(r.left() + (across - view_x0_) / (view_x1_ - view_x0_) * r.width(),
+                 r.top() + (depth - view_z0_) / (view_z1_ - view_z0_) * r.height());
+}
+
 /*--------------------------------------------------------------------*/
 void WcdPlot::buildMesh(std::vector<float> &vertices, std::vector<unsigned int> &indices) {
   const int nb = data_.nbeams, ns = data_.nsamples;
@@ -389,6 +404,10 @@ void WcdPlot::drawOverlay(QPainter &p, const QSize &size, const QString &caption
     }
   }
   p.restore();
+
+  /* the lasso of the swath view */
+  if (lasso_ != nullptr)
+    lasso_->draw(p, r, [&](double x, double z) { return QPointF(px(x), pz(z)); });
 
   /* frame, ticks and labels */
   p.setRenderHint(QPainter::Antialiasing, false);

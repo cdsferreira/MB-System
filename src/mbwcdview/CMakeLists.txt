@@ -100,6 +100,8 @@ add_library(
   WcdView.h
   wcd_curtain_view.cc
   wcd_curtain_view.h
+  wcd_lasso.cc
+  wcd_lasso.h
   wcd_palette.cc
   wcd_palette.h
   wcd_plot.cc

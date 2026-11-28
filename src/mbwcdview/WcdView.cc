@@ -24,6 +24,7 @@
 
 #include "WcdView.h"
 
+#include <QMouseEvent>
 #include <QVBoxLayout>
 
 #ifdef MBWCD_HAVE_RHI
@@ -61,6 +62,52 @@ WcdView::WcdView(QWidget *parent) : QWidget(parent) {
   }
 #endif
   layout->addWidget(drawing_widget_);
+  plot_.setLasso(&lasso_);
+  drawing_widget_->installEventFilter(this);
+}
+
+void WcdView::setLassoMode(bool on) {
+  lasso_mode_ = on;
+  if (!on && lasso_.drawing()) {
+    lasso_.cancel();
+    redraw();
+  }
+  if (on)
+    drawing_widget_->setCursor(Qt::CrossCursor);
+  else
+    drawing_widget_->unsetCursor();
+}
+
+bool WcdView::eventFilter(QObject *watched, QEvent *event) {
+  if (watched != drawing_widget_ || !lasso_mode_)
+    return QWidget::eventFilter(watched, event);
+  const QEvent::Type type = event->type();
+  if (type != QEvent::MouseButtonPress && type != QEvent::MouseMove && type != QEvent::MouseButtonRelease &&
+      type != QEvent::MouseButtonDblClick)
+    return QWidget::eventFilter(watched, event);
+  auto *mouse = static_cast<QMouseEvent *>(event);
+  const QSize size = drawing_widget_->size();
+  double across, depth;
+  plot_.toDataClamped(mouse->position(), size, across, depth);
+  const QPointF data(across, depth);
+  if (type == QEvent::MouseButtonPress && mouse->button() == Qt::LeftButton) {
+    if (!plot_.plotRect(size).contains(mouse->position()))
+      return true;
+    if (lasso_.press(data, mouse->position(), mouse->modifiers()))
+      emit lassoChanged();
+    redraw();
+  }
+  else if (type == QEvent::MouseMove && lasso_.drawing()) {
+    lasso_.move(data, mouse->position());
+    redraw();
+  }
+  else if (type == QEvent::MouseButtonRelease && mouse->button() == Qt::LeftButton && lasso_.drawing()) {
+    lasso_.move(data, mouse->position());
+    if (lasso_.release())
+      emit lassoChanged();
+    redraw();
+  }
+  return true;
 }
 
 /* the drawing widget uses the plot: delete it first */

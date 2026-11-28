@@ -146,6 +146,16 @@ int CurtainPlot::pingAt(const QPointF &pixel, const QSize &size) const {
   return curtain_->column(x0_ + (pixel.x() - r.left()) * metresPerPixelAlong(size));
 }
 
+void CurtainPlot::toDataClamped(const QPointF &pixel, const QSize &size, double &along, double &depth) const {
+  const QRectF r = plotRect(size);
+  double z0, z1;
+  depthView(z0, z1);
+  const double x = std::min(std::max(pixel.x(), r.left()), r.right());
+  const double y = std::min(std::max(pixel.y(), r.top()), r.bottom());
+  along = x0_ + (x - r.left()) * metresPerPixelAlong(size);
+  depth = z0 + (y - r.top()) / r.height() * (z1 - z0);
+}
+
 /*--------------------------------------------------------------------*/
 void CurtainPlot::draw(QPainter &p, const QSize &size, double dpr, const QString &caption) {
   const QRectF r = plotRect(size);
@@ -208,6 +218,10 @@ void CurtainPlot::draw(QPainter &p, const QSize &size, double dpr, const QString
       }
     }
   }
+
+  /* the lasso of the curtain */
+  if (lasso_ != nullptr)
+    lasso_->draw(p, r, [&](double x, double z) { return QPointF(px(x), pz(z)); });
 
   /* frame, ticks and labels */
   p.setRenderHint(QPainter::Antialiasing, false);
@@ -274,6 +288,7 @@ CurtainView::CurtainView(QWidget *parent) : QWidget(parent) {
   setAttribute(Qt::WA_OpaquePaintEvent);
   setMouseTracking(false);
   setToolTip("Curtain: drag to move along track, wheel to zoom along track, click to show that ping");
+  plot_.setLasso(&lasso_);
 }
 
 void CurtainView::setExaggeration(double exaggeration) {
@@ -300,7 +315,31 @@ void CurtainView::paintEvent(QPaintEvent *) {
   plot_.draw(painter, size(), devicePixelRatioF());
 }
 
+void CurtainView::setLassoMode(bool on) {
+  lasso_mode_ = on;
+  if (!on && lasso_.drawing()) {
+    lasso_.cancel();
+    update();
+  }
+  if (on)
+    setCursor(Qt::CrossCursor);
+  else
+    unsetCursor();
+}
+
 void CurtainView::mousePressEvent(QMouseEvent *event) {
+  if (lasso_mode_) {
+    if (event->button() == Qt::LeftButton && plot_.curtain() != nullptr &&
+        plot_.plotRect(size()).contains(event->position())) {
+      double along, depth;
+      plot_.toDataClamped(event->position(), size(), along, depth);
+      if (lasso_.press(QPointF(along, depth), event->position(), event->modifiers()))
+        emit lassoChanged();
+      update();
+    }
+    event->accept();
+    return;
+  }
   if (event->button() == Qt::LeftButton) {
     pressed_ = true;
     dragging_ = false;
@@ -311,6 +350,16 @@ void CurtainView::mousePressEvent(QMouseEvent *event) {
 }
 
 void CurtainView::mouseMoveEvent(QMouseEvent *event) {
+  if (lasso_mode_) {
+    if (lasso_.drawing()) {
+      double along, depth;
+      plot_.toDataClamped(event->position(), size(), along, depth);
+      lasso_.move(QPointF(along, depth), event->position());
+      update();
+    }
+    event->accept();
+    return;
+  }
   if (pressed_) {
     const double dx = event->position().x() - press_.x();
     if (std::fabs(dx) > 3.0)
@@ -325,6 +374,18 @@ void CurtainView::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void CurtainView::mouseReleaseEvent(QMouseEvent *event) {
+  if (lasso_mode_) {
+    if (event->button() == Qt::LeftButton && lasso_.drawing()) {
+      double along, depth;
+      plot_.toDataClamped(event->position(), size(), along, depth);
+      lasso_.move(QPointF(along, depth), event->position());
+      if (lasso_.release())
+        emit lassoChanged();
+      update();
+    }
+    event->accept();
+    return;
+  }
   if (event->button() == Qt::LeftButton && pressed_) {
     pressed_ = false;
     unsetCursor();
