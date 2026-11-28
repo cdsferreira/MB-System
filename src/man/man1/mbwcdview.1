@@ -40,6 +40,20 @@ Version 5.0
 .br
 \fB\-\-size\fP=\fIwidth\fPx\fIheight\fP
 .br
+\fB\-\-range\fP=\fImin\fP/\fImax\fP
+.br
+\fB\-\-export-3d\fP=\fBfan\fP|\fBcurtain\fP|\fBboth\fP
+.br
+\fB\-\-export-3d-name\fP=\fIname\fP
+.br
+\fB\-\-pings\fP=\fBcurrent\fP|\fIfirst\fP/\fIlast\fP[/\fIstep\fP]
+.br
+\fB\-\-format-3d\fP=\fBvec\fP,\fBply\fP,\fBlas\fP
+.br
+\fB\-\-budget\fP=\fIpoints\fP
+.br
+\fB\-\-lasso\fP=\fIfile\fP
+.br
 \fB\-\-dump\fP
 .br
 \fB\-\-verbose\fP {\fB\-V\fP}
@@ -155,8 +169,8 @@ A datalist (a file named *.mb-1 or given with format \-1, see \fBmbdatalist\fP(1
 opens its first file; \fBPrevious file\fP and \fBNext file\fP (also Page Up and Page
 Down) open the others, and \fBFile\fP \fIi\fP / \fIn\fP tells which is shown. The
 *.kmwcd of a *.kmall listed before it (or the *.wcd of a *.all, or the reverse) is the
-same line and is left out. Without a window, \fB\-\-dump\fP, \fB\-\-export\fP and
-\fB\-\-export-curtain\fP use the first file of a datalist.
+same line and is left out. Without a window, \fB\-\-dump\fP, \fB\-\-export\fP,
+\fB\-\-export-curtain\fP and \fB\-\-export-3d\fP use the first file of a datalist.
 
 The depth range starts at the surface, or, for a sonar deeper than its longest
 slant range (on a vehicle), a tenth of that range above the shallowest transducer
@@ -165,6 +179,36 @@ depth; so does the image written with \fB\-\-export\fP.
 Without a window, \fB\-\-dump\fP prints a summary of a survey line,
 \fB\-\-export\fP writes an image of one swath and \fB\-\-export-curtain\fP an image
 of the curtain.
+
+\fB\-\-export-3d\fP writes the water column as 3D points: the samples of the fans of
+the pings of \fB\-\-pings\fP, the cells of the curtain, or both, those with an
+amplitude in \fB\-\-range\fP and, with \fB\-\-lasso\fP, in the lasso's polygons. A fan
+sample is placed across track from its ping's position, along the heading (positive to
+starboard), at its depth in the swath view (ray traced unless \fB\-\-straight\fP); a
+curtain cell at its ping's position and the depth of its centre. Both are limited to
+the beams of \fB\-\-beams\fP. Nothing is cut at the bottom detection. The heights are
+elevations (z = \-depth, as \fBmbgrid\fP \fB\-A2\fP grids them), below the waterline
+where the transducer depth is known. The files are \fIname\fP_fan.\fIext\fP and
+\fIname\fP_curtain.\fIext\fP in the formats of \fB\-\-format-3d\fP:
+.RS
+.TP
+.B vec
+An \fBmbgrdviz\fP vector file (lines of longitude, latitude, z and amplitude; one
+segment per fan, so that each is a vector of its own), opened with \fBOpen Vector\fP and coloured by \fBmbgrdviz\fP
+between the ends of \fB\-\-range\fP.
+.TP
+.B ply
+Binary PLY: x, y, z as floats relative to an offset (a round easting and northing
+given in a comment, with the coordinate system), the colour of the palette, the
+amplitude (dB) and the ping number. For CloudCompare, Blender and similar programs.
+.TP
+.B las
+LAS 1.4, point format 7, in the UTM zone of the first exported ping (WGS 84, as OGC
+WKT): x, y, z, the palette colour, the intensity (the amplitude scaled over
+\fB\-\-range\fP), the time (adjusted standard GPS time) and two extra attributes,
+\fBamplitude\fP (dB) and \fBping\fP (ping number). For QGIS point cloud layers and
+PDAL.
+.RE
 
 .SH MB-SYSTEM AUTHORSHIP
 David W. Caress
@@ -255,6 +299,47 @@ both images are written.
 .br
 The size in pixels of the exported images. Default: 1400x900.
 .TP
+.B \-\-range\fP=\fImin\fP/\fImax\fP
+.br
+The amplitude range (dB) of the colour palette in the exported images and 3D files, and
+with \fB\-\-export-3d\fP the samples exported. Default: the amplitude range of the
+file, all samples.
+.TP
+.B \-\-export-3d\fP=\fBfan\fP|\fBcurtain\fP|\fBboth\fP
+.br
+Write the fans, the curtain or both as 3D points (see DESCRIPTION) and exit without
+opening a window; with \fB\-\-export\fP or \fB\-\-export-curtain\fP the images are
+written too.
+.TP
+.B \-\-export-3d-name\fP=\fIname\fP
+.br
+The start of the names of the 3D files, which may include a directory. Default: the
+input file name without its extension, in the current directory.
+.TP
+.B \-\-pings\fP=\fBcurrent\fP|\fIfirst\fP/\fIlast\fP[/\fIstep\fP]
+.br
+The water column pings (counted from 0) of the 3D export: the ping of \fB\-\-ping\fP,
+or the pings \fIfirst\fP to \fIlast\fP, every \fIstep\fP\-th. The curtain gets the
+columns of these pings. Default: \fBcurrent\fP.
+.TP
+.B \-\-format-3d\fP=\fBvec\fP,\fBply\fP,\fBlas\fP
+.br
+The formats of the 3D export, one or more separated by commas. Default: \fBvec\fP.
+.TP
+.B \-\-budget\fP=\fIpoints\fP
+.br
+The most points written for the fans and for the curtain; above it every \fIn\fP\-th
+selected point is kept. Default: 0, all points.
+.TP
+.B \-\-lasso\fP=\fIfile\fP
+.br
+Export only the samples in the polygons of a lasso file, as the window saves it: lines
+\fBfan\fP or \fBcurtain\fP each start a polygon, followed by lines of \fIx\fP and
+\fIdepth\fP in metres (across track for the fan view, along track for the curtain);
+\fB#\fP starts a comment. A fan sample is exported when it lies in a fan polygon (or
+there is none) and its ping and depth lie in a curtain polygon (or there is none); a
+curtain cell when it lies in a curtain polygon.
+.TP
 .B \-\-dump
 Print a summary of the survey line and exit: the files found, the numbers of
 pings, matched pings and position records, the amplitude range and fill value,
@@ -282,7 +367,8 @@ roll at the echo, can), and then again the one nearest in direction. The summary
 says how many beams were compared each way. The same pairs serve both geometries.
 .TP
 .B \-\-verbose {\fB\-V\fP}
-Print the program name and version, and with \fB\-\-export\fP what was written.
+Print the program name and version, and with \fB\-\-export\fP, \fB\-\-export-curtain\fP and
+\fB\-\-export-3d\fP what was written.
 .TP
 .B \-\-help {\fB\-H\fP}
 Print the usage message and exit.
@@ -310,6 +396,18 @@ To write the curtain of the central beams 192 to 319 of a 512 beam swath, with t
 strongest value of each cell:
 .br
 	mbwcdview \-I 0030_20250208_100905.kmall \-\-beams=192/319 \-\-combine=max \-\-export-curtain=curtain.png
+.br
+
+To write the fan of ping 200, the samples from \-30 to 0 dB, for \fBmbgrdviz\fP and
+QGIS:
+.br
+	mbwcdview \-I 0030_20250208_100905.kmall \-\-ping=200 \-\-range=\-30/0 \-\-export-3d=fan \-\-format-3d=vec,las
+.br
+
+To write every tenth fan of pings 100 to 400 and the curtain of the same pings,
+at most two million points each, in the lasso saved from the window:
+.br
+	mbwcdview \-I 0030_20250208_100905.kmall \-\-export-3d=both \-\-pings=100/400/10 \-\-budget=2000000 \-\-lasso=plume.lasso \-\-format-3d=ply,las
 .br
 
 To go through the lines of a datalist:

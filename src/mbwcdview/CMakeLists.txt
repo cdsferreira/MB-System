@@ -76,6 +76,8 @@ add_library(
   wcd_data.h
   wcd_dump.cc
   wcd_dump.h
+  wcd_export3d.cc
+  wcd_export3d.h
   wcd_raytrace.cc
   wcd_raytrace.h)
 

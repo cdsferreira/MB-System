@@ -78,6 +78,63 @@ def read_png(path):
   return width, height, bpp, rows
 
 
+def read_vec(path):
+  """Header lines and segments (lists of lon, lat, z, value) of an mbgrdviz vector file."""
+  header, segments = [], [[]]
+  with open(path) as f:
+    for line in f:
+      if line.startswith("##"):
+        header.append(line.strip())
+      elif line.startswith(">"):
+        segments.append([])
+      else:
+        segments[-1].append(tuple(float(v) for v in line.split()))
+  return header, [seg for seg in segments if seg]
+
+
+def read_ply(path):
+  """Header lines and records (x, y, z, r, g, b, amplitude, ping) of a PLY file written by mbwcdview."""
+  with open(path, "rb") as f:
+    data = f.read()
+  end = data.index(b"end_header\n") + len(b"end_header\n")
+  header = data[:end].decode().splitlines()
+  size = struct.calcsize("<fffBBBfI")
+  records = [struct.unpack_from("<fffBBBfI", data, end + i * size) for i in range((len(data) - end) // size)]
+  return header, records, (len(data) - end) % size
+
+
+def read_las(path):
+  """Header fields, variable length records and points (x, y, z, intensity, gps time, r, g, b, amplitude, ping)
+  of a LAS 1.4 point format 7 file with two extra attributes."""
+  with open(path, "rb") as f:
+    data = f.read()
+  h = {"signature": data[0:4], "encoding": struct.unpack_from("<H", data, 6)[0],
+       "version": struct.unpack_from("<BB", data, 24), "header_size": struct.unpack_from("<H", data, 94)[0]}
+  h["offset"], h["nvlr"], h["format"], h["length"] = struct.unpack_from("<IIBH", data, 96)
+  h["scale"] = struct.unpack_from("<3d", data, 131)
+  h["origin"] = struct.unpack_from("<3d", data, 155)
+  h["bounds"] = struct.unpack_from("<6d", data, 179)  # max x, min x, max y, min y, max z, min z
+  h["count"] = struct.unpack_from("<Q", data, 247)[0]
+  vlrs, pos = [], h["header_size"]
+  for _ in range(h["nvlr"]):
+    user, record, length = struct.unpack_from("<16sHH", data, pos + 2)
+    vlrs.append((user.rstrip(b"\0").decode(), record, data[pos + 54:pos + 54 + length]))
+    pos += 54 + length
+  points = []
+  for i in range(h["count"]):
+    o = h["offset"] + i * h["length"]
+    x, y, z, intensity = struct.unpack_from("<iiiH", data, o)
+    gps, r, g, b, amplitude, ping = struct.unpack_from("<dHHHfI", data, o + 22)
+    points.append((h["origin"][0] + x * h["scale"][0], h["origin"][1] + y * h["scale"][1],
+                   h["origin"][2] + z * h["scale"][2], intensity, gps, r, g, b, amplitude, ping))
+  return h, vlrs, points, len(data) - h["offset"] - h["count"] * h["length"]
+
+
+def local_metres(lon, lat, lon0, lat0):
+  """East and north (m) of lon, lat from lon0, lat0 on a sphere, good over a few hundred metres."""
+  return (lon - lon0) * 111194.9 * math.cos(math.radians(lat0)), (lat - lat0) * 111194.9
+
+
 class MbwcdviewTest(unittest.TestCase):
 
   @classmethod
@@ -131,6 +188,152 @@ class MbwcdviewTest(unittest.TestCase):
         if max(r, g, b) - min(r, g, b) > 16:
           colours.add((r, g, b))
     self.assertGreater(len(colours), 20)
+
+  def export_3d(self, name, *options):
+    """Run a 3D export of the synthetic line into the temporary directory; the prefix of its files."""
+    prefix = os.path.join(self.tmp.name, name)
+    result = subprocess.run([self.program, "-I", self.kmall, "--export-3d-name=" + prefix] + list(options),
+                            capture_output=True, text=True, timeout=120)
+    self.assertEqual(result.returncode, 0, result.stderr)
+    return prefix, result.stderr
+
+  def test_export_3d_formats(self):
+    """The fans of all water column pings and the curtain in the three formats agree point for point."""
+    prefix, _ = self.export_3d("all3d", "--export-3d=both", "--pings=0/%d" % (S.NPINGS - 2),
+                               "--format-3d=vec,ply,las")
+    for kind in ("fan", "curtain"):
+      header, segments = read_vec(prefix + "_%s.vec" % kind)
+      self.assertIn("## Vector File Version 1.0", header)
+      self.assertIn("## MIN -55.0", header)
+      self.assertIn("## MAX -10.0", header)
+      points = [p for seg in segments for p in seg]
+      self.assertGreater(len(points), 100)
+      # one segment per ping for the fans; the fill value (-94 dB) is no data before the first echo of a beam, and
+      # data within it, as in the swath view: sample INNER_FILL of beam 1 of the first ping, in both swaths
+      self.assertEqual(len(segments), S.NPINGS - 1 if kind == "fan" else 1)
+      inner_fill = [p for p in points if p[3] == -94.0]
+      self.assertEqual(len(inner_fill), 2 if kind == "fan" else 0)
+      self.assertTrue(all(-55.0 <= p[3] <= -10.0 for p in points if p[3] != -94.0))
+      self.assertTrue(all(p[2] < 0.0 for p in points))
+      ply_header, records, rest = read_ply(prefix + "_%s.ply" % kind)
+      self.assertEqual(rest, 0)
+      self.assertIn("element vertex %d" % len(points), ply_header)
+      self.assertEqual(len(records), len(points))
+      h, vlrs, las, rest = read_las(prefix + "_%s.las" % kind)
+      self.assertEqual((h["signature"], h["version"], h["format"], h["length"], h["header_size"]),
+                       (b"LASF", (1, 4), 7, 44, 375))
+      self.assertEqual(h["encoding"], 0x11)
+      self.assertEqual(rest, 0)
+      self.assertEqual(h["count"], len(points))
+      self.assertEqual([(u, r) for u, r, _ in vlrs], [("LASF_Projection", 2112), ("LASF_Spec", 4)])
+      wkt = vlrs[0][2].decode()
+      self.assertIn("UTM zone", wkt)
+      ply_offset = [line for line in ply_header if line.startswith("comment offset")][0].split()
+      self.assertEqual((float(ply_offset[2]), float(ply_offset[3])), h["origin"][:2])
+      for c, (hi, lo) in enumerate(((0, 1), (2, 3), (4, 5))):
+        values = [p[c] for p in las]
+        self.assertAlmostEqual(max(values), h["bounds"][hi], delta=0.001)
+        self.assertAlmostEqual(min(values), h["bounds"][lo], delta=0.001)
+      lon0, lat0 = points[0][0], points[0][1]
+      for v, r, l in zip(points, records, las):
+        self.assertAlmostEqual(v[2], r[2], delta=0.006)
+        self.assertAlmostEqual(v[2], l[2], delta=0.006)
+        self.assertAlmostEqual(v[3], l[8], delta=0.051)
+        self.assertEqual(r[7], l[9])
+        self.assertEqual((r[3] * 257, r[4] * 257, r[5] * 257), l[5:8])
+        self.assertAlmostEqual(r[0] + h["origin"][0], l[0], delta=0.002)
+        self.assertAlmostEqual(r[1] + h["origin"][1], l[1], delta=0.002)
+      # the projected distances are those of the longitudes and latitudes (UTM scale within 0.1 %)
+      far = max(range(len(points)), key=lambda i: math.hypot(*local_metres(points[i][0], points[i][1], lon0, lat0)))
+      d_geo = math.hypot(*local_metres(points[far][0], points[far][1], lon0, lat0))
+      d_utm = math.hypot(las[far][0] - las[0][0], las[far][1] - las[0][1])
+      self.assertGreater(d_geo, 5.0)
+      self.assertAlmostEqual(d_utm / d_geo, 1.0, delta=0.002)
+      # the ping numbers and the times of the pings
+      pings = sorted(set(l[9] for l in las))
+      self.assertEqual(pings, list(range(S.PING0 + 1, S.PING0 + S.NPINGS)))
+      for l in las[:20]:
+        # adjusted standard GPS time: 18 leap seconds in 2025
+        self.assertAlmostEqual(l[4] + 1.0e9 + 315964800.0 - 18.0, S.ping_time(l[9]), delta=0.05)
+
+  def test_export_3d_fan_geometry(self):
+    """A fan stands across the track at its ping's position, starboard to the right of the heading."""
+    lasso = os.path.join(self.tmp.name, "sides.lasso")
+    sides = {}
+    for side, x0, x1 in (("starboard", 0.5, 1.0e5), ("port", -1.0e5, -0.5)):
+      with open(lasso, "w") as f:
+        f.write("# one side of the fans\nfan\n%g 0\n%g 0\n%g 1e5\n%g 1e5\n" % (x0, x1, x1, x0))
+      prefix, _ = self.export_3d("side_" + side, "--export-3d=fan", "--ping=0", "--lasso=" + lasso)
+      _, segments = read_vec(prefix + "_fan.vec")
+      sides[side] = segments[0]
+    lat0, lon0 = S.position(S.ping_time(S.PING0 + 1))
+    h = math.radians(S.HEADING)
+    for side, sign in (("starboard", 1.0), ("port", -1.0)):
+      self.assertGreater(len(sides[side]), 20)
+      for p in sides[side]:
+        e, n = local_metres(p[0], p[1], lon0, lat0)
+        across, along = e * math.cos(h) - n * math.sin(h), e * math.sin(h) + n * math.cos(h)
+        self.assertGreater(sign * across, 0.4, (side, p))
+        self.assertLess(abs(along), 0.05 * abs(across) + 0.5, (side, p))
+
+  def test_export_3d_range_budget(self):
+    prefix, _ = self.export_3d("range3d", "--export-3d=fan", "--pings=0/3", "--range=-30/-20")
+    header, segments = read_vec(prefix + "_fan.vec")
+    points = [p for seg in segments for p in seg]
+    self.assertIn("## MIN -30.0", header)
+    self.assertGreater(len(points), 20)
+    self.assertTrue(all(-30.0 <= p[3] <= -20.0 for p in points))
+    _, all_segments = read_vec(self.export_3d("range3d_all", "--export-3d=fan", "--pings=0/3")[0] + "_fan.vec")
+    n = sum(len(seg) for seg in all_segments)
+    self.assertLess(len(points), n)
+    budget = n // 7
+    prefix, err = self.export_3d("budget3d", "--export-3d=fan", "--pings=0/3", "--budget=%d" % budget, "-V")
+    _, segments = read_vec(prefix + "_fan.vec")
+    stride = -(-n // budget)
+    self.assertEqual(sum(len(seg) for seg in segments), -(-n // stride))
+    self.assertIn("fan: %d points of 4 pings" % n, err)
+    self.assertIn("(stride %d)" % stride, err)
+    # every second ping: two segments
+    _, segments = read_vec(self.export_3d("step3d", "--export-3d=fan", "--pings=0/3/2")[0] + "_fan.vec")
+    self.assertEqual(len(segments), 2)
+
+  def test_export_3d_lasso(self):
+    """Fan polygons select by across track distance and depth, curtain polygons by along track distance and depth."""
+    lasso = os.path.join(self.tmp.name, "depth.lasso")
+    depth = S.DRAFT + 0.5 * S.BOTTOM_BELOW_TX
+    with open(lasso, "w") as f:
+      f.write("fan\n-1e5 0\n1e5 0\n1e5 %g\n-1e5 %g\n" % (depth, depth))
+    prefix, _ = self.export_3d("lasso3d", "--export-3d=both", "--pings=0/3", "--lasso=" + lasso)
+    _, segments = read_vec(prefix + "_fan.vec")
+    points = [p for seg in segments for p in seg]
+    self.assertGreater(len(points), 20)
+    self.assertTrue(all(p[2] >= -depth for p in points))
+    # no curtain polygon: no curtain cells
+    self.assertFalse(os.path.exists(prefix + "_curtain.vec"))
+    # a curtain polygon over the first metres of the track and the upper water: fans of the first ping only
+    with open(lasso, "w") as f:
+      f.write("curtain\n-1 0\n1 0\n1 %g\n-1 %g\n" % (depth, depth))
+    prefix, err = self.export_3d("lasso3d_curtain", "--export-3d=both", "--pings=0/3", "--lasso=" + lasso, "-V")
+    _, fan = read_vec(prefix + "_fan.vec")
+    _, curtain = read_vec(prefix + "_curtain.vec")
+    self.assertEqual(len(fan), 1)
+    self.assertIn("fan: %d points of 4 pings" % len(fan[0]), err)
+    self.assertTrue(all(p[2] >= -depth for p in fan[0] + curtain[0]))
+    self.assertEqual(len(set((p[0], p[1]) for p in curtain[0])), 1)
+    for bad in ("fan\n0 0\n1 1\n", "0 0\n", "fan\n0 zero\n"):
+      with open(lasso, "w") as f:
+        f.write(bad)
+      result = subprocess.run([self.program, "-I", self.kmall, "--export-3d=fan", "--lasso=" + lasso,
+                               "--export-3d-name=" + os.path.join(self.tmp.name, "bad3d")], capture_output=True,
+                              text=True, timeout=60)
+      self.assertNotEqual(result.returncode, 0, bad)
+
+  def test_export_3d_options(self):
+    for bad in ("--export-3d=side", "--format-3d=vec,xyz", "--pings=3/1", "--pings=0/2/0", "--range=-10/-30",
+                "--budget=-5", "--range=low"):
+      result = subprocess.run([self.program, "-I", self.kmall, bad], capture_output=True, text=True, timeout=60)
+      self.assertNotEqual(result.returncode, 0, bad)
+      self.assertIn("usage: mbwcdview", result.stderr, bad)
 
   def test_dump_curtain(self):
     """The curtain of the line: one column per water column ping at its along-track distance
